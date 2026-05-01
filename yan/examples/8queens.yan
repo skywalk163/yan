@@ -1,0 +1,43 @@
+-- ============================================
+-- 八皇后问题 - 言语言示例
+-- ============================================
+-- 
+-- 问题：在 8×8 棋盘上放置 8 个皇后，使其互不攻击
+-- 解法：回溯算法
+-- 结果：共 92 个解
+--
+-- 本示例展示言语言的「双轨制」设计：
+-- - 中文定义函数名，语义清晰
+-- - Python 实现算法，表达力强
+-- - 各取所长，浑然天成
+-- ============================================
+
+-- 安全检查：判断在第 row 行放置皇后是否安全
+定 安全={{
+def safe(queens, row):
+    for i in range(row):
+        if queens[i] == queens[row]:
+            return False
+        if abs(queens[i] - queens[row]) == row - i:
+            return False
+    return True
+safe
+}}。
+
+-- 求解函数：使用回溯法找出所有解
+定 求解={{
+def solve(queens, row, n):
+    if row == n:
+        return [queens[:]]
+    solutions = []
+    for col in range(n):
+        queens.append(col)
+        if safe(queens, row):
+            solutions += solve(queens, row + 1, n)
+        queens.pop()
+    return solutions
+solve
+}}。
+
+-- 求解并打印结果
+印 $(solve([], 0, 8))。

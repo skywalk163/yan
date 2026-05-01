@@ -1,0 +1,13 @@
+-- 阶乘函数示例
+
+-- 方法一：纯中文递归
+定阶乘=函n若n等1则1否则n乘阶乘n减1。
+印阶乘5。
+
+-- 方法二：Python 实现
+定fact={{
+def fact(n):
+    return 1 if n <= 1 else n * fact(n-1)
+fact
+}}。
+印fact 6。
