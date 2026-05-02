@@ -82,6 +82,11 @@ python main.py examples/8queens.yan    # 运行文件
 python main.py file.yan --debug   # 调试模式
 ```
 
+### 学习
+
+- **[语法手册](yan/docs/SYNTAX.md)** — 从零开始的完整教程
+- **[示例代码](yan/examples/)** — 基础到进阶的示例
+
 ---
 
 ## 语法速览
