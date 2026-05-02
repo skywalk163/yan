@@ -48,6 +48,8 @@ class PythonCodeGen:
             return self._gen_define(node)
         elif isinstance(node, Lambda):
             return self._gen_lambda(node)
+        elif isinstance(node, Block):
+            return self._gen_block(node)
         elif isinstance(node, If):
             return self._gen_if(node)
         else:
@@ -223,14 +225,55 @@ class PythonCodeGen:
             else:
                 return f'{name} = {code}'
 
+        # Lambda with Block body: generate def function instead of lambda
+        if isinstance(node.value, Lambda) and isinstance(node.value.body, Block):
+            return self._gen_def_function(name, node.value)
+
         value = self.generate(node.value)
         return f'{name} = {value}'
+
+    def _gen_def_function(self, name: str, node: Lambda) -> str:
+        """Generate a def function for Lambda with Block body"""
+        params = ', '.join(node.params) if node.params else '_'
+        lines = []
+        
+        for i, stmt in enumerate(node.body.statements):
+            code = self.generate(stmt)
+            # 最后一个语句作为返回值
+            if i == len(node.body.statements) - 1:
+                lines.append(f'    return {code}')
+            else:
+                lines.append(f'    {code}')
+        
+        body_code = '\n'.join(lines)
+        return f'def {name}({params}):\n{body_code}'
 
     def _gen_lambda(self, node: Lambda) -> str:
         """生成匿名函数"""
         params = ', '.join(node.params) if node.params else '_'
+        
+        # 如果函数体是 Block，需要特殊处理
+        if isinstance(node.body, Block):
+            lines = []
+            for i, stmt in enumerate(node.body.statements):
+                code = self.generate(stmt)
+                # 最后一个语句作为返回值
+                if i == len(node.body.statements) - 1:
+                    lines.append(f'    return {code}')
+                else:
+                    lines.append(f'    {code}')
+            body_code = '\n'.join(lines)
+            return f'(lambda {params}:\n{body_code}\n)'
+        
         body = self.generate(node.body)
         return f'(lambda {params}: {body})'
+
+    def _gen_block(self, node: Block) -> str:
+        """生成代码块"""
+        lines = []
+        for stmt in node.statements:
+            lines.append(self.generate(stmt))
+        return '\n'.join(lines)
 
     def _gen_if(self, node: If) -> str:
         """生成条件表达式"""

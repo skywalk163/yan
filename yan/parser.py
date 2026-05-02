@@ -154,8 +154,54 @@ class Parser:
                self._current().value not in {'定', '函'}):
             params.append(self._advance().value)
 
-        body = self._parse_expression()
+        # 检查是否有块（冒号或句号后换行）
+        if self._current().type == TokenType.COLON:
+            self._advance()  # 消耗 '：'
+            body = self._parse_block()
+        else:
+            body = self._parse_expression()
         return Lambda(params, body)
+
+    def _parse_block(self) -> Node:
+        """解析代码块"""
+        statements = []
+        
+        while not self._is_at_end():
+            # 块结束条件：遇到句号后跟非缩进内容
+            if self._is_block_end():
+                break
+            
+            stmt = self._parse_statement()
+            if stmt:
+                statements.append(stmt)
+            
+            # 如果刚解析完一个语句（遇到句号），检查下一个token
+            # 如果是 印 或其他顶层操作，块结束
+            if self._current().type == TokenType.WORD:
+                if self._current().value in {'印'}:
+                    break
+        
+        if len(statements) == 0:
+            return Nil()
+        elif len(statements) == 1:
+            return statements[0]
+        else:
+            return Block(statements)
+    
+    def _is_block_end(self) -> bool:
+        """检查是否到达块结束"""
+        tok = self._current()
+        
+        # 文件结束
+        if tok.type == TokenType.EOF:
+            return True
+        
+        # 只有遇到新的函数定义才结束块
+        # 注意：块内可以有 定 定义局部变量
+        if tok.type == TokenType.WORD and tok.value in {'函'}:
+            return True
+        
+        return False
 
     def _parse_expression(self) -> Node:
         return self._parse_pipeline()

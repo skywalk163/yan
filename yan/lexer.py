@@ -16,6 +16,7 @@ class TokenType(Enum):
     COMMA = auto()     # ，
     DOT = auto()       # 。
     SEMI = auto()      # ；
+    COLON = auto()     # ：（块开始）
     EQUALS = auto()    # =
     MATH = auto()      # $(...) 数学表达式
     PYTHON = auto()    # {{...}} Python 代码块
@@ -154,6 +155,12 @@ class Lexer:
 
             if ch == '=':
                 tokens.append(Token(TokenType.EQUALS, '=', line, col))
+                i += 1; col += 1
+                continue
+
+            # 冒号：块开始标记
+            if ch == '：':
+                tokens.append(Token(TokenType.COLON, '：', line, col))
                 i += 1; col += 1
                 continue
 

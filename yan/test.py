@@ -105,6 +105,29 @@ def test_reduce():
     print("  [OK] 归约通过")
 
 
+def test_block():
+    """测试块语法"""
+    print("测试块语法...")
+    # 带局部变量的函数 - 使用印来输出，但测试需要捕获输出
+    import io
+    import sys
+    old_stdout = sys.stdout
+    sys.stdout = io.StringIO()
+    
+    run("""
+定距离=函a b：
+  定差=减a b。
+  若差小0则负差否则差。
+。
+印距离3 7。
+""")
+    output = sys.stdout.getvalue()
+    sys.stdout = old_stdout
+    
+    assert output.strip() == '4', f"期望输出 '4'，得到 '{output.strip()}'"
+    print("  [OK] 块语法通过")
+
+
 def run_all():
     """运行所有测试"""
     print("=" * 40)
@@ -123,6 +146,7 @@ def run_all():
     test_logic()
     test_string()
     test_reduce()
+    test_block()
 
     print()
     print("=" * 40)

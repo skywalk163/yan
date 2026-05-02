@@ -95,6 +95,12 @@ class Lambda(Node):
 
 
 @dataclass
+class Block(Node):
+    """代码块（多个语句）"""
+    statements: List[Node]
+
+
+@dataclass
 class If(Node):
     """条件分支"""
     cond: Node
