@@ -49,7 +49,7 @@ class Lexer:
     HAN_START = 0x4E00
     HAN_END = 0x9FFF
 
-    def __init__(self, keywords: Optional[Set[str]] = None):
+    def __init__(self, keywords: Optional[Set[str]] = None, user_words: Optional[Set[str]] = None):
         self.keywords = keywords or {
             # 多字动词
             '定义', '阶乘', '平方', '否则', '如果', '那么', '不等',
@@ -64,6 +64,7 @@ class Lexer:
             '若', '则', '定', '函', '行',
             '真', '假',
         }
+        self.user_words = user_words or set()  # 用户定义的词（不拆分）
         self.max_keyword_len = max(len(k) for k in self.keywords) if self.keywords else 1
 
     def _is_han(self, ch: str) -> bool:
@@ -262,8 +263,40 @@ class Lexer:
 
             # 汉字或字母标识符
             if self._is_ident_char(ch):
+                # 尝试最长匹配用户定义的词
+                if self._is_han(ch) and self.user_words:
+                    for length in range(min(10, len(source) - i), 0, -1):  # 最多10个字
+                        candidate = source[i:i+length]
+                        if candidate in self.user_words:
+                            tokens.append(Token(TokenType.WORD, candidate, line, col))
+                            col += length
+                            i += length
+                            continue
+                
                 # 尝试最长匹配关键字（只对汉字关键字）
                 if self._is_han(ch):
+                    # 特殊处理：如果前一个 token 是 '定'，检查整个连续汉字序列后面是否跟着 '='
+                    # 如果是，则不拆分关键字（这是变量/函数名）
+                    should_not_split = False
+                    if tokens and tokens[-1].type == TokenType.WORD and tokens[-1].value == '定':
+                        j = i
+                        while j < len(source) and self._is_han(source[j]):
+                            j += 1
+                        # 跳过空白
+                        k = j
+                        while k < len(source) and source[k] in ' \t':
+                            k += 1
+                        # 检查是否跟着 '='
+                        if k < len(source) and source[k] == '=':
+                            should_not_split = True
+                            # 不拆分，整个序列作为一个标识符
+                            value = source[i:j]
+                            tokens.append(Token(TokenType.WORD, value, line, col))
+                            col += len(value)
+                            i = j
+                            continue
+                    
+                    # 否则，尝试匹配关键字
                     matched = None
                     matched_len = 0
                     for length in range(min(self.max_keyword_len, len(source) - i), 0, -1):

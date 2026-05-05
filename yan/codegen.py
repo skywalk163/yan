@@ -138,20 +138,41 @@ class PythonCodeGen:
                 # 特殊处理高阶函数
                 if verb_name == '皆':
                     # 皆(func, lst) - 管道值是 lst
+                    # 如果有多个参数，第一个是动词，其余是柯里化参数
                     if len(args) == 1:
                         result = f'{py_func_name}({args[0]}, {result})'
+                    elif len(args) >= 2 and isinstance(step.args[0], Word):
+                        # 柯里化：乘2 -> lambda x: _mul(x, 2)
+                        inner_verb = step.args[0].name
+                        if inner_verb in BUILTINS:
+                            inner_py_func, _ = BUILTINS[inner_verb]
+                            inner_func_name = inner_py_func.__name__ if hasattr(inner_py_func, '__name__') else str(inner_py_func)
+                            curried_args = ', '.join(args[1:])
+                            result = f'{py_func_name}((lambda _x: {inner_func_name}(_x, {curried_args})), {result})'
+                        else:
+                            result = f'{py_func_name}({args[0]}, {", ".join(args[1:])}, {result})'
                     else:
                         result = f'{py_func_name}({", ".join(args)}, {result})'
                 elif verb_name == '只':
                     # 只(pred, lst) - 管道值是 lst
                     if len(args) == 1:
                         result = f'{py_func_name}({args[0]}, {result})'
+                    elif len(args) >= 2 and isinstance(step.args[0], Word):
+                        # 柯里化：大2 -> lambda x: _gt(x, 2)
+                        inner_verb = step.args[0].name
+                        if inner_verb in BUILTINS:
+                            inner_py_func, _ = BUILTINS[inner_verb]
+                            inner_func_name = inner_py_func.__name__ if hasattr(inner_py_func, '__name__') else str(inner_py_func)
+                            curried_args = ', '.join(args[1:])
+                            result = f'{py_func_name}((lambda _x: {inner_func_name}(_x, {curried_args})), {result})'
+                        else:
+                            result = f'{py_func_name}({args[0]}, {", ".join(args[1:])}, {result})'
                     else:
                         result = f'{py_func_name}({", ".join(args)}, {result})'
                 elif verb_name == '归':
                     # 归(func, init, lst) - 管道值是 lst
                     # args[0] 可能是柯里化的函数，需要提取原始函数
-                    if len(args) >= 1:
+                    if len(step.args) >= 1:
                         # 检查 args[0] 是否是 Call（副词吞噬的动词调用）
                         if isinstance(step.args[0], Call):
                             inner_verb = step.args[0].verb.name
@@ -159,7 +180,18 @@ class PythonCodeGen:
                                 inner_py_func, _ = BUILTINS[inner_verb]
                                 inner_func_name = inner_py_func.__name__ if hasattr(inner_py_func, '__name__') else str(inner_py_func)
                                 # 使用原始函数名
-                                init_val = args[1] if len(args) > 1 else '0'
+                                # init 从 step.args[1] 获取，而不是从 args 获取
+                                init_val = self.generate(step.args[1]) if len(step.args) > 1 else '0'
+                                result = f'_reduce({inner_func_name}, {init_val}, {result})'
+                            else:
+                                result = f'{py_func_name}({args[0]}, {", ".join(args[1:])}, {result})'
+                        # 检查 args[0] 是否是 Word（动词引用）
+                        elif isinstance(step.args[0], Word):
+                            inner_verb = step.args[0].name
+                            if inner_verb in BUILTINS:
+                                inner_py_func, _ = BUILTINS[inner_verb]
+                                inner_func_name = inner_py_func.__name__ if hasattr(inner_py_func, '__name__') else str(inner_py_func)
+                                init_val = self.generate(step.args[1]) if len(step.args) > 1 else '0'
                                 result = f'_reduce({inner_func_name}, {init_val}, {result})'
                             else:
                                 result = f'{py_func_name}({args[0]}, {", ".join(args[1:])}, {result})'

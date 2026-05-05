@@ -15,10 +15,29 @@ class ParserError(Exception):
         super().__init__(f"语法错误 (行{line}, 列{col}): {message}")
 
 
+# 全局用户动词集合（用于交互模式）
+_global_user_verbs: Set[str] = set()
+
+
+def get_global_user_verbs() -> Set[str]:
+    """获取全局用户动词集合"""
+    return _global_user_verbs
+
+
+def add_global_user_verb(name: str):
+    """添加全局用户动词"""
+    _global_user_verbs.add(name)
+
+
+def clear_global_user_verbs():
+    """清空全局用户动词集合"""
+    _global_user_verbs.clear()
+
+
 class Parser:
     """语法分析器"""
 
-    ADVERBS = {'皆', '只', '归', '潜'}
+    ADVERBS = {'潜'}  # 潜 is the only true adverb that modifies verbs
     VARARGS = {'列', '典', '序'}
     BUILTIN_VERBS = {
         '加', '减', '乘', '除', '模', '幂', '绝对', '负',
@@ -31,14 +50,17 @@ class Parser:
         '列', '典', '序', '范围',
     }
 
-    def __init__(self):
+    def __init__(self, use_global_verbs: bool = False):
         self.tokens: List[Token] = []
         self.pos: int = 0
-        self.user_verbs: Set[str] = set()  # 用户定义的函数名
+        self.user_verbs: Set[str] = set()
+        self.use_global_verbs = use_global_verbs
 
     @property
     def VERBS(self) -> Set[str]:
         """合并内置动词和用户定义动词"""
+        if self.use_global_verbs:
+            return self.BUILTIN_VERBS | _global_user_verbs | self.user_verbs
         return self.BUILTIN_VERBS | self.user_verbs
 
     def parse(self, tokens: List[Token]) -> Program:
@@ -77,9 +99,13 @@ class Parser:
                             # 定 名称 = 函 ...
                             if next_tok.type == TokenType.WORD and next_tok.value == '函':
                                 self.user_verbs.add(name_tok.value)
+                                if self.use_global_verbs:
+                                    _global_user_verbs.add(name_tok.value)
                             # 定 名称 = {{...}} (Python 代码块，可能是函数)
                             elif next_tok.type == TokenType.PYTHON:
                                 self.user_verbs.add(name_tok.value)
+                                if self.use_global_verbs:
+                                    _global_user_verbs.add(name_tok.value)
             pos += 1
 
     def _current(self) -> Token:
@@ -118,6 +144,50 @@ class Parser:
     def _is_verb(self, name: str) -> bool:
         return name in self.VERBS or name in self.ADVERBS
 
+    def _try_match_user_verb(self) -> Optional[str]:
+        """尝试匹配用户定义的函数名（可能被拆分为多个 WORD）"""
+        if not self.use_global_verbs:
+            return None
+        
+        # 收集当前位置开始的连续 WORD
+        saved_pos = self.pos
+        word_parts = []
+        while self._current().type == TokenType.WORD:
+            word_parts.append(self._current().value)
+            self.pos += 1
+        
+        self.pos = saved_pos  # 恢复位置
+        
+        if not word_parts:
+            return None
+        
+        # 尝试最长匹配
+        for length in range(len(word_parts), 0, -1):
+            candidate = ''.join(word_parts[:length])
+            if candidate in _global_user_verbs:
+                # 消耗匹配的 tokens
+                for _ in range(length):
+                    self._advance()
+                return candidate
+        
+        return None
+
+    def _collect_call_args(self) -> List[Node]:
+        """收集函数调用的参数"""
+        args = []
+        while not self._is_at_end():
+            tok = self._current()
+            if tok.type in {TokenType.DOT, TokenType.SEMI, TokenType.COMMA,
+                            TokenType.RPAREN, TokenType.EQUALS}:
+                break
+            if tok.type == TokenType.WORD and tok.value in {'若', '则', '否则'}:
+                break
+            if tok.type == TokenType.WORD and self._is_verb(tok.value):
+                break
+            arg = self._parse_atom()
+            args.append(arg)
+        return args
+
     def _parse_statement(self) -> Optional[Node]:
         if self._match(TokenType.DOT, TokenType.SEMI):
             return None
@@ -131,13 +201,30 @@ class Parser:
         return expr
 
     def _parse_define(self) -> Define:
-        self._advance()
-        name_tok = self._expect(TokenType.WORD, "期望标识符")
-        name = name_tok.value
+        self._advance()  # 消耗 '定'
+        
+        # 收集连续的 WORD 作为名称（直到遇到 '='）
+        name_parts = []
+        while self._current().type == TokenType.WORD:
+            # 检查下一个是否是 '='
+            next_tok = self._peek(1)
+            if next_tok.type == TokenType.EQUALS:
+                # 这是名称的最后一部分
+                name_parts.append(self._advance().value)
+                break
+            name_parts.append(self._advance().value)
+        
+        if not name_parts:
+            raise ParserError("期望标识符", self._current().line, self._current().col)
+        
+        name = ''.join(name_parts)
         self._expect(TokenType.EQUALS, "期望 '='")
 
         if self._check_word('函'):
             value = self._parse_lambda()
+            # 添加到全局用户动词集合
+            if self.use_global_verbs:
+                _global_user_verbs.add(name)
         else:
             value = self._parse_expression()
 
@@ -148,11 +235,30 @@ class Parser:
 
         params = []
         # 收集参数（非动词、非关键字的标识符）
+        # 参数必须连续，遇到其他类型则停止
         while (self._current().type == TokenType.WORD and
                self._current().value not in self.VERBS and
                self._current().value not in {'若', '则', '否则', '真', '假', '空'} and
                self._current().value not in {'定', '函'}):
-            params.append(self._advance().value)
+            # 如果下一个 token 是动词，当前可能是函数体的开始
+            # 但如果当前 token 后面还是非动词的 WORD，则继续收集参数
+            next_tok = self._peek(1)
+            if next_tok.type == TokenType.DOT or next_tok.type == TokenType.COLON:
+                # 当前 token 是最后一个参数
+                params.append(self._advance().value)
+                break
+            if next_tok.type == TokenType.WORD and next_tok.value not in self.VERBS:
+                # 下一个也是非动词，继续收集
+                params.append(self._advance().value)
+            elif next_tok.type == TokenType.WORD and self._is_verb(next_tok.value):
+                # 下一个是动词，当前 token 可能是参数，也可能是函数体
+                # 检查当前 token 是否像参数名（单字符或常见命名模式）
+                # 如果只有一个 token 后面跟动词，则当前是参数
+                if len(params) == 0:
+                    params.append(self._advance().value)
+                break
+            else:
+                params.append(self._advance().value)
 
         # 检查是否有块（冒号或句号后换行）
         if self._current().type == TokenType.COLON:
@@ -244,6 +350,16 @@ class Parser:
 
         # 动词开头（必须是已知动词）
         if self._current().type == TokenType.WORD and self._is_verb(self._current().value):
+            # 检查是否是用户定义的函数名（可能被拆分为多个 WORD）
+            # 例如：用户定义了 "加三"，但词法分析器拆分为 "加" "三"
+            if self.use_global_verbs:
+                # 尝试匹配用户定义的函数名
+                matched_name = self._try_match_user_verb()
+                if matched_name:
+                    func = Word(matched_name)
+                    args = self._collect_call_args()
+                    return Call(func, args)
+            
             verb_name = self._advance().value
             verb = Word(verb_name)
             args = []
@@ -268,6 +384,11 @@ class Parser:
                     # 可变参数动词：停止
                     if verb_name in self.VARARGS:
                         break
+                    # 高阶函数（归、皆、只）：动词作为参数传递（只取动词名，不解析参数）
+                    if verb_name in {'归', '皆', '只'}:
+                        args.append(Word(self._advance().value))
+                        # 继续收集后续参数（如初始值）
+                        continue
                     # 普通动词：吞噬
                     arg = self._parse_term()
                     args.append(arg)
@@ -289,6 +410,61 @@ class Parser:
                 args.append(arg)
 
             return Call(verb, args)
+
+        # 用户定义函数调用或普通标识符
+        if self._current().type == TokenType.WORD:
+            # 检查是否是布尔值或空值 - 这些应该由 _parse_atom() 处理
+            if self._current().value in {'真', '假', '空'}:
+                left = self._parse_atom()
+            # 检查下一个 token 是否是动词 - 如果是，当前是数据，不是函数调用
+            elif self._peek(1).type == TokenType.WORD and self._is_verb(self._peek(1).value):
+                left = self._parse_atom()
+            else:
+                # 尝试匹配用户定义的函数名
+                matched_name = self._try_match_user_verb()
+                if matched_name:
+                    func = Word(matched_name)
+                    args = self._collect_call_args()
+                    return Call(func, args)
+                
+                # 收集连续的 WORD 作为函数名（但遇到动词时停止）
+                name_parts = []
+                while self._current().type == TokenType.WORD and not self._is_verb(self._current().value):
+                    name_parts.append(self._advance().value)
+                
+                if name_parts:
+                    func_name = ''.join(name_parts)
+                    func = Word(func_name)
+                    args = []
+                    
+                    # 收集参数
+                    while not self._is_at_end():
+                        tok = self._current()
+                        if tok.type in {TokenType.DOT, TokenType.SEMI, TokenType.COMMA,
+                                        TokenType.RPAREN, TokenType.EQUALS}:
+                            break
+                        if tok.type == TokenType.WORD and tok.value in {'若', '则', '否则'}:
+                            break
+                        if tok.type == TokenType.WORD and self._is_verb(tok.value):
+                            break
+                        arg = self._parse_atom()
+                        args.append(arg)
+                    
+                    return Call(func, args)
+                else:
+                    left = self._parse_atom()
+
+            # 中缀动词（不能是条件关键字）
+            while (self._current().type == TokenType.WORD and
+                   self._is_verb(self._current().value) and
+                   self._current().value not in self.ADVERBS and
+                   self._current().value not in {'若', '则', '否则'}):
+                verb_name = self._advance().value
+                verb = Word(verb_name)
+                right = self._parse_term()  # 改为 _parse_term() 以支持动词作为右操作数
+                left = Call(verb, [left, right])
+
+            return left
 
         # 数据开头（数字、字符串、标识符）
         left = self._parse_atom()

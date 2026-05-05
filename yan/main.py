@@ -4,9 +4,9 @@
 """
 
 import sys
-from typing import Any
+from typing import Any, Optional, Dict
 from lexer import Lexer, LexerError
-from parser import Parser, ParserError, process_adverbs
+from parser import Parser, ParserError, process_adverbs, add_global_user_verb, _global_user_verbs
 from codegen import PythonCodeGen, CodeGenError
 from runtime import (
     _add, _sub, _mul, _div, _mod, _pow, _abs, _neg,
@@ -18,12 +18,32 @@ from runtime import (
     BUILTINS
 )
 
+# 全局环境，用于交互模式
+_global_env: Optional[Dict[str, Any]] = None
 
-def run(source: str, debug: bool = False) -> Any:
-    """运行言语言代码"""
+
+def create_env() -> Dict[str, Any]:
+    """创建新的执行环境"""
+    env = globals().copy()
+    return env
+
+
+def run(source: str, debug: bool = False, env: Optional[Dict[str, Any]] = None, use_global_verbs: bool = False) -> Any:
+    """运行言语言代码
+    
+    Args:
+        source: 言语言源代码
+        debug: 是否显示调试信息
+        env: 执行环境（可选，用于保持全局变量）
+        use_global_verbs: 是否使用全局用户动词集合（交互模式）
+    
+    Returns:
+        执行结果
+    """
     try:
         # 1. 词法分析
-        lexer = Lexer()
+        user_words = _global_user_verbs if use_global_verbs else None
+        lexer = Lexer(user_words=user_words)
         tokens = lexer.tokenize(source)
         if debug:
             print("=== Tokens ===")
@@ -32,7 +52,7 @@ def run(source: str, debug: bool = False) -> Any:
             print()
 
         # 2. 语法分析
-        parser = Parser()
+        parser = Parser(use_global_verbs=use_global_verbs)
         ast = parser.parse(tokens)
         ast = process_adverbs(ast)
         if debug:
@@ -49,7 +69,8 @@ def run(source: str, debug: bool = False) -> Any:
             print()
 
         # 4. 执行
-        env = globals().copy()
+        if env is None:
+            env = create_env()
 
         # 对于单表达式，使用 eval
         if '\n' not in py_code:
@@ -97,10 +118,23 @@ def run(source: str, debug: bool = False) -> Any:
         return None
 
 
+def run_repl(source: str, debug: bool = False) -> Any:
+    """在交互模式下运行（保持全局变量和用户定义的函数）"""
+    global _global_env
+    
+    if _global_env is None:
+        _global_env = create_env()
+    
+    return run(source, debug=debug, env=_global_env, use_global_verbs=True)
+
+
 def repl():
     """交互式环境"""
-    print("言语言 v0.1")
+    global _global_env
+    
+    print("言语言 v0.2")
     print("输入代码，以空行结束。输入 'quit' 或 '退出' 退出。")
+    print("提示：变量和函数会保持在当前会话中。")
     print()
 
     while True:
@@ -124,7 +158,7 @@ def repl():
                 continue
 
             source = ''.join(lines)
-            result = run(source, debug=False)
+            result = run_repl(source, debug=False)
             if result is not None:
                 print(f"  => {result}")
 
@@ -141,6 +175,14 @@ def main():
 
     filename = sys.argv[1]
     debug = '--debug' in sys.argv
+
+    # 检查是否是 .ymd 文件
+    if filename.endswith('.ymd'):
+        from md_executor import run_ymd
+        # 自动生成输出文件名
+        output_file = filename[:-4] + '_output.md'
+        run_ymd(filename, output_file, debug=debug)
+        return
 
     try:
         with open(filename, 'r', encoding='utf-8') as f:
