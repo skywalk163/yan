@@ -11,8 +11,7 @@ class TokenType(Enum):
     NUM = auto()       # 数字：1, 2.5, -3
     STR = auto()       # 字符串："hello"
     WORD = auto()      # 动词/标识符：加, 乘, 列, x, y
-    LPAREN = auto()    # 「
-    RPAREN = auto()    # 」
+    QUOTE = auto()     # ' (引用)
     COMMA = auto()     # ，
     DOT = auto()       # 。
     SEMI = auto()      # ；
@@ -53,6 +52,21 @@ class Lexer:
         self.keywords = keywords or {
             # 多字动词
             '定义', '阶乘', '平方', '否则', '如果', '那么', '不等',
+            # 数学库
+            '正弦', '余弦', '正切', '反正弦', '反余弦', '反正切',
+            '指数', '对数', '对数10', '开方', '取整', '进位', '四舍五入',
+            '随机', '随机整数', '圆周率', '自然常数',
+            # 字符串库
+            '长度', '连接', '分割', '替换', '截取', '小写', '大写',
+            '查找', '包含', '去空', '开头是', '结尾是',
+            # 文件库
+            '读文件', '写文件', '追加文件', '存在', '是文件', '是目录',
+            '列目录', '建目录', '删文件', '删目录', '当前目录',
+            '文件名', '目录名', '扩展名',
+            # 时间库
+            '当前时间', '日期', '时间', '日期时间', '格式化时间', '睡眠',
+            # 类型检查
+            '是数', '是串', '是表', '是函', '是真', '是空', '类型',
             # 单字动词
             '加', '减', '乘', '除', '模', '幂', '绝对', '负',
             '大', '小', '等',
@@ -128,6 +142,12 @@ class Lexer:
                     i += 1
                 continue
 
+            # 引用符号：' (Lisp-style quote)
+            if ch == "'":
+                tokens.append(Token(TokenType.QUOTE, "'", line, col))
+                i += 1; col += 1
+                continue
+
             # 结构符
             if ch == '。':
                 tokens.append(Token(TokenType.DOT, '。', line, col))
@@ -141,16 +161,6 @@ class Lexer:
 
             if ch == '；':
                 tokens.append(Token(TokenType.SEMI, '；', line, col))
-                i += 1; col += 1
-                continue
-
-            if ch == '「':
-                tokens.append(Token(TokenType.LPAREN, '「', line, col))
-                i += 1; col += 1
-                continue
-
-            if ch == '」':
-                tokens.append(Token(TokenType.RPAREN, '」', line, col))
                 i += 1; col += 1
                 continue
 

@@ -48,6 +48,15 @@ class Parser:
         '印', '读', '写', '行',
         '若', '则', '否则', '定', '函',
         '列', '典', '序', '范围',
+        # 字符串库
+        '长度', '连接', '分割', '替换', '截取', '小写', '大写',
+        '查找', '包含', '去空', '开头是', '结尾是',
+        # 数学库
+        '正弦', '余弦', '正切', '反正弦', '反余弦', '反正切',
+        '指数', '对数', '对数10', '开方', '取整', '进位', '四舍五入',
+        '随机', '随机整数', '圆周率', '自然常数',
+        # 类型检查
+        '是数', '是串', '是表', '是函', '是真', '是空', '类型',
     }
 
     def __init__(self, use_global_verbs: bool = False):
@@ -178,7 +187,7 @@ class Parser:
         while not self._is_at_end():
             tok = self._current()
             if tok.type in {TokenType.DOT, TokenType.SEMI, TokenType.COMMA,
-                            TokenType.RPAREN, TokenType.EQUALS}:
+                            TokenType.EQUALS}:
                 break
             if tok.type == TokenType.WORD and tok.value in {'若', '则', '否则'}:
                 break
@@ -237,14 +246,17 @@ class Parser:
         # 收集参数（非动词、非关键字的标识符）
         # 参数必须连续，遇到其他类型则停止
         while (self._current().type == TokenType.WORD and
-               self._current().value not in self.VERBS and
-               self._current().value not in {'若', '则', '否则', '真', '假', '空'} and
-               self._current().value not in {'定', '函'}):
-            # 如果下一个 token 是动词，当前可能是函数体的开始
-            # 但如果当前 token 后面还是非动词的 WORD，则继续收集参数
+                self._current().value not in self.VERBS and
+                self._current().value not in {'若', '则', '否则', '真', '假', '空'} and
+                self._current().value not in {'定', '函'}):
+            # 如果下一个 token 是动词或条件关键字，当前可能是函数体的开始
             next_tok = self._peek(1)
             if next_tok.type == TokenType.DOT or next_tok.type == TokenType.COLON:
                 # 当前 token 是最后一个参数
+                params.append(self._advance().value)
+                break
+            if next_tok.type == TokenType.WORD and next_tok.value in {'若', '则', '否则'}:
+                # 下一个是条件关键字，停止收集参数
                 params.append(self._advance().value)
                 break
             if next_tok.type == TokenType.WORD and next_tok.value not in self.VERBS:
@@ -252,8 +264,6 @@ class Parser:
                 params.append(self._advance().value)
             elif next_tok.type == TokenType.WORD and self._is_verb(next_tok.value):
                 # 下一个是动词，当前 token 可能是参数，也可能是函数体
-                # 检查当前 token 是否像参数名（单字符或常见命名模式）
-                # 如果只有一个 token 后面跟动词，则当前是参数
                 if len(params) == 0:
                     params.append(self._advance().value)
                 break
@@ -368,7 +378,7 @@ class Parser:
                 tok = self._current()
 
                 if tok.type in {TokenType.DOT, TokenType.SEMI, TokenType.COMMA,
-                                TokenType.RPAREN, TokenType.EQUALS}:
+                                TokenType.EQUALS}:
                     break
 
                 # 遇到条件关键字，停止
@@ -427,9 +437,9 @@ class Parser:
                     args = self._collect_call_args()
                     return Call(func, args)
                 
-                # 收集连续的 WORD 作为函数名（但遇到动词时停止）
+                # 收集连续的 WORD 作为函数名（但遇到动词或布尔值时停止）
                 name_parts = []
-                while self._current().type == TokenType.WORD and not self._is_verb(self._current().value):
+                while self._current().type == TokenType.WORD and not self._is_verb(self._current().value) and self._current().value not in {'真', '假', '空'}:
                     name_parts.append(self._advance().value)
                 
                 if name_parts:
@@ -441,7 +451,7 @@ class Parser:
                     while not self._is_at_end():
                         tok = self._current()
                         if tok.type in {TokenType.DOT, TokenType.SEMI, TokenType.COMMA,
-                                        TokenType.RPAREN, TokenType.EQUALS}:
+                                        TokenType.EQUALS}:
                             break
                         if tok.type == TokenType.WORD and tok.value in {'若', '则', '否则'}:
                             break
@@ -483,9 +493,10 @@ class Parser:
 
     def _parse_atom(self) -> Node:
         """解析原子"""
-        if self._match(TokenType.LPAREN):
+        # 引用：'expr
+        if self._current().type == TokenType.QUOTE:
+            self._advance()  # 跳过 '
             expr = self._parse_expression()
-            self._expect(TokenType.RPAREN, "期望 '」'")
             return Quote(expr)
 
         if self._check_word('若'):
@@ -536,15 +547,44 @@ class Parser:
 
         self._expect(TokenType.WORD, "期望 '则'")
 
-        # 解析 then 分支（单个 term）
-        then_branch = self._parse_term()
+        # 解析 then 分支（表达式，直到遇到 '否则' 或 '。'）
+        then_branch = self._parse_expr_until({'否则'})
 
         else_branch = None
+        # 跳过可能的句号（在块结构中，句号可能在 '否则' 之前）
+        if self._current().type == TokenType.DOT:
+            self._advance()
         if self._check_word('否则'):
             self._advance()
-            else_branch = self._parse_term()
+            else_branch = self._parse_expr_until(set())
 
         return If(cond, then_branch, else_branch)
+
+    def _parse_expr_until(self, stop_words: Set[str]) -> Node:
+        """解析表达式，直到遇到指定的停止词"""
+        # 收集所有 term 直到遇到停止词
+        terms = []
+        while not self._is_at_end():
+            if self._current().type == TokenType.DOT:
+                break
+            if self._current().type == TokenType.WORD and self._current().value in stop_words:
+                break
+            if self._current().type == TokenType.WORD and self._current().value in {'若', '则', '否则'}:
+                # 如果是嵌套的条件语句
+                if self._current().value == '若':
+                    terms.append(self._parse_if())
+                else:
+                    break
+            else:
+                terms.append(self._parse_term())
+
+        if len(terms) == 0:
+            return Nil()
+        elif len(terms) == 1:
+            return terms[0]
+        else:
+            # 多个 term 组成管道
+            return Pipeline(terms)
 
 
 def process_adverbs(node: Node, adverbs: Set[str] = None) -> Node:

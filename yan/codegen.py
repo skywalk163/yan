@@ -4,7 +4,7 @@
 
 from typing import Dict, Tuple, Any
 from nodes import *
-from runtime import BUILTINS
+from runtime import ALL_BUILTINS as BUILTINS
 
 
 class CodeGenError(Exception):
@@ -219,6 +219,10 @@ class PythonCodeGen:
             return {'type': 'num', 'value': node.value}
         elif isinstance(node, Str):
             return {'type': 'str', 'value': node.value}
+        elif isinstance(node, Bool):
+            return {'type': 'bool', 'value': node.value}
+        elif isinstance(node, Nil):
+            return {'type': 'nil'}
         elif isinstance(node, Word):
             return {'type': 'word', 'name': node.name}
         elif isinstance(node, Call):
@@ -231,6 +235,21 @@ class PythonCodeGen:
             return {
                 'type': 'pipeline',
                 'steps': [self._ast_to_dict(s) for s in node.steps]
+            }
+        elif isinstance(node, Quote):
+            return {'type': 'quote', 'expr': self._ast_to_dict(node.expr)}
+        elif isinstance(node, Lambda):
+            return {
+                'type': 'lambda',
+                'params': node.params,
+                'body': self._ast_to_dict(node.body)
+            }
+        elif isinstance(node, If):
+            return {
+                'type': 'if',
+                'cond': self._ast_to_dict(node.cond),
+                'then': self._ast_to_dict(node.then_branch),
+                'else': self._ast_to_dict(node.else_branch) if node.else_branch else None
             }
         else:
             return {'type': 'unknown'}

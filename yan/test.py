@@ -408,6 +408,140 @@ def test_markdown_math():
     print("  [OK] Markdown 数学公式通过")
 
 
+# ============ 标准库测试 ============
+
+def test_stdlib_math():
+    """测试数学库"""
+    print("测试数学库...")
+    
+    # 基础数学
+    assert run("开方16。") == 4.0
+    assert run("取整3.9。") == 3
+    assert run("进位3.1。") == 4
+    assert run("四舍五入3.5。") == 4
+    assert run("四舍五入3.4。") == 3
+    
+    # 三角函数
+    import math
+    assert abs(run("正弦0。") - 0.0) < 0.0001
+    assert abs(run("余弦0。") - 1.0) < 0.0001
+    assert abs(run("正切0。") - 0.0) < 0.0001
+    
+    # 指数对数
+    assert abs(run("指数1。") - math.e) < 0.0001
+    assert abs(run("对数1。") - 0.0) < 0.0001
+    assert abs(run("对数10 100。") - 2.0) < 0.0001
+    
+    # 常量
+    assert abs(run("圆周率。") - math.pi) < 0.0001
+    assert abs(run("自然常数。") - math.e) < 0.0001
+    
+    print("  [OK] 数学库通过")
+
+
+def test_stdlib_string():
+    """测试字符串库"""
+    print("测试字符串库...")
+    
+    # 基础操作
+    assert run('长度"你好"。') == 2
+    assert run('连接"你好""世界"。') == "你好世界"
+    assert run('分割"a,b,c"","。') == ["a", "b", "c"]
+    assert run('替换"abc""b""x"。') == "axc"
+    
+    # 大小写
+    assert run('小写"HELLO"。') == "hello"
+    assert run('大写"hello"。') == "HELLO"
+    
+    # 查找
+    assert run('查找"hello""ll"。') == 2
+    assert run('包含"hello""ll"。') == True
+    assert run('包含"hello""xx"。') == False
+    
+    # 其他
+    assert run('去空"  hello  "。') == "hello"
+    assert run('开头是"hello""he"。') == True
+    assert run('结尾是"hello""lo"。') == True
+    
+    print("  [OK] 字符串库通过")
+
+
+def test_stdlib_time():
+    """测试时间库"""
+    print("测试时间库...")
+    
+    # 日期时间格式
+    date = run("日期。")
+    assert isinstance(date, str) and len(date) == 10  # YYYY-MM-DD
+    
+    time = run("时间。")
+    assert isinstance(time, str) and len(time) == 8  # HH:MM:SS
+    
+    datetime = run("日期时间。")
+    assert isinstance(datetime, str) and len(datetime) == 19  # YYYY-MM-DD HH:MM:SS
+    
+    # 时间戳
+    now = run("当前时间。")
+    assert isinstance(now, float) and now > 0
+    
+    print("  [OK] 时间库通过")
+
+
+def test_stdlib_type():
+    """测试类型检查库"""
+    print("测试类型检查库...")
+    
+    # 类型判断
+    assert run("是数42。") == True
+    assert run("是串\"hello\"。") == True
+    assert run("列1 2 3，是表。") == True  # 管道形式
+    
+    # 类型名称
+    assert run("类型42。") == "整数"
+    assert run("类型3.14。") == "浮点"
+    assert run("类型\"hello\"。") == "串"
+    assert run("列1 2 3，类型。") == "表"  # 管道形式
+    assert run("类型真。") == "真"
+    
+    print("  [OK] 类型检查库通过")
+
+
+def test_stdlib_file():
+    """测试文件库"""
+    print("测试文件库...")
+    
+    import os
+    import tempfile
+    
+    # 创建临时目录
+    with tempfile.TemporaryDirectory() as tmpdir:
+        test_file = os.path.join(tmpdir, "test.txt")
+        
+        # 写文件
+        run(f'写文件"{test_file}""hello"。')
+        assert os.path.exists(test_file)
+        
+        # 读文件
+        content = run(f'读文件"{test_file}"。')
+        assert content == "hello"
+        
+        # 追加文件
+        run(f'追加文件"{test_file}"" world"。')
+        content = run(f'读文件"{test_file}"。')
+        assert content == "hello world"
+        
+        # 文件检查
+        assert run(f'存在"{test_file}"。') == True
+        assert run(f'是文件"{test_file}"。') == True
+        assert run(f'是目录"{tmpdir}"。') == True
+        
+        # 路径操作
+        assert run(f'文件名"{test_file}"。') == "test.txt"
+        assert run(f'扩展名"{test_file}"。') == ".txt"
+    
+    print("  [OK] 文件库通过")
+
+
 # ============ 运行所有测试 ============
 
 def run_all():
@@ -478,6 +612,15 @@ def run_all():
     print("【Markdown】")
     test_markdown_execution()
     test_markdown_math()
+    print()
+    
+    # 标准库
+    print("【标准库】")
+    test_stdlib_math()
+    test_stdlib_string()
+    test_stdlib_time()
+    test_stdlib_type()
+    test_stdlib_file()
     print()
     
     print("=" * 50)

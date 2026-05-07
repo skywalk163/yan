@@ -15,7 +15,20 @@ from runtime import (
     _list, _head, _tail, _nth, _len, _append, _concat, _contains, _empty,
     _range,
     _map, _filter, _reduce,
-    BUILTINS
+    BUILTINS, ALL_BUILTINS,
+    # 数学库
+    _sin, _cos, _tan, _asin, _acos, _atan, _exp, _log, _log10, _sqrt,
+    _floor, _ceil, _round, _random, _randint, _pi, _e,
+    # 字符串库
+    _strlen, _strcat, _strsplit, _strreplace, _strslice, _strlower, _strupper,
+    _strfind, _strcontains, _strstrip, _strstartswith, _strendswith,
+    # 文件库
+    _readfile, _writefile, _appendfile, _fileexists, _isfile, _isdir,
+    _listdir, _mkdir, _removefile, _removedir, _getcwd, _basename, _dirname, _extname,
+    # 时间库
+    _now, _date, _time, _datetime, _strftime, _sleep,
+    # 类型检查
+    _isnum, _isstr, _islist, _isfunc, _isbool, _isnone, _typeof,
 )
 
 # 全局环境，用于交互模式

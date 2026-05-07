@@ -67,6 +67,12 @@ python main.py examples/factorial.yan --debug
 定数据={{import numpy as np; np.array([1, 2, 3])}}。
 ```
 
+### 引用（Quote）
+
+```
+'加1 2。              -- 返回 AST，不执行
+```
+
 ## 项目结构
 
 ```
