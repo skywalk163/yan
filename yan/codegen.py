@@ -52,6 +52,10 @@ class PythonCodeGen:
             return self._gen_block(node)
         elif isinstance(node, If):
             return self._gen_if(node)
+        elif isinstance(node, ForEach):
+            return self._gen_foreach(node)
+        elif isinstance(node, While):
+            return self._gen_while(node)
         else:
             raise CodeGenError(f"未知节点类型: {type(node)}")
 
@@ -336,3 +340,40 @@ class PythonCodeGen:
             return f'({then_code} if {cond} else {else_code})'
         else:
             return f'({then_code} if {cond} else None)'
+
+    def _gen_foreach(self, node: ForEach) -> str:
+        """生成遍历循环"""
+        iterable = self.generate(node.iterable)
+        var = node.var
+        
+        # 生成循环体
+        if isinstance(node.body, Block):
+            lines = []
+            for i, stmt in enumerate(node.body.statements):
+                code = self.generate(stmt)
+                # 最后一个语句作为返回值（如果需要的话）
+                if i == len(node.body.statements) - 1:
+                    lines.append(f'    {code}')
+                else:
+                    lines.append(f'    {code}')
+            body_code = '\n'.join(lines)
+        else:
+            body_code = f'    {self.generate(node.body)}'
+        
+        return f'for {var} in {iterable}:\n{body_code}'
+
+    def _gen_while(self, node: While) -> str:
+        """生成当循环"""
+        cond = self.generate(node.cond)
+        
+        # 生成循环体
+        if isinstance(node.body, Block):
+            lines = []
+            for stmt in node.body.statements:
+                code = self.generate(stmt)
+                lines.append(f'    {code}')
+            body_code = '\n'.join(lines)
+        else:
+            body_code = f'    {self.generate(node.body)}'
+        
+        return f'while {cond}:\n{body_code}'

@@ -109,6 +109,21 @@ class If(Node):
 
 
 @dataclass
+class ForEach(Node):
+    """遍历循环"""
+    var: str
+    iterable: Node
+    body: Node
+
+
+@dataclass
+class While(Node):
+    """当循环"""
+    cond: Node
+    body: Node
+
+
+@dataclass
 class Program(Node):
     """程序（多个语句）"""
     statements: List[Node]

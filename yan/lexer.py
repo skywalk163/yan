@@ -5,6 +5,18 @@
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import List, Optional, Set, Any
+import os
+import sys
+
+# 添加项目根目录到路径
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# 导入百家姓数据
+try:
+    from data.surnames import BAIJIAXING, CONFLICTING_SURNAMES
+except ImportError:
+    BAIJIAXING = set()
+    CONFLICTING_SURNAMES = set()
 
 
 class TokenType(Enum):
@@ -52,6 +64,8 @@ class Lexer:
         self.keywords = keywords or {
             # 多字动词
             '定义', '阶乘', '平方', '否则', '如果', '那么', '不等',
+            # 循环
+            '遍历', '当',
             # 数学库
             '正弦', '余弦', '正切', '反正弦', '反余弦', '反正切',
             '指数', '对数', '对数10', '开方', '取整', '进位', '四舍五入',
@@ -81,6 +95,11 @@ class Lexer:
         self.user_words = user_words or set()  # 用户定义的词（不拆分）
         self.max_keyword_len = max(len(k) for k in self.keywords) if self.keywords else 1
 
+        # 百家姓变量识别
+        self.surnames = BAIJIAXING
+        self.conflicting_surnames = CONFLICTING_SURNAMES
+        self.max_surname_len = max(len(k) for k in self.surnames) if self.surnames else 2
+
     def _is_han(self, ch: str) -> bool:
         """判断是否为汉字"""
         if not ch:
@@ -93,6 +112,18 @@ class Lexer:
         if not ch:
             return False
         return self._is_han(ch) or ch.isalnum() or ch == '_'
+
+    def _try_match_surname(self, source: str, i: int):
+        """尝试匹配姓氏（支持复姓）"""
+        if not self.surnames:
+            return None
+
+        # 尝试最长匹配（复姓最长2字）
+        for length in range(min(self.max_surname_len, len(source) - i), 0, -1):
+            candidate = source[i:i+length]
+            if candidate in self.surnames and candidate not in self.conflicting_surnames:
+                return candidate
+        return None
 
     def _is_same_type(self, ch1: str, ch2: str) -> bool:
         """判断两个字符是否属于同一类型（用于分词）"""
@@ -282,12 +313,10 @@ class Lexer:
                             col += length
                             i += length
                             continue
-                
+
                 # 尝试最长匹配关键字（只对汉字关键字）
                 if self._is_han(ch):
-                    # 特殊处理：如果前一个 token 是 '定'，检查整个连续汉字序列后面是否跟着 '='
-                    # 如果是，则不拆分关键字（这是变量/函数名）
-                    should_not_split = False
+                    # 优先级1：检查是否是"定"后面的变量名
                     if tokens and tokens[-1].type == TokenType.WORD and tokens[-1].value == '定':
                         j = i
                         while j < len(source) and self._is_han(source[j]):
@@ -298,15 +327,14 @@ class Lexer:
                             k += 1
                         # 检查是否跟着 '='
                         if k < len(source) and source[k] == '=':
-                            should_not_split = True
                             # 不拆分，整个序列作为一个标识符
                             value = source[i:j]
                             tokens.append(Token(TokenType.WORD, value, line, col))
                             col += len(value)
                             i = j
                             continue
-                    
-                    # 否则，尝试匹配关键字
+
+                    # 优先级2：尝试匹配关键字（最长匹配优先）
                     matched = None
                     matched_len = 0
                     for length in range(min(self.max_keyword_len, len(source) - i), 0, -1):
@@ -321,6 +349,78 @@ class Lexer:
                         col += matched_len
                         i += matched_len
                         continue
+
+                    # 优先级3：尝试百家姓变量识别
+                    if self.surnames:
+                        surname = self._try_match_surname(source, i)
+                        if surname:
+                            # 找到姓氏，收集完整的变量名（姓氏 + 0-3个汉字）
+                            # 注意：变量名中可能包含关键字字符（如"王小明"中的"小"）
+                            # 但遇到动词时应停止收集
+                            j = i + len(surname)
+                            while j < len(source) and self._is_han(source[j]) and j - i < 4:
+                                # 检查当前位置是否是关键字
+                                found_keyword = False
+                                found_keyword_len = 0
+                                for length in range(min(self.max_keyword_len, len(source) - j), 0, -1):
+                                    if source[j:j+length] in self.keywords:
+                                        found_keyword = True
+                                        found_keyword_len = length
+                                        break
+                                
+                                if found_keyword:
+                                    # 检查这个关键字是否是动词（单字动词）
+                                    # 如果是动词，停止收集；如果不是动词，继续收集
+                                    keyword = source[j:j+found_keyword_len]
+                                    # 单字动词列表（不包括比较操作符，因为它们可能出现在变量名中）
+                                    verbs = {'加', '减', '乘', '除', '模', '幂',
+                                             '且', '或', '非', '首', '余', '入', '长', '添', '连',
+                                             '含', '空', '皆', '只', '归', '潜', '印', '读', '写',
+                                             '若', '则', '定', '函', '行', '真', '假'}
+                                    if keyword in verbs:
+                                        # 是动词，停止收集
+                                        break
+                                    else:
+                                        # 不是动词（如"小"），继续收集
+                                        j += found_keyword_len
+                                        continue
+                                j += 1
+
+                            # 提取变量名
+                            var_name = source[i:j]
+
+                            # 跳过空白
+                            k = j
+                            while k < len(source) and source[k] in ' \t':
+                                k += 1
+
+                            # 检查后面是否跟着 '=' 或动词（确认是变量名）
+                            should_be_var = False
+                            if k < len(source):
+                                # 如果跟着 '='，肯定是变量定义
+                                if source[k] == '=':
+                                    should_be_var = True
+                                # 如果跟着动词，说明这是变量名
+                                elif self._is_han(source[k]):
+                                    # 检查下一个token是否是动词
+                                    next_is_verb = False
+                                    for length in range(min(self.max_keyword_len, len(source) - k), 0, -1):
+                                        if source[k:k+length] in self.keywords:
+                                            next_is_verb = True
+                                            break
+
+                                    # 只有当下一个token是动词时，才确认是变量名
+                                    if next_is_verb:
+                                        should_be_var = True
+                                # 如果跟着句号，也确认为变量名
+                                elif source[k] == '。':
+                                    should_be_var = True
+
+                            if should_be_var:
+                                tokens.append(Token(TokenType.WORD, var_name, line, col))
+                                col += len(var_name)
+                                i = j
+                                continue
 
                     # 非关键字的汉字：收集连续的汉字作为一个标识符
                     # 这样 "安全" 会被作为一个标识符

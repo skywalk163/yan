@@ -223,6 +223,94 @@ $(int(面积))。
     print("  [OK] 双轨制混合使用通过")
 
 
+# ============ 循环测试 ============
+
+def test_foreach_loop():
+    """测试遍历循环"""
+    print("测试遍历循环...")
+    
+    # 基本遍历
+    result = []
+    code = """
+遍历x于列1 2 3：
+印x。
+。
+"""
+    # 由于循环返回 None，我们需要捕获输出
+    import sys
+    import io
+    old_stdout = sys.stdout
+    sys.stdout = io.StringIO()
+    
+    run(code)
+    output = sys.stdout.getvalue()
+    sys.stdout = old_stdout
+    
+    assert "1" in output and "2" in output and "3" in output, f"期望输出 1 2 3，得到 {output}"
+    
+    print("  [OK] 遍历循环通过")
+
+
+def test_while_loop():
+    """测试当循环"""
+    print("测试当循环...")
+    
+    # 简单计数循环
+    code = """
+定计数=0。
+定结果=0。
+当计数小5：
+定结果=结果加计数。
+定计数=计数加1。
+。
+结果。
+"""
+    result = run(code)
+    # 0 + 1 + 2 + 3 + 4 = 10
+    assert result == 10, f"期望 10，得到 {result}"
+    
+    print("  [OK] 当循环通过")
+
+
+# ============ 百家姓变量测试 ============
+
+def test_surname_variables():
+    """测试百家姓变量命名"""
+    print("测试百家姓变量命名...")
+    
+    # 基本定义和使用
+    result = run("""
+定张三=10。
+定李四=20。
+张三加李四。
+""")
+    assert result == 30, f"期望 30，得到 {result}"
+    
+    # 复姓变量
+    result = run("""
+定欧阳=100。
+欧阳加50。
+""")
+    assert result == 150, f"期望 150，得到 {result}"
+    
+    # 3字变量名
+    result = run("""
+定李小二=5。
+李小二乘2。
+""")
+    assert result == 10, f"期望 10，得到 {result}"
+    
+    # 百家姓变量与函数
+    result = run("""
+定张三=10。
+定平方=函x乘x x。
+平方张三。
+""")
+    assert result == 100, f"期望 100，得到 {result}"
+    
+    print("  [OK] 百家姓变量命名通过")
+
+
 # ============ 全局变量/交互模式测试 ============
 
 def test_repl_global_vars():
@@ -588,6 +676,11 @@ def run_all():
     test_dual_track_mixed()
     print()
     
+    # 百家姓变量
+    print("【百家姓变量】")
+    test_surname_variables()
+    print()
+    
     # 交互模式
     print("【交互模式】")
     test_repl_global_vars()
@@ -621,6 +714,12 @@ def run_all():
     test_stdlib_time()
     test_stdlib_type()
     test_stdlib_file()
+    print()
+    
+    # 循环
+    print("【循环】")
+    test_foreach_loop()
+    test_while_loop()
     print()
     
     print("=" * 50)

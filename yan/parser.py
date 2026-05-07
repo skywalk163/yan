@@ -47,6 +47,7 @@ class Parser:
         '皆', '只', '归', '潜',
         '印', '读', '写', '行',
         '若', '则', '否则', '定', '函',
+        '遍历', '于', '当',
         '列', '典', '序', '范围',
         # 字符串库
         '长度', '连接', '分割', '替换', '截取', '小写', '大写',
@@ -187,7 +188,7 @@ class Parser:
         while not self._is_at_end():
             tok = self._current()
             if tok.type in {TokenType.DOT, TokenType.SEMI, TokenType.COMMA,
-                            TokenType.EQUALS}:
+                            TokenType.EQUALS, TokenType.COLON}:
                 break
             if tok.type == TokenType.WORD and tok.value in {'若', '则', '否则'}:
                 break
@@ -351,6 +352,14 @@ class Parser:
         if self._check_word('若'):
             return self._parse_if()
 
+        # 遍历循环
+        if self._check_word('遍历'):
+            return self._parse_foreach()
+
+        # 当循环
+        if self._check_word('当'):
+            return self._parse_while()
+
         # 副词开头
         if self._current().type == TokenType.WORD and self._current().value in self.ADVERBS:
             adverb_name = self._advance().value
@@ -378,7 +387,7 @@ class Parser:
                 tok = self._current()
 
                 if tok.type in {TokenType.DOT, TokenType.SEMI, TokenType.COMMA,
-                                TokenType.EQUALS}:
+                                TokenType.EQUALS, TokenType.COLON}:
                     break
 
                 # 遇到条件关键字，停止
@@ -559,6 +568,50 @@ class Parser:
             else_branch = self._parse_expr_until(set())
 
         return If(cond, then_branch, else_branch)
+
+    def _parse_foreach(self) -> ForEach:
+        """解析遍历循环：遍历 变量 于 列表：循环体。"""
+        self._advance()  # 消耗 '遍历'
+        
+        # 解析变量名
+        if self._current().type != TokenType.WORD:
+            raise ParserError("期望变量名", self._current().line, self._current().col)
+        var = self._advance().value
+        
+        # 期望 '于'
+        if not self._check_word('于'):
+            raise ParserError("期望 '于'", self._current().line, self._current().col)
+        self._advance()  # 消耗 '于'
+        
+        # 解析可迭代对象
+        iterable = self._parse_term()
+        
+        # 期望 '：'（块开始）
+        if self._current().type != TokenType.COLON:
+            raise ParserError("期望 '：' 开始循环体", self._current().line, self._current().col)
+        self._advance()  # 消耗 '：'
+        
+        # 解析循环体
+        body = self._parse_block()
+        
+        return ForEach(var, iterable, body)
+
+    def _parse_while(self) -> While:
+        """解析当循环：当 条件：循环体。"""
+        self._advance()  # 消耗 '当'
+        
+        # 解析条件
+        cond = self._parse_term()
+        
+        # 期望 '：'（块开始）
+        if self._current().type != TokenType.COLON:
+            raise ParserError("期望 '：' 开始循环体", self._current().line, self._current().col)
+        self._advance()  # 消耗 '：'
+        
+        # 解析循环体
+        body = self._parse_block()
+        
+        return While(cond, body)
 
     def _parse_expr_until(self, stop_words: Set[str]) -> Node:
         """解析表达式，直到遇到指定的停止词"""
