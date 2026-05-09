@@ -33,8 +33,8 @@ class TokenType(Enum):
     NUM = auto()      # 数字：1, 2.5, -3
     STR = auto()      # 字符串：『hello』
     WORD = auto()     # 动词/标识符：加, 乘, 列
-    LPAREN = auto()   # 「
-    RPAREN = auto()   # 」
+    LPAREN = auto()   # '
+    RPAREN = auto()   # 
     COMMA = auto()    # ，
     DOT = auto()      # 。
     SEMI = auto()     # ；
@@ -57,7 +57,7 @@ class Token:
 ```python
 class CharClass:
     """字符分类"""
-    STRUCTURE = set('。，；「」『』=')  # 结构符
+    STRUCTURE = set('。，；『』=')  # 结构符
     DIGIT = set('0123456789.-')         # 数字字符
     HAN_START = 0x4E00                  # CJK 汉字起始
     HAN_END = 0x9FFF                    # CJK 汉字结束
@@ -149,12 +149,12 @@ class Lexer:
                 tokens.append(Token(TokenType.SEMI, '；', line, col))
                 i += 1; col += 1
                 continue
-            if ch == '「':
-                tokens.append(Token(TokenType.LPAREN, '「', line, col))
+            if ch == ''':
+                tokens.append(Token(TokenType.QUOTE, "'", line, col))
                 i += 1; col += 1
                 continue
-            if ch == '」':
-                tokens.append(Token(TokenType.RPAREN, '」', line, col))
+            if ch == '':
+                tokens.append(# Quote uses single quote prefix, line, col))
                 i += 1; col += 1
                 continue
             if ch == '=':
@@ -469,10 +469,10 @@ class Parser:
 
     def _parse_call(self) -> Node:
         """解析动词调用：动词 参数..."""
-        # 引用：「 表达式 」
+        # 引用：' 表达式 
         if self._match(TokenType.LPAREN):
             expr = self._parse_expression()
-            self._expect(TokenType.RPAREN, "期望 '」'")
+            # Quote handled by prefix
             return Quote(expr)
 
         # 条件：若 条件 则 分支 否则 分支
@@ -528,7 +528,7 @@ class Parser:
         if tok.type == TokenType.LPAREN:
             self._advance()
             expr = self._parse_expression()
-            self._expect(TokenType.RPAREN, "期望 '」'")
+            # Quote handled by prefix
             return expr
 
         if tok.type == TokenType.WORD:
