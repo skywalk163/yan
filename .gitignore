@@ -73,3 +73,6 @@ Thumbs.db
 # Project specific
 *.pyc
 .mypy_cache/
+
+# ANTLR
+*.jar
