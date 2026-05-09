@@ -1,0 +1,185 @@
+grammar Yan;
+
+// ============ 词法规则 ============
+
+// 关键字
+IF: '若';
+THEN: '则';
+ELSE: '否则';
+DEFINE: '定';
+FUNC: '函';
+TRUE: '真';
+FALSE: '假';
+NIL: '空';
+FOREACH: '遍历';
+IN: '于';
+WHILE: '当';
+DENGYU: '等于';
+
+// 内置动词
+PRINT: '印';
+ADD: '加';
+SUB: '减';
+MUL: '乘';
+DIV: '除';
+MOD: '模';
+POW: '幂';
+ABS: '绝对';
+NEG: '负';
+GT: '大';
+LT: '小';
+EQ: '等';
+NE: '不等';
+AND: '且';
+OR: '或';
+NOT: '非';
+HEAD: '首';
+TAIL: '余';
+APPEND: '入';
+LEN: '长';
+CONCAT: '连';
+CONTAINS: '含';
+MAP: '皆';
+FILTER: '只';
+REDUCE: '归';
+
+// 操作符
+EQUALS: '=';
+DOT: '。';
+SEMI: '；';
+COMMA: '，';
+COLON: '：';
+QUOTE: '\'';
+
+// 数学表达式
+MATH: '$(' ~')'* ')';
+
+// Python 代码块
+PYTHON: '{{' .*? '}}';
+
+// 字符串
+STRING: '"' ~'"'* '"';
+
+// 数字
+NUMBER: [0-9]+ ('.' [0-9]+)?;
+
+// 标识符（汉字序列或拉丁字母）
+// 匹配连续的汉字字符或拉丁字母
+ID: [\u4e00-\u9fa5]+ | [a-zA-Z_][a-zA-Z0-9_]*;
+
+// 跳过空白字符
+WS: [ \t\r\n]+ -> skip;
+
+// 注释（以 -- 开头，到行尾）
+COMMENT: '--' ~[\r\n]* -> skip;
+
+// ============ 语法规则 ============
+
+// 程序
+program: statement* EOF;
+
+// 语句
+statement
+    : defineStmt
+    | exprStmt
+    | DOT
+    | SEMI
+    ;
+
+// 定义语句
+defineStmt
+    : DEFINE ID EQUALS value          # DefineWithKeyword
+    | ID EQUALS value                 # DefineWithoutKeyword
+    | ID DENGYU value                 # DefineWithDengyu
+    ;
+
+// 值
+value
+    : lambda
+    | expression
+    ;
+
+// Lambda 表达式
+lambda
+    : FUNC ID* COLON block            # LambdaWithBlock
+    | FUNC ID* expression             # LambdaWithExpr
+    ;
+
+// 代码块
+block
+    : statement+ DOT
+    ;
+
+// 表达式语句
+exprStmt
+    : expression
+    ;
+
+// 表达式
+expression
+    : pipeline
+    ;
+
+// 管道
+pipeline
+    : term (COMMA term)*
+    ;
+
+// 项
+term
+    : ifExpr
+    | foreachExpr
+    | whileExpr
+    | callExpr
+    | verbWithData    // 动词 + 数据（如 "印张三"）
+    | atom
+    ;
+
+// 动词 + 数据（处理动词和标识符连写的情况）
+verbWithData
+    : (PRINT | ADD | SUB | MUL | DIV | MOD | POW | ABS | NEG | GT | LT | EQ | NE | AND | OR | NOT | HEAD | TAIL | APPEND | LEN | CONCAT | CONTAINS | MAP | FILTER | REDUCE) ID
+    ;
+
+// 条件表达式
+ifExpr
+    : IF term THEN thenBranch elseBranch?  # IfWithElse
+    | IF term THEN thenBranch              # IfWithoutElse
+    ;
+
+thenBranch
+    : COLON block                         # ThenBlock
+    | expression                          # ThenExpr
+    ;
+
+elseBranch
+    : ELSE COLON block                    # ElseBlock
+    | ELSE expression                     # ElseExpr
+    ;
+
+// 遍历循环
+foreachExpr
+    : FOREACH ID IN term COLON block
+    ;
+
+// 当循环
+whileExpr
+    : WHILE term COLON block
+    ;
+
+// 函数调用
+callExpr
+    : (ID | PRINT | ADD | SUB | MUL | DIV | MOD | POW | ABS | NEG | GT | LT | EQ | NE | AND | OR | NOT | HEAD | TAIL | APPEND | LEN | CONCAT | CONTAINS | MAP | FILTER | REDUCE) term*  # FunctionCall
+    ;
+
+// 原子
+atom
+    : NUMBER                              # NumberAtom
+    | STRING                              # StringAtom
+    | TRUE                                # TrueAtom
+    | FALSE                               # FalseAtom
+    | NIL                                 # NilAtom
+    | MATH                                # MathAtom
+    | PYTHON                              # PythonAtom
+    | QUOTE expression                    # QuoteAtom
+    | ID                                  # IdAtom
+    ;

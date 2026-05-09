@@ -1,0 +1,346 @@
+#!/usr/bin/env python3
+"""
+ANTLR AST 构建器
+将 ANTLR 解析树转换为言语言 AST 节点
+"""
+
+import sys
+import os
+
+# 添加父目录到路径，以便导入 nodes
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from generated.YanVisitor import YanVisitor
+from generated.YanParser import YanParser
+from nodes import *
+
+
+class ASTBuilder(YanVisitor):
+    """将 ANTLR 解析树转换为 AST"""
+    
+    def __init__(self):
+        self.user_verbs = set()  # 用户定义的函数名
+    
+    # ============ 程序和语句 ============
+    
+    def visitProgram(self, ctx: YanParser.ProgramContext):
+        """程序"""
+        statements = []
+        for stmt_ctx in ctx.statement():
+            stmt = self.visit(stmt_ctx)
+            if stmt:
+                statements.append(stmt)
+        return Program(statements)
+    
+    def visitStatement(self, ctx: YanParser.StatementContext):
+        """语句"""
+        if ctx.defineStmt():
+            return self.visit(ctx.defineStmt())
+        elif ctx.exprStmt():
+            return self.visit(ctx.exprStmt())
+        elif ctx.DOT() or ctx.SEMI():
+            return None
+        return None
+    
+    # ============ 定义语句 ============
+    
+    def visitDefineWithKeyword(self, ctx: YanParser.DefineWithKeywordContext):
+        """带关键字的定义：定 名称 = 值"""
+        name = ctx.ID().getText()
+        
+        # 检查是否以"定"开头（词法分析器可能将"定张三"识别为一个标识符）
+        if name.startswith('定') and len(name) > 1:
+            # 拆分"定"和变量名
+            name = name[1:]
+        
+        value = self.visit(ctx.value())
+        
+        # 记录用户定义的函数
+        if isinstance(value, Lambda):
+            self.user_verbs.add(name)
+        
+        return Define(name, value)
+    
+    def visitDefineWithoutKeyword(self, ctx: YanParser.DefineWithoutKeywordContext):
+        """省略关键字的定义：名称 = 值"""
+        name = ctx.ID().getText()
+        
+        # 检查是否以"定"开头（词法分析器可能将"定张三"识别为一个标识符）
+        if name.startswith('定') and len(name) > 1:
+            # 拆分"定"和变量名
+            name = name[1:]
+        
+        value = self.visit(ctx.value())
+        
+        # 记录用户定义的函数
+        if isinstance(value, Lambda):
+            self.user_verbs.add(name)
+        
+        return Define(name, value)
+    
+    def visitDefineWithDengyu(self, ctx: YanParser.DefineWithDengyuContext):
+        """使用"等于"的定义：名称 等于 值"""
+        name = ctx.ID().getText()
+        value = self.visit(ctx.value())
+        
+        # 记录用户定义的函数
+        if isinstance(value, Lambda):
+            self.user_verbs.add(name)
+        
+        return Define(name, value)
+    
+    # ============ Lambda 表达式 ============
+    
+    def visitLambdaWithBlock(self, ctx: YanParser.LambdaWithBlockContext):
+        """带代码块的 Lambda：函 参数...：代码块"""
+        # 获取参数列表
+        params = []
+        if ctx.ID():
+            for id_node in ctx.ID():
+                param_text = id_node.getText()
+                params.append(param_text)
+        
+        # 检查第一个参数是否以"函"开头（词法分析器可能将"函盘子数"识别为一个标识符）
+        if params and params[0].startswith('函') and len(params[0]) > 1:
+            # 拆分"函"和第一个参数
+            params[0] = params[0][1:]
+        
+        body = self.visit(ctx.block())
+        return Lambda(params, body)
+    
+    def visitLambdaWithExpr(self, ctx: YanParser.LambdaWithExprContext):
+        """带表达式的 Lambda：函 参数... 表达式"""
+        # 获取参数列表
+        params = []
+        if ctx.ID():
+            for id_node in ctx.ID():
+                param_text = id_node.getText()
+                params.append(param_text)
+        
+        # 检查第一个参数是否以"函"开头（词法分析器可能将"函盘子数"识别为一个标识符）
+        if params and params[0].startswith('函') and len(params[0]) > 1:
+            # 拆分"函"和第一个参数
+            params[0] = params[0][1:]
+        
+        body = self.visit(ctx.expression())
+        return Lambda(params, body)
+    
+    # ============ 代码块 ============
+    
+    def visitBlock(self, ctx: YanParser.BlockContext):
+        """代码块"""
+        statements = []
+        for stmt_ctx in ctx.statement():
+            stmt = self.visit(stmt_ctx)
+            if stmt:
+                statements.append(stmt)
+        
+        if len(statements) == 0:
+            return Nil()
+        elif len(statements) == 1:
+            return statements[0]
+        else:
+            return Block(statements)
+    
+    # ============ 表达式 ============
+    
+    def visitExprStmt(self, ctx: YanParser.ExprStmtContext):
+        """表达式语句"""
+        return self.visit(ctx.expression())
+    
+    def visitPipeline(self, ctx: YanParser.PipelineContext):
+        """管道"""
+        terms = [self.visit(term) for term in ctx.term()]
+        
+        if len(terms) == 1:
+            return terms[0]
+        else:
+            return Pipeline(terms)
+    
+    # ============ 条件表达式 ============
+    
+    def visitIfWithElse(self, ctx: YanParser.IfWithElseContext):
+        """带 else 的条件表达式"""
+        cond = self.visit(ctx.term())
+        then_branch = self.visit(ctx.thenBranch())
+        else_branch = self.visit(ctx.elseBranch()) if ctx.elseBranch() else None
+        return If(cond, then_branch, else_branch)
+    def visitIfWithElse(self, ctx: YanParser.IfWithElseContext):
+        """带 else 的条件表达式"""
+        cond = self.visit(ctx.term())
+        then_branch = self.visit(ctx.thenBranch())
+        else_branch = self.visit(ctx.elseBranch()) if ctx.elseBranch() else None
+        return If(cond, then_branch, else_branch)
+    def visitIfWithElse(self, ctx: YanParser.IfWithElseContext):
+        """带 else 的条件表达式"""
+        cond = self.visit(ctx.term())
+        then_branch = self.visit(ctx.thenBranch())
+        else_branch = self.visit(ctx.elseBranch()) if ctx.elseBranch() else None
+        return If(cond, then_branch, else_branch)
+    def visitIfWithElse(self, ctx: YanParser.IfWithElseContext):
+        """带 else 的条件表达式"""
+        cond = self.visit(ctx.term())
+        then_branch = self.visit(ctx.thenBranch())
+        else_branch = self.visit(ctx.elseBranch()) if ctx.elseBranch() else None
+        return If(cond, then_branch, else_branch)
+    def visitIfWithElse(self, ctx: YanParser.IfWithElseContext):
+        """带 else 的条件表达式"""
+        cond = self.visit(ctx.term())
+        then_branch = self.visit(ctx.thenBranch())
+        else_branch = self.visit(ctx.elseBranch()) if ctx.elseBranch() else None
+        return If(cond, then_branch, else_branch)
+    def visitIfWithElse(self, ctx: YanParser.IfWithElseContext):
+        """带 else 的条件表达式"""
+        cond = self.visit(ctx.term())
+        then_branch = self.visit(ctx.thenBranch())
+        else_branch = self.visit(ctx.elseBranch()) if ctx.elseBranch() else None
+        return If(cond, then_branch, else_branch)
+    def visitIfWithElse(self, ctx: YanParser.IfWithElseContext):
+        """带 else 的条件表达式"""
+        cond = self.visit(ctx.term())
+        then_branch = self.visit(ctx.thenBranch())
+        else_branch = self.visit(ctx.elseBranch()) if ctx.elseBranch() else None
+        return If(cond, then_branch, else_branch)
+    def visitIfWithoutElse(self, ctx: YanParser.IfWithoutElseContext):
+        """不带 else 的条件表达式"""
+        cond = self.visit(ctx.term())
+        then_branch = self.visit(ctx.thenBranch())
+        return If(cond, then_branch, None)
+    
+    def visitThenBlock(self, ctx: YanParser.ThenBlockContext):
+        """then 代码块"""
+        return self.visit(ctx.block())
+    
+    def visitThenExpr(self, ctx: YanParser.ThenExprContext):
+        """then 表达式"""
+        return self.visit(ctx.expression())
+    
+    def visitElseBlock(self, ctx: YanParser.ElseBlockContext):
+        """else 代码块"""
+        return self.visit(ctx.block())
+    
+    def visitElseExpr(self, ctx: YanParser.ElseExprContext):
+        """else 表达式"""
+        return self.visit(ctx.expression())
+    
+    # ============ 循环 ============
+    
+    def visitForeachExpr(self, ctx: YanParser.ForeachExprContext):
+        """遍历循环"""
+        var = ctx.ID().getText()
+        iterable = self.visit(ctx.term())
+        body = self.visit(ctx.block())
+        return ForEach(var, iterable, body)
+    
+    def visitWhileExpr(self, ctx: YanParser.WhileExprContext):
+        """当循环"""
+        cond = self.visit(ctx.term())
+        body = self.visit(ctx.block())
+        return While(cond, body)
+    def visitInfixExpr(self, ctx: YanParser.InfixExprContext):
+        """处理中缀表达式"""
+        # 获取第一个 atom
+        left = self.visit(ctx.atom())
+        
+        # 处理中缀操作符
+        if ctx.term():
+            # 获取所有中缀操作符和右操作数
+            # 注意：ANTLR 将它们放在两个列表中
+            # 但我们需要成对处理
+            # ctx.getChild(i) 会返回所有子节点
+            
+            children = list(ctx.getChildren())
+            i = 1  # 跳过第一个 atom
+            while i < len(children):
+                # 获取操作符
+                op_token = children[i]
+                op_name = op_token.getText()
+                
+                # 获取右操作数
+                i += 1
+                right_ctx = children[i]
+                right = self.visit(right_ctx)
+                
+                # 创建调用节点
+                verb = Word(op_name)
+                left = Call(verb, [left, right])
+                
+                i += 1
+        
+        return left
+    
+    # ============ 函数调用 ============
+    
+    def visitMathAtom(self, ctx: YanParser.MathAtomContext):
+        """数学表达式"""
+        text = ctx.MATH().getText()
+        # 去掉 $( 和 )
+        return MathExpr(text[2:-1])
+    
+    def visitPythonAtom(self, ctx: YanParser.PythonAtomContext):
+        """Python 代码块"""
+        text = ctx.PYTHON().getText()
+        # 去掉 {{ 和 }}
+        return PythonCode(text[2:-2])
+    
+    def visitQuoteAtom(self, ctx: YanParser.QuoteAtomContext):
+        """引用"""
+        expr = self.visit(ctx.expression())
+        return Quote(expr)
+    
+    def visitIdAtom(self, ctx: YanParser.IdAtomContext):
+        """标识符"""
+        name = ctx.ID().getText()
+        
+        # 检查是否以动词开头
+        verbs = ['印', '加', '减', '乘', '除', '模', '幂', '绝对', '负',
+                 '大', '小', '等', '不等', '且', '或', '非',
+                 '首', '余', '入', '长', '连', '含',
+                 '皆', '只', '归']
+        
+        for verb in verbs:
+            if name.startswith(verb) and len(name) > len(verb):
+                # 拆分为动词调用
+                verb_node = Word(verb)
+                arg_node = Word(name[len(verb):])
+                return Call(verb_node, [arg_node])
+        
+        return Word(name)
+
+    def visitLambdaIdWithBlock(self, ctx: YanParser.LambdaIdWithBlockContext):
+        """处理 ID ID* COLON block 的情况（"函参数..."被识别为ID）"""
+        # 获取所有 ID
+        ids = [id_node.getText() for id_node in ctx.ID()]
+        
+        # 检查第一个 ID 是否以"函"开头
+        if ids and ids[0].startswith('函'):
+            # 拆分"函"和第一个参数
+            first_id = ids[0]
+            params = [first_id[1:]] if len(first_id) > 1 else []
+            # 添加其他参数
+            params.extend(ids[1:])
+        else:
+            # 不是以"函"开头，这是错误的
+            raise SyntaxError(f"Lambda 表达式必须以'函'开头，但得到: {ids[0] if ids else '空'}")
+        
+        body = self.visit(ctx.block())
+        return Lambda(params, body)
+    
+    def visitLambdaIdWithExpr(self, ctx: YanParser.LambdaIdWithExprContext):
+        """处理 ID ID* expression 的情况（"函参数..."被识别为ID）"""
+        # 获取所有 ID
+        ids = [id_node.getText() for id_node in ctx.ID()]
+        
+        # 检查第一个 ID 是否以"函"开头
+        if ids and ids[0].startswith('函'):
+            # 拆分"函"和第一个参数
+            first_id = ids[0]
+            params = [first_id[1:]] if len(first_id) > 1 else []
+            # 添加其他参数
+            params.extend(ids[1:])
+        else:
+            # 不是以"函"开头，这是错误的
+            raise SyntaxError(f"Lambda 表达式必须以'函'开头，但得到: {ids[0] if ids else '空'}")
+        
+        body = self.visit(ctx.expression())
+        return Lambda(params, body)

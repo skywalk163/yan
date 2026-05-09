@@ -1,0 +1,17 @@
+        # 用户定义函数调用或普通标识符
+        if self._current().type == TokenType.WORD:
+            # 检查是否是布尔值或空值 - 这些应该由 _parse_atom() 处理
+            if self._current().value in {'真', '假', '空'}:
+                left = self._parse_atom()
+            else:
+                # 尝试匹配用户定义的函数名（即使下一个 token 是动词也要尝试）
+                matched_name = self._try_match_user_verb()
+                if matched_name:
+                    func = Word(matched_name)
+                    args = self._collect_call_args()
+                    return Call(func, args)
+                
+                # 检查下一个 token 是否是动词 - 如果是，当前是数据，不是函数调用
+                if self._peek(1).type == TokenType.WORD and self._is_verb(self._peek(1).value):
+                    left = self._parse_atom()
+                else:

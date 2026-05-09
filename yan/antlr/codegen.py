@@ -1,8 +1,16 @@
+#!/usr/bin/env python3
 """
-言语言 Python 代码生成器
+言语言代码生成器
+将 AST 转换为 Python 代码
 """
 
-from typing import Dict, Tuple, Any
+import sys
+import os
+
+# 添加父目录到路径，以便导入 nodes 和 runtime
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from typing import Dict
 from nodes import *
 from runtime import ALL_BUILTINS as BUILTINS
 
@@ -101,10 +109,8 @@ class PythonCodeGen:
             return py_func_name
 
         # 柯里化：参数不足时生成 lambda
-        # 规则：已有参数绑定到右侧，管道值（或新生成的参数）绑定到左侧
         if arity > 0 and len(args) < arity and pipeline_arg is None:
             missing = arity - len(args)
-            # 新参数在左侧，已有参数在右侧
             new_params = [f'_p{i}' for i in range(missing)]
             all_args = new_params + args
             params = ', '.join(new_params)
@@ -140,69 +146,10 @@ class PythonCodeGen:
                 args = [self.generate(a) for a in step.args]
 
                 # 特殊处理高阶函数
-                if verb_name == '皆':
-                    # 皆(func, lst) - 管道值是 lst
-                    # 如果有多个参数，第一个是动词，其余是柯里化参数
-                    if len(args) == 1:
-                        result = f'{py_func_name}({args[0]}, {result})'
-                    elif len(args) >= 2 and isinstance(step.args[0], Word):
-                        # 柯里化：乘2 -> lambda x: _mul(x, 2)
-                        inner_verb = step.args[0].name
-                        if inner_verb in BUILTINS:
-                            inner_py_func, _ = BUILTINS[inner_verb]
-                            inner_func_name = inner_py_func.__name__ if hasattr(inner_py_func, '__name__') else str(inner_py_func)
-                            curried_args = ', '.join(args[1:])
-                            result = f'{py_func_name}((lambda _x: {inner_func_name}(_x, {curried_args})), {result})'
-                        else:
-                            result = f'{py_func_name}({args[0]}, {", ".join(args[1:])}, {result})'
-                    else:
-                        result = f'{py_func_name}({", ".join(args)}, {result})'
-                elif verb_name == '只':
-                    # 只(pred, lst) - 管道值是 lst
-                    if len(args) == 1:
-                        result = f'{py_func_name}({args[0]}, {result})'
-                    elif len(args) >= 2 and isinstance(step.args[0], Word):
-                        # 柯里化：大2 -> lambda x: _gt(x, 2)
-                        inner_verb = step.args[0].name
-                        if inner_verb in BUILTINS:
-                            inner_py_func, _ = BUILTINS[inner_verb]
-                            inner_func_name = inner_py_func.__name__ if hasattr(inner_py_func, '__name__') else str(inner_py_func)
-                            curried_args = ', '.join(args[1:])
-                            result = f'{py_func_name}((lambda _x: {inner_func_name}(_x, {curried_args})), {result})'
-                        else:
-                            result = f'{py_func_name}({args[0]}, {", ".join(args[1:])}, {result})'
-                    else:
-                        result = f'{py_func_name}({", ".join(args)}, {result})'
-                elif verb_name == '归':
-                    # 归(func, init, lst) - 管道值是 lst
-                    # args[0] 可能是柯里化的函数，需要提取原始函数
-                    if len(step.args) >= 1:
-                        # 检查 args[0] 是否是 Call（副词吞噬的动词调用）
-                        if isinstance(step.args[0], Call):
-                            inner_verb = step.args[0].verb.name
-                            if inner_verb in BUILTINS:
-                                inner_py_func, _ = BUILTINS[inner_verb]
-                                inner_func_name = inner_py_func.__name__ if hasattr(inner_py_func, '__name__') else str(inner_py_func)
-                                # 使用原始函数名
-                                # init 从 step.args[1] 获取，而不是从 args 获取
-                                init_val = self.generate(step.args[1]) if len(step.args) > 1 else '0'
-                                result = f'_reduce({inner_func_name}, {init_val}, {result})'
-                            else:
-                                result = f'{py_func_name}({args[0]}, {", ".join(args[1:])}, {result})'
-                        # 检查 args[0] 是否是 Word（动词引用）
-                        elif isinstance(step.args[0], Word):
-                            inner_verb = step.args[0].name
-                            if inner_verb in BUILTINS:
-                                inner_py_func, _ = BUILTINS[inner_verb]
-                                inner_func_name = inner_py_func.__name__ if hasattr(inner_py_func, '__name__') else str(inner_py_func)
-                                init_val = self.generate(step.args[1]) if len(step.args) > 1 else '0'
-                                result = f'_reduce({inner_func_name}, {init_val}, {result})'
-                            else:
-                                result = f'{py_func_name}({args[0]}, {", ".join(args[1:])}, {result})'
-                        else:
-                            result = f'{py_func_name}({", ".join(args)}, {result})'
-                    else:
-                        result = f'{py_func_name}({result})'
+                if verb_name in {'皆', '只', '归'}:
+                    # 高阶函数：管道值作为最后一个参数
+                    args.append(result)
+                    result = f'{py_func_name}({", ".join(args)})'
                 else:
                     # 普通动词：管道值作为第一个参数
                     args.insert(0, result)
@@ -271,10 +218,8 @@ class PythonCodeGen:
         # Python 代码块需要特殊处理
         if isinstance(node.value, PythonCode):
             code = node.value.code.strip()
-            # 如果是多行代码，最后一行应该是返回值的表达式
             if '\n' in code:
                 lines = code.split('\n')
-                # 最后一行作为返回值
                 return f'''{code}
 {name} = {lines[-1].strip()}'''
             else:
@@ -286,7 +231,6 @@ class PythonCodeGen:
             if isinstance(node.value.body, Block):
                 return self._gen_def_function(name, node.value)
             # 检查 body 是否会生成多行代码（如 if-else 语句）
-            # 先生成代码，然后检查是否是多行
             body_code = self.generate(node.value.body)
             if '\n' in body_code:
                 return self._gen_def_function_from_code(name, node.value.params, body_code)

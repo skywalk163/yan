@@ -204,7 +204,7 @@ def main():
         print(f"文件不存在: {filename}", file=sys.stderr)
         return
 
-    result = run(source, debug=debug)
+    result = run(source, debug=debug, use_global_verbs=True)
     if result is not None:
         print(result)
 

@@ -18,6 +18,13 @@ except ImportError:
     BAIJIAXING = set()
     CONFLICTING_SURNAMES = set()
 
+# 导入中文数字转换
+try:
+    from chinese_number import chinese_to_number, is_chinese_number
+except ImportError:
+    chinese_to_number = None
+    is_chinese_number = None
+
 
 class TokenType(Enum):
     NUM = auto()       # 数字：1, 2.5, -3
@@ -64,6 +71,8 @@ class Lexer:
         self.keywords = keywords or {
             # 多字动词
             '定义', '阶乘', '平方', '否则', '如果', '那么', '不等',
+            # 赋值
+            '等于',
             # 循环
             '遍历', '当',
             # 数学库
@@ -421,6 +430,29 @@ class Lexer:
                                 col += len(var_name)
                                 i = j
                                 continue
+
+                    # 尝试中文数字识别
+                    if is_chinese_number:
+                        # 尝试匹配最长的中文数字
+                        j = i
+                        while j < len(source) and self._is_han(source[j]):
+                            candidate = source[i:j+1]
+                            if is_chinese_number(candidate):
+                                j += 1
+                            else:
+                                break
+                        
+                        if j > i:
+                            chinese_num = source[i:j]
+                            try:
+                                value = chinese_to_number(chinese_num)
+                                tokens.append(Token(TokenType.NUM, value, line, col))
+                                col += j - i
+                                i = j
+                                continue
+                            except (ValueError, KeyError):
+                                # 不是有效的中文数字，继续正常处理
+                                pass
 
                     # 非关键字的汉字：收集连续的汉字作为一个标识符
                     # 这样 "安全" 会被作为一个标识符
