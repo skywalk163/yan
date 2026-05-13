@@ -155,5 +155,68 @@ class TestShouldEndBlock:
         assert parser._should_end_block(0) == False
 
 
+class TestParseBlock:
+    """测试 _parse_block() 方法"""
+
+    def test_parse_single_line_block(self):
+        """测试单行块"""
+        from lexer import Lexer
+        from parser import Parser
+
+        code = "定x=1。"
+        lexer = Lexer()
+        tokens = lexer.tokenize(code)
+        parser = Parser()
+        ast = parser.parse(tokens)
+
+        assert len(ast.statements) == 1
+        assert ast.statements[0].name == 'x'
+
+    def test_parse_multi_line_block_auto_end(self):
+        """测试多行块自动结束"""
+        from lexer import Lexer
+        from parser import Parser
+
+        code = """
+定距离=函a b：
+  定差=减a b。
+  若差小0则负差否则差。
+"""
+        lexer = Lexer()
+        tokens = lexer.tokenize(code)
+        parser = Parser()
+        ast = parser.parse(tokens)
+
+        assert len(ast.statements) == 1
+        # 验证函数定义
+        define = ast.statements[0]
+        assert define.name == '距离'
+        # 验证函数体是 Block
+        assert hasattr(define.value, 'body')
+        # 验证块包含 2 个语句
+        assert hasattr(define.value.body, 'statements')
+        assert len(define.value.body.statements) == 2
+
+    def test_parse_consecutive_definitions(self):
+        """测试连续定义"""
+        from lexer import Lexer
+        from parser import Parser
+
+        code = """
+定x=1。
+定y=2。
+定z=加x y。
+"""
+        lexer = Lexer()
+        tokens = lexer.tokenize(code)
+        parser = Parser()
+        ast = parser.parse(tokens)
+
+        assert len(ast.statements) == 3
+        assert ast.statements[0].name == 'x'
+        assert ast.statements[1].name == 'y'
+        assert ast.statements[2].name == 'z'
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

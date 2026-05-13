@@ -379,23 +379,47 @@ class Parser:
         return Lambda(params, body)
 
     def _parse_block(self) -> Node:
-        """解析代码块"""
+        """解析代码块，智能推断结束"""
         statements = []
+        block_start_indent = self._get_current_indent()
+        
+        # 压入块栈
+        self.block_stack.push('BLOCK', block_start_indent)
         
         while not self._is_at_end():
-            # 块结束条件：遇到句号后跟非缩进内容
+            # 跳过句号
+            if self._current().type == TokenType.DOT:
+                self._advance()
+                
+                # 检查是否应该结束块
+                if self._should_end_block(block_start_indent):
+                    # 特殊情况：在块内部遇到控制流关键字（若、遍历、当等）不应结束块
+                    # 这些关键字在块内部是合法语句
+                    if self._current().type == TokenType.WORD:
+                        word = self._current().value
+                        if word in {'若', '遍历', '当', '测', '套'}:
+                            # 在块内部，控制流关键字是合法语句，继续解析
+                            pass  # 继续解析
+                        elif word == '定':
+                            # 在块内部，'定' 是局部变量定义，继续解析
+                            pass  # 继续解析
+                        else:
+                            break
+                    else:
+                        break
+                continue
+            
+            # 块结束条件
             if self._is_block_end():
                 break
             
+            # 解析语句
             stmt = self._parse_statement()
             if stmt:
                 statements.append(stmt)
-            
-            # 如果刚解析完一个语句（遇到句号），检查下一个token
-            # 如果是 印 或其他顶层操作，块结束
-            if self._current().type == TokenType.WORD:
-                if self._current().value in {'印'}:
-                    break
+        
+        # 弹出块栈
+        self.block_stack.pop()
         
         if len(statements) == 0:
             return Nil()
@@ -403,6 +427,12 @@ class Parser:
             return statements[0]
         else:
             return Block(statements)
+    
+    def _get_current_indent(self) -> int:
+        """获取当前缩进级别（简化实现）"""
+        # 简化实现：返回 0
+        # 完整实现需要从 lexer 获取缩进信息
+        return 0
     
     def _should_end_block(self, block_start_indent: int) -> bool:
         """
