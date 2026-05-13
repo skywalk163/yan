@@ -34,6 +34,40 @@ def clear_global_user_verbs():
     _global_user_verbs.clear()
 
 
+class BlockStack:
+    """块栈，用于跟踪当前块的状态"""
+
+    def __init__(self):
+        self._stack: List[dict] = []
+
+    def push(self, block_type: str, indent_level: int):
+        """压入新块"""
+        self._stack.append({
+            'type': block_type,
+            'indent': indent_level
+        })
+
+    def pop(self) -> Optional[dict]:
+        """弹出块，返回弹出的块信息，如果栈为空则返回 None"""
+        if self.is_empty():
+            return None
+        return self._stack.pop()
+
+    def current(self) -> Optional[dict]:
+        """获取当前块，如果栈为空则返回 None"""
+        if self.is_empty():
+            return None
+        return self._stack[-1]
+
+    def depth(self) -> int:
+        """获取栈深度"""
+        return len(self._stack)
+
+    def is_empty(self) -> bool:
+        """检查栈是否为空"""
+        return len(self._stack) == 0
+
+
 class Parser:
     """语法分析器"""
 
@@ -65,6 +99,7 @@ class Parser:
         self.pos: int = 0
         self.user_verbs: Set[str] = set()
         self.use_global_verbs = use_global_verbs
+        self.block_stack = BlockStack()
 
     @property
     def VERBS(self) -> Set[str]:
