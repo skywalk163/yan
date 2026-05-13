@@ -95,10 +95,6 @@ class TestBlockStack:
         assert stack.depth() == 0
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
-
-
 class TestShouldEndBlock:
     """测试 _should_end_block() 方法"""
 
@@ -157,3 +153,7 @@ class TestShouldEndBlock:
         parser.pos = 1  # 指向 'x'
 
         assert parser._should_end_block(0) == False
+
+
+if __name__ == '__main__':
+    pytest.main([__file__, '-v'])
