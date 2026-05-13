@@ -97,3 +97,63 @@ class TestBlockStack:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+class TestShouldEndBlock:
+    """测试 _should_end_block() 方法"""
+
+    def test_should_end_block_at_eof(self):
+        """测试文件结束时结束块"""
+        from lexer import Lexer
+        from parser import Parser
+
+        code = "定x=1。"
+        lexer = Lexer()
+        tokens = lexer.tokenize(code)
+        parser = Parser()
+        parser.tokens = tokens
+        parser.pos = len(tokens) - 1  # 指向 EOF
+
+        assert parser._should_end_block(0) == True
+
+    def test_should_end_block_at_define(self):
+        """测试遇到新定义时结束块"""
+        from lexer import Lexer
+        from parser import Parser
+
+        code = "定x=1。定y=2。"
+        lexer = Lexer()
+        tokens = lexer.tokenize(code)
+        parser = Parser()
+        parser.tokens = tokens
+        parser.pos = 5  # 指向第二个 '定'
+
+        assert parser._should_end_block(0) == True
+
+    def test_should_end_block_at_if(self):
+        """测试遇到条件语句时结束块"""
+        from lexer import Lexer
+        from parser import Parser
+
+        code = "若真则1。若假则0。"
+        lexer = Lexer()
+        tokens = lexer.tokenize(code)
+        parser = Parser()
+        parser.tokens = tokens
+        parser.pos = 5  # 指向第二个 '若'
+
+        assert parser._should_end_block(0) == True
+
+    def test_should_not_end_block_in_middle(self):
+        """测试块中间不应结束"""
+        from lexer import Lexer
+        from parser import Parser
+
+        code = "定x=1。定y=2。"
+        lexer = Lexer()
+        tokens = lexer.tokenize(code)
+        parser = Parser()
+        parser.tokens = tokens
+        parser.pos = 1  # 指向 'x'
+
+        assert parser._should_end_block(0) == False

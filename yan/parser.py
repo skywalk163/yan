@@ -404,6 +404,38 @@ class Parser:
         else:
             return Block(statements)
     
+    def _should_end_block(self, block_start_indent: int) -> bool:
+        """
+        判断是否应该结束当前块
+        
+        参数：
+            block_start_indent: 块开始时的缩进级别
+        
+        返回：
+            True 如果应该结束块，False 否则
+        """
+        # 情况 1：文件结束
+        if self._is_at_end():
+            return True
+        
+        # 情况 2：遇到新的定义
+        if self._check_word('定'):
+            return True
+        
+        # 情况 3：遇到同层级关键字
+        if self._current().type == TokenType.WORD:
+            word = self._current().value
+            # 这些关键字表示新的块开始，应该结束当前块
+            if word in {'若', '遍历', '当', '测', '套'}:
+                return True
+        
+        # 情况 4：缩进减少（如果实现了缩进跟踪）
+        # next_indent = self._peek_next_line_indent()
+        # if next_indent < block_start_indent:
+        #     return True
+        
+        return False
+
     def _is_block_end(self) -> bool:
         """检查是否到达块结束"""
         tok = self._current()
