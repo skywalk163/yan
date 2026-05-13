@@ -265,5 +265,55 @@ class TestFunctionDefinition:
         assert len(define.value.body.statements) == 2
 
 
+class TestIfWithBlock:
+    """测试带块的条件语句"""
+
+    def test_if_with_block(self):
+        """测试带块的条件语句"""
+        from lexer import Lexer
+        from parser import Parser
+
+        code = """
+若x大0则：
+  印"正数"。
+  印x。
+"""
+        lexer = Lexer()
+        tokens = lexer.tokenize(code)
+        parser = Parser()
+        ast = parser.parse(tokens)
+
+        assert len(ast.statements) == 1
+        if_node = ast.statements[0]
+        # 验证是 If 节点
+        assert hasattr(if_node, 'cond')
+        assert hasattr(if_node, 'then_branch')
+        # 验证 then_branch 是 Block
+        assert hasattr(if_node.then_branch, 'statements')
+        assert len(if_node.then_branch.statements) == 2
+
+    def test_if_else_with_block(self):
+        """测试带 else 块的条件语句"""
+        from lexer import Lexer
+        from parser import Parser
+
+        code = """
+若x大0则：
+  印"正数"。
+否则：
+  印"非正数"。
+"""
+        lexer = Lexer()
+        tokens = lexer.tokenize(code)
+        parser = Parser()
+        ast = parser.parse(tokens)
+
+        assert len(ast.statements) == 1
+        if_node = ast.statements[0]
+        # 验证有 else 分支
+        assert if_node.else_branch is not None
+        assert hasattr(if_node.else_branch, 'statements')
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

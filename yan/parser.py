@@ -666,7 +666,8 @@ class Parser:
         # 解析 then 分支
         if has_block:
             # 块结构：解析多个语句，直到遇到 '否则' 或 '。'
-            then_branch = self._parse_block_until({'否则'})
+            # always_block=True 确保即使只有一个语句也返回 Block
+            then_branch = self._parse_block_until({'否则'}, always_block=True)
         else:
             # 单行结构：解析单个表达式
             then_branch = self._parse_expr_until({'否则'})
@@ -680,14 +681,20 @@ class Parser:
             # 检查是否有 '：'
             if self._current().type == TokenType.COLON:
                 self._advance()  # 消耗 '：'
-                else_branch = self._parse_block_until(set())
+                # always_block=True 确保即使只有一个语句也返回 Block
+                else_branch = self._parse_block_until(set(), always_block=True)
             else:
                 else_branch = self._parse_expr_until(set())
 
         return If(cond, then_branch, else_branch)
 
-    def _parse_block_until(self, stop_words: Set[str]) -> Node:
-        """解析块，直到遇到指定的停止词"""
+    def _parse_block_until(self, stop_words: Set[str], always_block: bool = False) -> Node:
+        """解析块，直到遇到指定的停止词
+        
+        参数：
+            stop_words: 停止词集合
+            always_block: 如果为 True，即使只有一个语句也返回 Block
+        """
         statements = []
         while not self._is_at_end():
             if self._current().type == TokenType.DOT:
@@ -705,7 +712,7 @@ class Parser:
         
         if len(statements) == 0:
             return Nil()
-        elif len(statements) == 1:
+        elif len(statements) == 1 and not always_block:
             return statements[0]
         else:
             return Block(statements)
