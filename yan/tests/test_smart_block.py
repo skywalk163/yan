@@ -218,5 +218,52 @@ class TestParseBlock:
         assert ast.statements[2].name == 'z'
 
 
+class TestFunctionDefinition:
+    """测试函数定义解析"""
+
+    def test_single_line_function(self):
+        """测试单行函数"""
+        from lexer import Lexer
+        from parser import Parser
+
+        code = "定阶乘=函n 若n等1则1否则n乘阶乘n减1。"
+        lexer = Lexer()
+        tokens = lexer.tokenize(code)
+        parser = Parser()
+        ast = parser.parse(tokens)
+
+        assert len(ast.statements) == 1
+        define = ast.statements[0]
+        assert define.name == '阶乘'
+        # 验证是 Lambda
+        assert hasattr(define.value, 'params')
+        assert define.value.params == ['n']
+
+    def test_multi_line_function(self):
+        """测试多行函数"""
+        from lexer import Lexer
+        from parser import Parser
+
+        code = """
+定距离=函a b：
+  定差=减a b。
+  若差小0则负差否则差。
+"""
+        lexer = Lexer()
+        tokens = lexer.tokenize(code)
+        parser = Parser()
+        ast = parser.parse(tokens)
+
+        assert len(ast.statements) == 1
+        define = ast.statements[0]
+        assert define.name == '距离'
+        # 验证是 Lambda
+        assert hasattr(define.value, 'params')
+        assert define.value.params == ['a', 'b']
+        # 验证 body 是 Block
+        assert hasattr(define.value.body, 'statements')
+        assert len(define.value.body.statements) == 2
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
