@@ -1,0 +1,46 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Microsoft/vscode/master/src/vs/workbench/services/textMate/common/TMScopeRegistry.ts",
+  "name": "yanmd",
+  "scopeName": "text.yanmd",
+  "fileTypes": ["ymd"],
+  "patterns": [
+    {
+      "name": "meta.heading.yanmd",
+      "match": "^#{1,6}\\s+.*$"
+    },
+    {
+      "name": "markup.bold.yanmd",
+      "match": "\\*\\*[^*]+\\*\\*"
+    },
+    {
+      "name": "markup.italic.yanmd",
+      "match": "\\*[^*]+\\*"
+    },
+    {
+      "name": "string.link.yanmd",
+      "match": "\\[([^\\]]+)\\]\\(([^)]+)\\)"
+    },
+    {
+      "name": "comment.line.yanmd",
+      "match": "^\\s*%%.*$"
+    },
+    {
+      "name": "variable.code.yanmd",
+      "begin": "`",
+      "end": "`"
+    },
+    {
+      "name": "source.yanmd",
+      "begin": "```",
+      "end": "```"
+    },
+    {
+      "name": "support.function.yan",
+      "match": "\\b(言|包|版)\\s+"
+    },
+    {
+      "name": "entity.name.type.yan",
+      "match": "\\b[\\u4e00-\\u9fa5]+\\b"
+    }
+  ]
+}

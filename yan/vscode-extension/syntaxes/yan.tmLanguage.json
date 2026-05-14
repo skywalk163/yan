@@ -1,0 +1,76 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Microsoft/vscode/master/src/vs/workbench/services/textMate/common/TMScopeRegistry.ts",
+  "name": "yan",
+  "scopeName": "source.yan",
+  "fileTypes": ["yan"],
+  "patterns": [
+    {
+      "name": "comment.line.yan",
+      "match": "^\\s*--.*$"
+    },
+    {
+      "name": "string.quoted.double.yan",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.yan",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "constant.numeric.yan",
+      "match": "\\b\\d+\\.?\\d*\\b"
+    },
+    {
+      "name": "keyword.control.yan",
+      "match": "^(定|函|若|则|遍历|于|当|跳出|返回)\\s+"
+    },
+    {
+      "name": "keyword.import.yan",
+      "match": "^(引|出)\\s+"
+    },
+    {
+      "name": "support.function.yan",
+      "match": "\\b(加|减|乘|除|等|大|小|且|或|非|印|列|首|余|入|长|添|连|含|空|皆|只|归|正弦|余弦|正切|开方|取整|进位|四舍五入|随机|随机整数|圆周率|自然常数|读文件|写文件|追加文件|存在|是文件|是目录|列目录|建目录|删文件|删目录|文件名|目录名|扩展名|当前时间|日期|时间|日期时间|格式化时间|睡眠|类型|是数|是串|是表|是函|是真|是空|断言等|断言不等|断言大|断言小|断言真|断言假|断言空|断言非空|断言包含|断言长度|断言抛|转JSON|解JSON)\\b"
+    },
+    {
+      "name": "entity.name.function.yan",
+      "match": "\\b[\\u4e00-\\u9fa5]+\\b"
+    },
+    {
+      "name": "meta.brace.yan",
+      "match": "[{}「」【】]"
+    },
+    {
+      "name": "support.other.yan",
+      "begin": "{{",
+      "end": "}}",
+      "patterns": [
+        {
+          "include": "source.python"
+        }
+      ]
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.yan",
+          "match": "--.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.yan",
+          "begin": "\"",
+          "end": "\""
+        }
+      ]
+    }
+  }
+}

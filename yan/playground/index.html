@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>言语言 Playground</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Microsoft YaHei", "微软雅黑", sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #f8d56b;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo span {
+            color: #4ecdc4;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+
+        .editor-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .panel-header {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 12px 20px;
+            font-size: 14px;
+            color: #aaa;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .editor-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        #editor {
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border: none;
+            color: #e0e0e0;
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 16px;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+        }
+
+        #editor::placeholder {
+            color: #666;
+        }
+
+        .output-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .output-content {
+            flex: 1;
+            padding: 20px;
+            overflow: auto;
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .output-line {
+            margin-bottom: 4px;
+        }
+
+        .output-success {
+            color: #4ecdc4;
+        }
+
+        .output-error {
+            color: #ff6b6b;
+        }
+
+        .output-info {
+            color: #f8d56b;
+        }
+
+        .examples-sidebar {
+            width: 280px;
+            background: rgba(0, 0, 0, 0.2);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            overflow-y: auto;
+        }
+
+        .example-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.2s;
+        }
+
+        .example-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .example-title {
+            font-size: 14px;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .example-desc {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .share-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: #1a1a2e;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #f8d56b;
+        }
+
+        .share-url {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #fff;
+            font-family: monospace;
+            margin-bottom: 15px;
+        }
+
+        .status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px 20px;
+            font-size: 12px;
+            color: #888;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .loading {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #4ecdc4;
+            font-size: 18px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(78, 205, 196, 0.3);
+            border-top-color: #4ecdc4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">言<span>语言</span> Playground</div>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="clearOutput()">清空输出</button>
+            <button class="btn btn-secondary" onclick="showShareModal()">分享代码</button>
+            <button class="btn btn-primary" onclick="runCode()">▶ 运行代码</button>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <div class="editor-panel">
+            <div class="panel-header">
+                <span>编辑器</span>
+                <span id="charCount">0 字符</span>
+            </div>
+            <div class="editor-wrapper">
+                <textarea id="editor" placeholder="在此输入言语言代码...
+
+示例:
+定 问候 = 函 名
+  连 "你好，" 名 "！"。
+
+印 问候 "世界"。
+印 加 1 2。
+
+-- 使用高阶函数
+定 数字 = 列 1 2 3 4 5。
+印 数字 皆 乘 2。
+印 数字 只 大 3。"></textarea>
+                <div class="loading" id="loading">
+                    <span class="spinner"></span>
+                    运行中...
+                </div>
+            </div>
+        </div>
+
+        <div class="output-panel">
+            <div class="panel-header">
+                <span>输出</span>
+                <span id="runStatus">就绪</span>
+            </div>
+            <div class="output-content" id="output">
+                <div class="output-info">▶ 点击「运行代码」或按 Ctrl+Enter 执行</div>
+            </div>
+        </div>
+
+        <div class="examples-sidebar">
+            <div class="panel-header">示例代码</div>
+            <div class="example-item" onclick="loadExample('hello')">
+                <div class="example-title">你好，世界</div>
+                <div class="example-desc">最简单的程序</div>
+            </div>
+            <div class="example-item" onclick="loadExample('function')">
+                <div class="example-title">函数定义</div>
+                <div class="example-desc">如何定义和使用函数</div>
+            </div>
+            <div class="example-item" onclick="loadExample('list')">
+                <div class="example-title">列表操作</div>
+                <div class="example-desc">列表和高阶函数</div>
+            </div>
+            <div class="example-item" onclick="loadExample('condition')">
+                <div class="example-title">条件判断</div>
+                <div class="example-desc">条件语句示例</div>
+            </div>
+            <div class="example-item" onclick="loadExample('loop')">
+                <div class="example-title">循环遍历</div>
+                <div class="example-desc">遍历列表</div>
+            </div>
+            <div class="example-item" onclick="loadExample('fibonacci')">
+                <div class="example-title">斐波那契</div>
+                <div class="example-desc">计算斐波那契数列</div>
+            </div>
+            <div class="example-item" onclick="loadExample('hanoi')">
+                <div class="example-title">汉诺塔</div>
+                <div class="example-desc">经典汉诺塔问题</div>
+            </div>
+            <div class="example-item" onclick="loadExample('json')">
+                <div class="example-title">JSON处理</div>
+                <div class="example-desc">JSON编解码</div>
+            </div>
+        </div>
+    </main>
+
+    <div class="share-modal" id="shareModal">
+        <div class="modal-content">
+            <div class="modal-title">分享代码</div>
+            <input type="text" class="share-url" id="shareUrl" readonly>
+            <button class="btn btn-primary" onclick="copyShareUrl()">复制链接</button>
+            <button class="btn btn-secondary" onclick="hideShareModal()" style="margin-left: 10px;">关闭</button>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span>言语言 v0.5.0</span>
+        <span id="statusInfo">就绪</span>
+    </div>
+
+    <script>
+        const examples = {
+            hello: `-- 你好，世界
+印 "你好，言语言！"。
+
+定 名字 = "世界"。
+印 连 "你好，" 名字 "！"。`,
+
+            function: `-- 函数定义示例
+定 平方 = 函 x
+  乘 x x。
+
+定 立方 = 函 x
+  乘 x x x。
+
+印 平方 5。
+印 立方 3。
+
+定 计算 = 函 a b
+  加 (平方 a) (平方 b)。
+
+印 计算 3 4。`,
+
+            list: `-- 列表操作示例
+定 数字 = 列 1 2 3 4 5。
+
+印 "原始列表:" 数字。
+
+印 "每个乘2:" 数字 皆 乘 2。
+
+印 "大于3:" 数字 只 大 3。
+
+印 "求和:" 数字 归 加 0。
+
+印 "长度:" 长 数字。`,
+
+            condition: `-- 条件判断示例
+定 年龄 = 25。
+
+若 大 年龄 18
+  印 "成年人"。
+则
+  印 "未成年"。`,
+
+            loop: `-- 循环遍历示例
+定 水果 = 列 "苹果" "香蕉" "橘子"。
+
+遍历 水果 于 f
+  印 f。`,
+
+            fibonacci: `-- 斐波那契数列
+定 斐波那契 = 函 n
+  若 小 n 2
+    n
+  则
+    加 (斐波那契 (减 n 1)) (斐波那契 (减 n 2))。
+
+遍历 (列 1 2 3 4 5 6 7 8 9 10) 于 i
+  印 连 "斐波那契(" i ") = " (斐波那契 i)。`,
+
+            hanoi: `-- 汉诺塔问题
+定 汉诺塔 = 函 n 源 目标 辅助
+  若 等 n 1
+    印 连 "移动盘子从 " 源 " 到 " 目标。
+  则
+    汉诺塔 (减 n 1) 源 辅助 目标。
+    印 连 "移动盘子从 " 源 " 到 " 目标。
+    汉诺塔 (减 n 1) 辅助 目标 源。
+
+汉诺塔 3 "A" "B" "C"。`,
+
+            json: `-- JSON处理示例
+定 数据 = 列
+  (列 "name" "言语言")
+  (列 "version" "0.5.0")
+  (列 "author" "Yan Team")。
+
+定 json串 = 转JSON 数据。
+印 "JSON编码:" json串。
+
+定 解码数据 = 解JSON json串。
+印 "JSON解码:" 解码数据。`
+        };
+
+        const editor = document.getElementById('editor');
+        const output = document.getElementById('output');
+        const charCount = document.getElementById('charCount');
+        const loading = document.getElementById('loading');
+        const runStatus = document.getElementById('runStatus');
+        const statusInfo = document.getElementById('statusInfo');
+
+        editor.addEventListener('input', () => {
+            charCount.textContent = `${editor.value.length} 字符`;
+        });
+
+        editor.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                runCode();
+            }
+        });
+
+        function loadExample(name) {
+            editor.value = examples[name] || '';
+            charCount.textContent = `${editor.value.length} 字符`;
+            output.innerHTML = '<div class="output-info">▶ 已加载示例，点击「运行代码」执行</div>';
+        }
+
+        async function runCode() {
+            const code = editor.value.trim();
+            if (!code) {
+                output.innerHTML = '<div class="output-error">❌ 请输入代码</div>';
+                return;
+            }
+
+            loading.classList.add('show');
+            runStatus.textContent = '运行中...';
+            statusInfo.textContent = '正在执行...';
+
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch('/api/execute', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ code })
+                });
+
+                const result = await response.json();
+                const endTime = performance.now();
+                const duration = (endTime - startTime).toFixed(2);
+
+                if (result.success) {
+                    let outputHtml = '';
+                    for (const line of result.output) {
+                        if (line.startsWith('[ERROR]')) {
+                            outputHtml += `<div class="output-error">❌ ${line.substring(7)}</div>`;
+                        } else {
+                            outputHtml += `<div class="output-success">▶ ${line}</div>`;
+                        }
+                    }
+                    outputHtml += `<div class="output-info" style="margin-top: 15px;">✨ 执行完成，耗时 ${duration}ms</div>`;
+                    output.innerHTML = outputHtml;
+                } else {
+                    output.innerHTML = `<div class="output-error">❌ 执行错误: ${result.error}</div>`;
+                }
+            } catch (error) {
+                output.innerHTML = `<div class="output-error">❌ 网络错误: ${error.message}</div>`;
+            }
+
+            loading.classList.remove('show');
+            runStatus.textContent = '完成';
+            statusInfo.textContent = '就绪';
+        }
+
+        function clearOutput() {
+            output.innerHTML = '<div class="output-info">▶ 输出已清空</div>';
+        }
+
+        function showShareModal() {
+            const code = editor.value.trim();
+            if (!code) {
+                output.innerHTML = '<div class="output-error">❌ 请先输入代码</div>';
+                return;
+            }
+
+            const encoded = btoa(encodeURIComponent(code));
+            const shareUrl = `${window.location.origin}${window.location.pathname}?code=${encoded}`;
+            document.getElementById('shareUrl').value = shareUrl;
+            document.getElementById('shareModal').style.display = 'flex';
+        }
+
+        function hideShareModal() {
+            document.getElementById('shareModal').style.display = 'none';
+        }
+
+        function copyShareUrl() {
+            const urlInput = document.getElementById('shareUrl');
+            urlInput.select();
+            document.execCommand('copy');
+            alert('链接已复制到剪贴板！');
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const sharedCode = urlParams.get('code');
+        if (sharedCode) {
+            try {
+                editor.value = decodeURIComponent(atob(sharedCode));
+                charCount.textContent = `${editor.value.length} 字符`;
+                output.innerHTML = '<div class="output-info">▶ 已加载分享的代码，点击「运行代码」执行</div>';
+            } catch (e) {
+                console.error('Failed to decode shared code:', e);
+            }
+        }
+    </script>
+</body>
+</html>

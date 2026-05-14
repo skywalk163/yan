@@ -74,7 +74,7 @@ class Lexer:
             # 赋值
             '等于',
             # 循环
-            '遍历', '当',
+            '遍历', '当', '于',
             # 数学库
             '正弦', '余弦', '正切', '反正弦', '反余弦', '反正切',
             '指数', '对数', '对数10', '开方', '取整', '进位', '四舍五入',
@@ -330,7 +330,7 @@ class Lexer:
                     # 优先级1：检查是否是"定"后面的变量名
                     if tokens and tokens[-1].type == TokenType.WORD and tokens[-1].value == '定':
                         j = i
-                        while j < len(source) and self._is_han(source[j]):
+                        while j < len(source) and (self._is_han(source[j]) or source[j].isdigit()):
                             j += 1
                         # 跳过空白
                         k = j

@@ -1,0 +1,149 @@
+{
+  "name": "yan-language",
+  "displayName": "言语言 (Yan Language)",
+  "description": "言语言 - 一门用中文文言文编程的编程语言",
+  "version": "0.5.0",
+  "publisher": "yan-lang",
+  "author": "Yan Language Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yan-lang/yan-vscode"
+  },
+  "keywords": [
+    "yan",
+    "言语言",
+    "chinese",
+    "literary",
+    "programming-language"
+  ],
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets",
+    "Debuggers"
+  ],
+  "activationEvents": [
+    "onLanguage:yan",
+    "onLanguage:yanmd"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "yan",
+        "aliases": ["言语言", "Yan", "yan"],
+        "extensions": [".yan"],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "yanmd",
+        "aliases": ["言文档", "YanMD", "yanmd"],
+        "extensions": [".ymd"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "yan",
+        "scopeName": "source.yan",
+        "embeddedLanguages": {
+          "source.python": "python"
+        },
+        "path": "./syntaxes/yan.tmLanguage.json"
+      },
+      {
+        "language": "yanmd",
+        "scopeName": "text.yanmd",
+        "path": "./syntaxes/yanmd.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "yan",
+        "path": "./snippets/yan.json"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "言语言配置",
+      "properties": {
+        "yan.languageServer.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用语言服务器"
+        },
+        "yan.languageServer.path": {
+          "type": "string",
+          "default": "",
+          "description": "语言服务器路径（留空使用默认）"
+        },
+        "yan.format.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用代码格式化"
+        },
+        "yan.linter.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用代码检查"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "yan.formatDocument",
+        "title": "格式化言语言代码",
+        "category": "言语言"
+      },
+      {
+        "command": "yan.runFile",
+        "title": "运行言语言文件",
+        "category": "言语言"
+      },
+      {
+        "command": "yan.showDocumentation",
+        "title": "显示帮助文档",
+        "category": "言语言"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "yan",
+        "label": "言语言调试器",
+        "languages": ["yan"],
+        "configurationAttributes": {
+          "launch": {
+            "required": ["program"],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "程序入口文件"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "lint": "eslint src --ext ts",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^16.0.0",
+    "@types/vscode": "^1.70.0",
+    "@typescript-eslint/eslint-plugin": "^5.0.0",
+    "@typescript-eslint/parser": "^5.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^4.0.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^8.0.0",
+    "vscode-languageserver": "^8.0.0"
+  }
+}

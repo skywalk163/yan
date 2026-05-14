@@ -73,6 +73,10 @@ class Parser:
 
     ADVERBS = {'潜'}  # 潜 is the only true adverb that modifies verbs
     VARARGS = {'列', '典', '序'}
+    INFIX_VERBS = {'加', '减', '乘', '除', '模', '幂',
+                   '大', '小', '等', '不等',
+                   '且', '或', '连', '含', '入',
+                   '包含', '开头是', '结尾是'}
     BUILTIN_VERBS = {
         '加', '减', '乘', '除', '模', '幂', '绝对', '负',
         '大', '小', '等', '不等',
@@ -288,8 +292,7 @@ class Parser:
             
             # 中缀动词
             while (self._current().type == TokenType.WORD and
-                   self._is_verb(self._current().value) and
-                   self._current().value not in self.ADVERBS):
+                   self._current().value in self.INFIX_VERBS):
                 infix_verb = self._advance().value
                 right = self._parse_atom()
                 arg = Call(Word(infix_verb), [arg, right])
@@ -302,7 +305,9 @@ class Parser:
             return None
 
         if self._check_word('定'):
-            return self._parse_define()
+            result = self._parse_define()
+            self._match(TokenType.DOT, TokenType.SEMI)
+            return result
 
         if self._check_word('测'):
             return self._parse_test()
@@ -385,7 +390,7 @@ class Parser:
         return Lambda(params, body)
 
     def _parse_block(self) -> Node:
-        """解析代码块，智能推断结束"""
+        """解析代码块"""
         statements = []
         block_start_indent = self._get_current_indent()
         
@@ -393,27 +398,19 @@ class Parser:
         self.block_stack.push('BLOCK', block_start_indent)
         
         while not self._is_at_end():
-            # 跳过句号
+            # 检测块结束标记
             if self._current().type == TokenType.DOT:
+                peek = self.tokens[self.pos + 1] if self.pos + 1 < len(self.tokens) else None
+                if peek and peek.type == TokenType.DOT:
+                    # 显式双句号：结束块
+                    self._advance()  # 第一个句号
+                    self._advance()  # 第二个句号
+                    break
+                # 单个句号也是块结束标记
+                # 因为上一个语句已经消耗了它自己的结束句号
+                # 所以这里的句号属于块结束
                 self._advance()
-                
-                # 检查是否应该结束块
-                if self._should_end_block(block_start_indent):
-                    # 特殊情况：在块内部遇到控制流关键字（若、遍历、当等）不应结束块
-                    # 这些关键字在块内部是合法语句
-                    if self._current().type == TokenType.WORD:
-                        word = self._current().value
-                        if word in {'若', '遍历', '当', '测', '套'}:
-                            # 在块内部，控制流关键字是合法语句，继续解析
-                            pass  # 继续解析
-                        elif word == '定':
-                            # 在块内部，'定' 是局部变量定义，继续解析
-                            pass  # 继续解析
-                        else:
-                            break
-                    else:
-                        break
-                continue
+                break
             
             # 块结束条件
             if self._is_block_end():
@@ -588,8 +585,7 @@ class Parser:
 
                 # 中缀动词
                 while (self._current().type == TokenType.WORD and
-                       self._is_verb(self._current().value) and
-                       self._current().value not in self.ADVERBS):
+                       self._current().value in self.INFIX_VERBS):
                     infix_verb = self._advance().value
                     right = self._parse_atom()
                     arg = Call(Word(infix_verb), [arg, right])
@@ -659,9 +655,7 @@ class Parser:
         
         # 处理中缀动词
         while (self._current().type == TokenType.WORD and
-               self._is_verb(self._current().value) and
-               self._current().value not in self.ADVERBS and
-               self._current().value != '则'):
+               self._current().value in self.INFIX_VERBS):
             infix_verb = self._advance().value
             right = self._parse_atom()
             cond = Call(Word(infix_verb), [cond, right])
@@ -762,8 +756,7 @@ class Parser:
         
         # 处理中缀动词
         while (self._current().type == TokenType.WORD and
-               self._is_verb(self._current().value) and
-               self._current().value not in self.ADVERBS):
+               self._current().value in self.INFIX_VERBS):
             # 遇到冒号时停止
             if self._current().type == TokenType.COLON:
                 break
