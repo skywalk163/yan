@@ -747,8 +747,19 @@ class Parser:
         """解析当循环：当 条件：循环体。"""
         self._advance()  # 消耗 '当'
         
-        # 解析条件
-        cond = self._parse_term()
+        # 解析条件（单个 term，可能是中缀表达式）
+        cond = self._parse_atom()
+        
+        # 处理中缀动词
+        while (self._current().type == TokenType.WORD and
+               self._is_verb(self._current().value) and
+               self._current().value not in self.ADVERBS):
+            # 遇到冒号时停止
+            if self._current().type == TokenType.COLON:
+                break
+            infix_verb = self._advance().value
+            right = self._parse_atom()
+            cond = Call(Word(infix_verb), [cond, right])
         
         # 期望 '：'（块开始）
         if self._current().type != TokenType.COLON:

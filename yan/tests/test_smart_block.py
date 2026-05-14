@@ -315,5 +315,100 @@ class TestIfWithBlock:
         assert hasattr(if_node.else_branch, 'statements')
 
 
+class TestLoopWithBlock:
+    """测试带块的循环语句"""
+
+    def test_foreach_with_block(self):
+        """测试遍历循环"""
+        from lexer import Lexer
+        from parser import Parser
+
+        code = """
+遍历x 于 列1 2 3：
+  印x。
+"""
+        lexer = Lexer()
+        tokens = lexer.tokenize(code)
+        parser = Parser()
+        ast = parser.parse(tokens)
+
+        assert len(ast.statements) == 1
+        foreach = ast.statements[0]
+        # 验证是 ForEach 节点
+        assert hasattr(foreach, 'var')
+        assert foreach.var == 'x'
+        assert hasattr(foreach, 'iterable')
+        assert hasattr(foreach, 'body')
+
+    def test_while_with_block(self):
+        """测试当循环"""
+        from lexer import Lexer
+        from parser import Parser
+
+        code = """
+当x小10：
+  印x。
+  定x=加x 1。
+"""
+        lexer = Lexer()
+        tokens = lexer.tokenize(code)
+        parser = Parser()
+        ast = parser.parse(tokens)
+
+        assert len(ast.statements) == 1
+        while_node = ast.statements[0]
+        # 验证是 While 节点
+        assert hasattr(while_node, 'cond')
+        assert hasattr(while_node, 'body')
+
+    def test_nested_loops(self):
+        """测试嵌套循环"""
+        from lexer import Lexer
+        from parser import Parser
+
+        code = """
+遍历x 于 列1 2 3：
+  遍历y 于 列4 5：
+    印x。
+    印y。
+"""
+        lexer = Lexer()
+        tokens = lexer.tokenize(code)
+        parser = Parser()
+        ast = parser.parse(tokens)
+
+        assert len(ast.statements) == 1
+        outer_foreach = ast.statements[0]
+        assert hasattr(outer_foreach, 'var')
+        assert outer_foreach.var == 'x'
+        # 验证外层循环体包含内层循环
+        # 当循环体只有一个语句时，_parse_block 返回该语句本身
+        assert hasattr(outer_foreach.body, 'var')
+        assert outer_foreach.body.var == 'y'
+
+    def test_while_with_complex_condition(self):
+        """测试带复杂条件的当循环"""
+        from lexer import Lexer
+        from parser import Parser
+
+        code = """
+当x小10且y大5：
+  印x。
+  印y。
+"""
+        lexer = Lexer()
+        tokens = lexer.tokenize(code)
+        parser = Parser()
+        ast = parser.parse(tokens)
+
+        assert len(ast.statements) == 1
+        while_node = ast.statements[0]
+        # 验证是 While 节点
+        assert hasattr(while_node, 'cond')
+        # 验证条件是中缀表达式链
+        assert hasattr(while_node.cond, 'verb')
+        assert hasattr(while_node, 'body')
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
