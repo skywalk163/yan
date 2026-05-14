@@ -127,3 +127,19 @@ class While(Node):
 class Program(Node):
     """程序（多个语句）"""
     statements: List[Node]
+
+
+@dataclass
+class Test(Node):
+    """测试用例"""
+    name: str
+    body: Node
+
+
+@dataclass
+class TestSuite(Node):
+    """测试套件"""
+    name: str
+    tests: List['Test']
+    setup: Optional[Node] = None
+    teardown: Optional[Node] = None

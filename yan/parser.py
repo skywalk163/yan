@@ -304,6 +304,12 @@ class Parser:
         if self._check_word('定'):
             return self._parse_define()
 
+        if self._check_word('测'):
+            return self._parse_test()
+
+        if self._check_word('套'):
+            return self._parse_test_suite()
+
         expr = self._parse_expression()
         self._match(TokenType.DOT, TokenType.SEMI)
 
@@ -477,6 +483,10 @@ class Parser:
         # 只有遇到新的函数定义才结束块
         # 注意：块内可以有 定 定义局部变量
         if tok.type == TokenType.WORD and tok.value in {'函'}:
+            return True
+        
+        # 测试块结束：遇到新的测试或测试套件
+        if tok.type == TokenType.WORD and tok.value in {'测', '套'}:
             return True
         
         return False
@@ -796,6 +806,87 @@ class Parser:
         else:
             # 多个 term 组成管道
             return Pipeline(terms)
+
+    def _parse_test(self) -> Test:
+        """解析测试：测 "测试名"：测试体。"""
+        self._advance()  # 消耗 '测'
+        
+        # 解析测试名称（字符串字面量）
+        if self._current().type != TokenType.STR:
+            raise self._error("期望测试名称（字符串）")
+        name = self._advance().value
+        
+        # 期望 '：'（块开始）
+        if self._current().type != TokenType.COLON:
+            raise self._error("期望 '：' 开始测试体")
+        self._advance()  # 消耗 '：'
+        
+        # 解析测试体
+        body = self._parse_block()
+        
+        return Test(name, body)
+
+    def _parse_test_suite(self) -> TestSuite:
+        """解析测试套件：套 "套件名"：测试列表。"""
+        self._advance()  # 消耗 '套'
+
+        # 解析套件名称（字符串字面量）
+        if self._current().type != TokenType.STR:
+            raise self._error("期望套件名称（字符串）")
+        name = self._advance().value
+
+        # 期望 '：'（块开始）
+        if self._current().type != TokenType.COLON:
+            raise self._error("期望 '：' 开始测试套件")
+        self._advance()  # 消耗 '：'
+
+        # 解析测试列表
+        tests = []
+        setup = None
+        teardown = None
+
+        while not self._is_at_end():
+            # 跳过句号
+            if self._current().type == TokenType.DOT:
+                self._advance()
+                continue
+
+            # 文件结束
+            if self._current().type == TokenType.EOF:
+                break
+
+            # 前置钩子
+            if self._check_word('前'):
+                self._advance()
+                if self._current().type != TokenType.COLON:
+                    raise self._error("期望 '：' 开始前置钩子")
+                self._advance()
+                setup = self._parse_block()
+                continue
+
+            # 后置钩子
+            if self._check_word('后'):
+                self._advance()
+                if self._current().type != TokenType.COLON:
+                    raise self._error("期望 '：' 开始后置钩子")
+                self._advance()
+                teardown = self._parse_block()
+                continue
+
+            # 测试定义
+            if self._check_word('测'):
+                test = self._parse_test()
+                tests.append(test)
+                continue
+
+            # 遇到新的测试套件，结束当前套件
+            if self._check_word('套'):
+                break
+
+            # 其他语句，跳过
+            self._advance()
+
+        return TestSuite(name, tests, setup, teardown)
 
 
 def process_adverbs(node: Node, adverbs: Set[str] = None) -> Node:

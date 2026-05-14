@@ -410,5 +410,91 @@ class TestLoopWithBlock:
         assert hasattr(while_node, 'body')
 
 
+class TestTestFramework:
+    """测试测试框架解析"""
+
+    def test_test_suite_auto_end(self):
+        """测试测试套件自动结束"""
+        from lexer import Lexer
+        from parser import Parser
+
+        code = """
+套 "算术运算测试"：
+  测 "加法运算"：
+    断言等 加 1 2 3。
+
+  测 "减法运算"：
+    断言等 减 5 3 2。
+"""
+        lexer = Lexer()
+        tokens = lexer.tokenize(code)
+        parser = Parser()
+        ast = parser.parse(tokens)
+
+        assert len(ast.statements) == 1
+        suite = ast.statements[0]
+        # 验证是 TestSuite
+        assert hasattr(suite, 'tests')
+        assert len(suite.tests) == 2
+
+    def test_test_suite_with_multiple_tests(self):
+        """测试套件包含多个测试"""
+        from lexer import Lexer
+        from parser import Parser
+
+        code = """
+套 "数据操作测试"：
+  测 "数据创建"：
+    定 数据 = 列 1 2 3。
+    断言等 长 数据 3。
+
+  测 "首元素"：
+    定 数据 = 列 1 2 3。
+    断言等 首 数据 1。
+
+  测 "余元素"：
+    定 数据 = 列 1 2 3。
+    断言等 余 数据 列 2 3。
+"""
+        lexer = Lexer()
+        tokens = lexer.tokenize(code)
+        parser = Parser()
+        ast = parser.parse(tokens)
+
+        assert len(ast.statements) == 1
+        suite = ast.statements[0]
+        assert hasattr(suite, 'tests')
+        assert len(suite.tests) == 3
+
+    def test_multiple_test_suites(self):
+        """测试多个测试套件"""
+        from lexer import Lexer
+        from parser import Parser
+
+        code = """
+套 "算术测试"：
+  测 "加法"：
+    断言等 加 1 2 3。
+
+套 "数据测试"：
+  测 "列表"：
+    断言等 长 列 1 2 3 3。
+"""
+        lexer = Lexer()
+        tokens = lexer.tokenize(code)
+        parser = Parser()
+        ast = parser.parse(tokens)
+
+        assert len(ast.statements) == 2
+        # 第一个套件
+        suite1 = ast.statements[0]
+        assert hasattr(suite1, 'tests')
+        assert len(suite1.tests) == 1
+        # 第二个套件
+        suite2 = ast.statements[1]
+        assert hasattr(suite2, 'tests')
+        assert len(suite2.tests) == 1
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

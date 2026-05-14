@@ -100,6 +100,8 @@ class Lexer:
             '印', '读', '写',
             '若', '则', '定', '函', '行',
             '真', '假',
+            # 测试框架
+            '套', '测',
         }
         self.user_words = user_words or set()  # 用户定义的词（不拆分）
         self.max_keyword_len = max(len(k) for k in self.keywords) if self.keywords else 1
