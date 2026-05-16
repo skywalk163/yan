@@ -56,6 +56,14 @@ class PythonCodeGen:
             return self._gen_foreach(node)
         elif isinstance(node, While):
             return self._gen_while(node)
+        elif isinstance(node, Import):
+            return self._gen_import(node)
+        elif isinstance(node, Export):
+            return self._gen_export(node)
+        elif isinstance(node, StructDef):
+            return self._gen_struct_def(node)
+        elif isinstance(node, StructInit):
+            return self._gen_struct_init(node)
         else:
             raise CodeGenError(f"未知节点类型: {type(node)}")
 
@@ -77,13 +85,19 @@ class PythonCodeGen:
         """生成函数调用"""
         verb_name = node.verb.name
 
-        # 查找动词
-        if verb_name in BUILTINS:
-            py_func, arity = BUILTINS[verb_name]
-            py_func_name = py_func.__name__ if hasattr(py_func, '__name__') else str(py_func)
-        elif verb_name in self.user_defined:
+        # 处理返回语句：返回 value -> return value
+        if verb_name == '返回':
+            if node.args:
+                return f'return {self.generate(node.args[0])}'
+            return 'return None'
+
+        # 查找动词：用户定义优先于内置函数
+        if verb_name in self.user_defined:
             py_func_name = verb_name
             arity = self.user_defined[verb_name]
+        elif verb_name in BUILTINS:
+            py_func, arity = BUILTINS[verb_name]
+            py_func_name = py_func.__name__ if hasattr(py_func, '__name__') else str(py_func)
         else:
             # 假设是用户定义的函数
             py_func_name = verb_name
@@ -92,12 +106,20 @@ class PythonCodeGen:
         # 生成参数
         args = [self.generate(a) for a in node.args]
 
+        # 只(列表, 谓词) -> _filter(谓词, 列表) 参数交换
+        if verb_name == '只' and len(args) == 2:
+            args = [args[1], args[0]]
+
         # 如果有管道参数，插入到参数列表首位
         if pipeline_arg is not None:
             args.insert(0, pipeline_arg)
 
-        # 如果没有参数且不是内置动词，可能是变量引用
-        if len(args) == 0 and verb_name not in BUILTINS and pipeline_arg is None:
+        # 如果没有参数且不是动词，可能是变量引用
+        if len(args) == 0 and verb_name not in BUILTINS and verb_name not in self.user_defined and pipeline_arg is None:
+            return py_func_name
+
+        # 对于 Python 代码块（arity=-1）且无参数调用，按变量引用处理
+        if len(args) == 0 and verb_name in self.user_defined and self.user_defined[verb_name] == -1 and pipeline_arg is None:
             return py_func_name
 
         # 柯里化：参数不足时生成 lambda
@@ -311,7 +333,10 @@ class PythonCodeGen:
             else:
                 # 最后一个语句作为返回值
                 if i == len(node.body.statements) - 1:
-                    lines.append(f'    return {code}')
+                    if code.startswith('return '):
+                        lines.append(f'    {code}')
+                    else:
+                        lines.append(f'    return {code}')
                 else:
                     lines.append(f'    {code}')
         
@@ -338,21 +363,27 @@ class PythonCodeGen:
         
         # 如果函数体是 Block，需要特殊处理
         if isinstance(node.body, Block):
+            # 单语句 Block：直接内联表达式（避免使用 return，lambda 不支持 return）
+            if len(node.body.statements) == 1:
+                code = self.generate(node.body.statements[0])
+                if '\n' not in code:
+                    return f'(lambda {params}: {code})'
+                # 多行代码：提取最后一行作为三元表达式
+                code_lines = code.split('\n')
+                last_expr = code_lines[-1].strip()
+                if ' if ' in last_expr and ' else ' in last_expr:
+                    return f'(lambda {params}: {last_expr})'
+            
+            # 多语句 Block：只能生成 def 风格的函数
             lines = []
             for i, stmt in enumerate(node.body.statements):
                 code = self.generate(stmt)
-                # 如果语句是多行的（如 if-else），需要特殊处理缩进
                 if '\n' in code:
-                    # 多行语句，需要调整缩进
                     code_lines = code.split('\n')
-                    indented_lines = []
                     for line in code_lines:
                         if line.strip():
-                            indented_lines.append(f'    {line}')
-                    code = '\n'.join(indented_lines)
-                    lines.append(code)
+                            lines.append(f'    {line}')
                 else:
-                    # 最后一个语句作为返回值
                     if i == len(node.body.statements) - 1:
                         lines.append(f'    return {code}')
                     else:
@@ -376,17 +407,18 @@ class PythonCodeGen:
         
         # 检查 then_branch 是否是 Block
         if isinstance(node.then_branch, Block):
-            # 生成完整的 if-else 语句
             lines = []
             then_lines = []
-            for stmt in node.then_branch.statements:
+            for i, stmt in enumerate(node.then_branch.statements):
                 code = self.generate(stmt)
-                # 如果语句是多行的，需要为每一行添加缩进
+                is_last = (i == len(node.then_branch.statements) - 1)
                 if '\n' in code:
                     code_lines = code.split('\n')
                     for line in code_lines:
                         if line.strip():
                             then_lines.append(f'    {line}')
+                elif is_last:
+                    then_lines.append(f'    return {code}')
                 else:
                     then_lines.append(f'    {code}')
             lines.append(f'if {cond}:')
@@ -395,47 +427,43 @@ class PythonCodeGen:
             if node.else_branch:
                 if isinstance(node.else_branch, Block):
                     lines.append('else:')
-                    for stmt in node.else_branch.statements:
+                    for i, stmt in enumerate(node.else_branch.statements):
                         code = self.generate(stmt)
-                        # 如果语句是多行的，需要为每一行添加缩进
+                        is_last = (i == len(node.else_branch.statements) - 1)
                         if '\n' in code:
                             code_lines = code.split('\n')
                             for line in code_lines:
                                 if line.strip():
                                     lines.append(f'    {line}')
+                        elif is_last:
+                            lines.append(f'    return {code}')
                         else:
                             lines.append(f'    {code}')
                 else:
                     else_code = self.generate(node.else_branch)
-                    lines.append(f'else:')
-                    lines.append(f'    {else_code}')
+                    lines.append('else:')
+                    lines.append(f'    return {else_code}')
             
             return '\n'.join(lines)
         
-        # 单行 then 分支
+        # 单行 then 分支，else 是 Block
         then_code = self.generate(node.then_branch)
         
-        # 检查 else_branch 是否是 Block
         if node.else_branch and isinstance(node.else_branch, Block):
             lines = []
             lines.append(f'if {cond}:')
-            # 如果 then_code 是多行的，需要为每一行添加缩进
-            if '\n' in then_code:
-                code_lines = then_code.split('\n')
-                for line in code_lines:
-                    if line.strip():
-                        lines.append(f'    {line}')
-            else:
-                lines.append(f'    {then_code}')
+            lines.append(f'    return {then_code}')
             lines.append('else:')
-            for stmt in node.else_branch.statements:
+            for i, stmt in enumerate(node.else_branch.statements):
                 code = self.generate(stmt)
-                # 如果语句是多行的，需要为每一行添加缩进
+                is_last = (i == len(node.else_branch.statements) - 1)
                 if '\n' in code:
                     code_lines = code.split('\n')
                     for line in code_lines:
                         if line.strip():
                             lines.append(f'    {line}')
+                elif is_last:
+                    lines.append(f'    return {code}')
                 else:
                     lines.append(f'    {code}')
             return '\n'.join(lines)
@@ -483,3 +511,40 @@ class PythonCodeGen:
             body_code = f'    {self.generate(node.body)}'
         
         return f'while {cond}:\n{body_code}'
+    
+    def _gen_import(self, node: Import) -> str:
+        """生成导入语句的 Python 代码"""
+        if node.names:
+            # 导入特定名称：from module import name1, name2
+            names_str = ', '.join(node.names)
+            return f'from {node.module_name} import {names_str}'
+        else:
+            # 导入整个模块
+            return f'import {node.module_name}'
+    
+    def _gen_export(self, node: Export) -> str:
+        """生成导出语句的 Python 代码"""
+        # Python 使用 __all__ 来控制导出
+        names_str = ', '.join(f"'{name}'" for name in node.names)
+        return f'__all__ = [{names_str}]'
+    
+    def _gen_struct_def(self, node: StructDef) -> str:
+        """生成结构体定义的 Python 代码"""
+        lines = [f'class {node.name}:']
+        
+        if node.fields:
+            # 生成 __init__ 方法
+            params = ', '.join(f'{name}=None' for name, _ in node.fields)
+            lines.append(f'    def __init__(self, {params}):')
+            for name, _ in node.fields:
+                lines.append(f'        self.{name} = {name}')
+        else:
+            lines.append('    pass')
+        
+        return '\n'.join(lines)
+    
+    def _gen_struct_init(self, node: StructInit) -> str:
+        """生成结构体实例化的 Python 代码"""
+        args = ', '.join(f'{name}={self.generate(value)}' 
+                        for name, value in node.field_values.items())
+        return f'{node.struct_name}({args})'

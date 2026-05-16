@@ -1,0 +1,218 @@
+-- 求值器模块
+-- 用言语言编写的表达式求值器
+
+{{
+# 内置函数实现
+def builtin_add(args):
+    return sum(int(arg) for arg in args)
+
+def builtin_sub(args):
+    if len(args) == 0:
+        return 0
+    result = int(args[0])
+    for arg in args[1:]:
+        result -= int(arg)
+    return result
+
+def builtin_mul(args):
+    result = 1
+    for arg in args:
+        result *= int(arg)
+    return result
+
+def builtin_div(args):
+    if len(args) == 0:
+        return 1
+    result = int(args[0])
+    for arg in args[1:]:
+        result = result // int(arg)
+    return result
+
+def builtin_print(args):
+    print(*args)
+    return None
+
+def builtin_len(args):
+    if args:
+        return len(args[0])
+    return 0
+
+def builtin_list(args):
+    return list(args)
+
+def builtin_get(args):
+    if len(args) >= 2:
+        return args[0][int(args[1])]
+    return None
+
+def builtin_append(args):
+    if len(args) >= 2:
+        args[0].append(args[1])
+        return args[0]
+    return None
+
+def builtin_concat(args):
+    return ''.join(str(arg) for arg in args)
+
+def builtin_equal(args):
+    if len(args) >= 2:
+        return args[0] == args[1]
+    return False
+
+def builtin_greater(args):
+    if len(args) >= 2:
+        return int(args[0]) > int(args[1])
+    return False
+
+def builtin_less(args):
+    if len(args) >= 2:
+        return int(args[0]) < int(args[1])
+    return False
+
+# 内置函数映射
+BUILTINS = {
+    '加': builtin_add,
+    '减': builtin_sub,
+    '乘': builtin_mul,
+    '除': builtin_div,
+    '印': builtin_print,
+    '长': builtin_len,
+    '列': builtin_list,
+    '入': builtin_get,
+    '取': builtin_get,
+    '添': builtin_append,
+    '连': builtin_concat,
+    '等于': builtin_equal,
+    '大于': builtin_greater,
+    '小于': builtin_less,
+}
+
+class Environment:
+    def __init__(self, parent=None):
+        self.variables = {}
+        self.parent = parent
+    
+    def define(self, name, value):
+        self.variables[name] = value
+    
+    def lookup(self, name):
+        if name in self.variables:
+            return self.variables[name]
+        if self.parent:
+            return self.parent.lookup(name)
+        return None
+
+def evaluate(ast, env=None):
+    if env is None:
+        env = Environment()
+    
+    def eval_node(node):
+        if node is None:
+            return None
+        
+        node_type = node[0]
+        
+        if node_type == 'Program':
+            result = None
+            for stmt in node[1]:
+                result = eval_node(stmt)
+            return result
+        
+        if node_type == 'Num':
+            return int(node[1])
+        
+        if node_type == 'Str':
+            return node[1]
+        
+        if node_type == 'Bool':
+            return node[1]
+        
+        if node_type == 'Nil':
+            return None
+        
+        if node_type == 'Word':
+            name = node[1]
+            if name is None:
+                return None
+            value = env.lookup(name)
+            if value is None and name in BUILTINS:
+                return BUILTINS[name]
+            return value
+        
+        if node_type == 'Define':
+            name = node[1]
+            value = eval_node(node[2])
+            env.define(name, value)
+            return value
+        
+        if node_type == 'Lambda':
+            name = node[1]
+            params = node[2]
+            body = node[3]
+            
+            def lambda_func(*args):
+                new_env = Environment(env)
+                for i, param in enumerate(params):
+                    if i < len(args):
+                        new_env.define(param, args[i])
+                return eval_node(body, new_env)
+            
+            env.define(name, lambda_func)
+            return lambda_func
+        
+        if node_type == 'Call':
+            verb = node[1]
+            args = [eval_node(arg) for arg in node[2]]
+            
+            # 查找函数
+            func = env.lookup(verb)
+            if func is None and verb in BUILTINS:
+                func = BUILTINS[verb]
+            
+            if func is None:
+                raise ValueError(f"未定义的函数: {verb}")
+            
+            return func(args)
+        
+        if node_type == 'If':
+            cond = eval_node(node[1])
+            if cond:
+                return eval_node(node[2])
+            elif node[3]:
+                return eval_node(node[3])
+            return None
+        
+        if node_type == 'While':
+            result = None
+            while eval_node(node[1]):
+                result = eval_node(node[2])
+            return result
+        
+        if node_type == 'PythonCode':
+            code = node[1]
+            exec(code, env.variables)
+            return None
+        
+        if node_type == 'Pipeline':
+            result = None
+            for step in node[1]:
+                if result is not None:
+                    # 将前一步结果注入到当前步骤
+                    pass
+                result = eval_node(step)
+            return result
+        
+        return None
+    
+    return eval_node(ast)
+}}
+
+-- 求值器主函数
+定evaluate=函ast：
+{{ return evaluate(ast) }}
+。
+
+-- 求值器带环境的主函数
+定evaluate_with_env=函ast环境：
+{{ return evaluate(ast, 环境) }}
+。

@@ -1,0 +1,171 @@
+-- 代码生成器模块（纯言语言实现）
+
+-- 运算符映射
+定运算符映射=列"+" "-" "*" "/" "==" "!=" ">" "<" ">=" "<="。
+
+-- 获取运算符
+定取运算符=函verb：
+  当verb等于"加"：返回入运算符映射0。。当verb等于"减"：返回入运算符映射1。。当verb等于"乘"：返回入运算符映射2。。当verb等于"除"：返回入运算符映射3。。当verb等于"等于"：返回入运算符映射4。。当verb等于"不等"：返回入运算符映射5。。当verb等于"大于"：返回入运算符映射6。。当verb等于"小于"：返回入运算符映射7。。当verb等于"大等于"：返回入运算符映射8。。当verb等于"小等于"：返回入运算符映射9。。返回verb。
+．
+
+-- 内置函数映射
+定内置映射=列"印" "print" "长" "len" "首" "first" "余" "rest" "空" "is_empty" "添" "append" "连" "concat"。
+
+-- 获取内置函数
+定取内置函数=函verb：
+  定i=0。
+  当i小于长内置映射：
+    当取内置映射i等于verb：返回取内置映射加i1。。i=加i1。。返回verb。
+．
+
+-- 获取节点类型
+定取节点类型=函node：
+  当node等于空：返回空。。定类型=入node0。返回类型。
+．
+
+-- 生成数字节点
+定生成数字=函node：
+  定值=入node1。返回值。
+．
+
+-- 生成字符串节点
+定生成字符串=函node：
+  定值=入node1。返回连"’"连值连"’".
+．
+
+-- 生成词节点
+定生成词=函node：
+  定值=入node1。当值等于空：返回""。。返回值。
+．
+
+-- 生成布尔节点
+定生成布尔=函node：
+  定值=入node1。当值：返回"True"。。返回"False"。
+．
+
+-- 生成空节点
+定生成空=函：
+  返回"None"。
+．
+
+-- 生成调用节点
+定生成调用=函node：
+  定verb=入node1。
+  定args=入node2。
+  当verb等于"列"：返回生成列表args。。当verb等于"入"：返回生成索引args。。当verb等于"取"：返回生成取args。。当verb等于"添"：返回生成添args。。当verb等于"连"：返回生成连args。。当verb等于"印"：返回生成印args。。当verb等于"长"：返回生成长args。。当或verb等于"加"或verb等于"减"或verb等于"乘"或verb等于"除"或verb等于"等于"或verb等于"不等"或verb等于"大于"或verb等于"小于"或verb等于"大等于"或verb等于"小等于"：返回生成运算符verbargs。。返回生成函数调用verbargs。
+．
+
+-- 生成列表
+定生成列表=函args：
+  定结果="["。
+  定i=0。当i小于长args：定arg=入argsi。定code=生成节点arg。连结果code。当i小于减长args1：连结果", "。。i=加i1。。连结果"]"。返回结果。
+．
+
+-- 生成索引访问
+定生成索引=函args：
+  当长args小于2：返回""。。定obj=生成节点入args0。定idx=生成节点入args1。返回连obj连"["连idx连"]".
+．
+
+-- 生成列表元素访问
+定生成取=函args：
+  当长args小于2：返回""。。定obj=生成节点入args0。定idx=生成节点入args1。返回连obj连"["连idx连"]".
+．
+
+-- 生成列表追加
+定生成添=函args：
+  当长args小于2：返回""。。定obj=生成节点入args0。定item=生成节点入args1。返回连obj连".append("连item连")".
+．
+
+-- 生成字符串连接
+定生成连=函args：
+  定结果=""。
+  定i=0。当i小于长args：定arg=入argsi。定code=生成节点arg。连结果code。当i小于减长args1：连结果" + "。。i=加i1。。返回结果。
+．
+
+-- 生成打印
+定生成印=函args：
+  定args_str=""。
+  定i=0。当i小于长args：定arg=入argsi。定code=生成节点arg。连args_strcode。当i小于减长args1：连args_str", "。。i=加i1。。返回连"print("连args_str连")".
+．
+
+-- 生成长度
+定生成长=函args：
+  当长args小于1：返回"len()"。。定arg=生成节点入args0。返回连"len("连arg连")".
+．
+
+-- 生成运算符
+定生成运算符=函verb args：
+  当长args小于2：返回""。。定left=生成节点入args0。定op=取运算符verb。定right=生成节点入args1。返回连"("连left连" "连op连" "连right连")".
+．
+
+-- 生成函数调用
+定生成函数调用=函verb args：
+  定args_str=""。
+  定i=0。当i小于长args：定arg=入argsi。定code=生成节点arg。连args_strcode。当i小于减长args1：连args_str", "。。i=加i1。。返回连verb连"("连args_str连")".
+．
+
+-- 生成定义节点
+定生成定义=函node：
+  定名称=入node1。定value=生成节点入node2。返回连名称连" = "连value。
+．
+
+-- 生成Lambda节点
+定生成Lambda=函node：
+  定名称=入node1。定params=入node2。定body=生成节点入node3。定params_str=""。定i=0。当i小于长params：连params_str取params i。当i小于减长params1：连params_str", "。。i=加i1。。返回连"def "连名称连"("连params_str连"):\n    "连body。
+．
+
+-- 生成条件节点
+定生成条件=函node：
+  定cond=生成节点入node1。定then_branch=生成节点入node2。定else_branch=生成节点入node3。当else_branch等于空：返回连"("连then_branch连" if "连cond连" else None)"。。返回连"("连then_branch连" if "连cond连" else "连else_branch连")".
+．
+
+-- 生成循环节点
+定生成循环=函node：
+  定cond=生成节点入node1。定body=生成节点入node2。返回连"while "连cond连":\n    "连body。
+．
+
+-- 生成Pipeline节点
+定生成Pipeline=函node：
+  定steps=入node1。定结果=""。定i=0。当i小于长steps：定step=入steps i。定code=生成节点step。连结果code。当i小于减长steps1：连结果"\n"。。i=加i1。。返回结果。
+．
+
+-- 生成Python代码节点
+定生成Python代码=函node：
+  定code=入node1。返回code。
+．
+
+-- 生成节点
+定生成节点=函node：
+  当node等于空：返回""。。定类型=取节点类型node。当类型等于1：返回生成程序node。。当类型等于2：返回生成数字node。。当类型等于3：返回生成字符串node。。当类型等于4：返回生成布尔node。。当类型等于5：返回生成空。。当类型等于6：返回生成词node。。当类型等于7：返回生成定义node。。当类型等于8：返回生成Lambdanode。。当类型等于9：返回生成调用node。。当类型等于10：返回生成条件node。。当类型等于11：返回生成循环node。。当类型等于12：返回生成Python代码node。。返回""。
+．
+
+-- 生成程序节点
+定生成程序=函node：
+  定statements=入node1。定结果=""。定i=0。当i小于长statements：定stmt=入statements i。定code=生成节点stmt。当code不等于空：连结果code。当i小于减长statements1：连结果"\n"。。i=加i1。。返回结果。
+．
+
+-- 代码生成主函数
+定generate=函ast：
+  返回生成节点ast。
+．
+
+-- 格式化代码
+定format_code=函code：
+  定lines=截取code 0长code。
+  定result=""。
+  定indent=0。
+  定i=0。当i小于长lines：
+    定line=入lines i。
+    定stripped=截取line 0长line。
+    定result_line=""。
+    定j=0。当j小于indent：连result_line"    "。j=加j1。。连result_linestripped。
+    连resultresult_line。
+    当且stripped不等于空且截取stripped长stripped减1等于":"：indent=加indent1。.i=加i1。
+  。返回result。
+．
+
+-- 保存代码到文件
+定save_code=函code文件名：
+  -- 此函数需要文件系统操作，保留为Python代码块
+  {{ save_code(code, 文件名) }}
+。

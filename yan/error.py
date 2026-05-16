@@ -210,12 +210,13 @@ class ErrorSuggester:
     }
     
     @classmethod
-    def suggest(cls, error_message: str, context: Optional[str] = None) -> Optional[str]:
+    def suggest(cls, error_message: Optional[str] = None, context: Optional[str] = None) -> Optional[str]:
         """根据错误信息生成建议"""
         # 检查常见错误
-        for key, suggestion in cls.COMMON_ERRORS.items():
-            if key in error_message:
-                return suggestion
+        if error_message:
+            for key, suggestion in cls.COMMON_ERRORS.items():
+                if key in error_message:
+                    return suggestion
         
         # 检查拼写错误
         if context:

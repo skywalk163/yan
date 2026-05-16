@@ -1,0 +1,169 @@
+-- 言语言编译器测试套件
+
+-- ============ 测试工具函数 ============
+
+定assert_eq=函(expected, actual, msg)：
+  若非expected等actual则：
+    印连"测试失败: "，msg。
+    印连"  期望: "，expected。
+    印连"  实际: "，actual。
+    返回假。
+  返回真。
+
+定assert_true=函(condition, msg)：
+  若非condition则：
+    印连"测试失败: "，msg。
+    返回假。
+  返回真。
+
+定run_test=函(test_name, test_func)：
+  印连"测试: "，test_name。
+  定result=test_func。
+  若result则：
+    印"  ✓ 通过"。
+  否则：
+    印"  ✗ 失败"。
+  返回result。
+
+-- ============ 词法分析测试 ============
+
+定test_lexer_basic=函：
+  定source="定x=加1 2。"
+  定tokens=tokenize source。
+  定expected_types=列'WORD' 'WORD' 'EQUALS' 'WORD' 'NUM' 'NUM' 'DOT' 'EOF'。
+  定actual_types=列。
+  定i=0。
+  当i小长tokens则：
+    actual_types，添入tokens i 1。
+    定i=加i 1。
+  return assert_eq(expected_types, actual_types, "基本词法分析")
+
+定test_lexer_string=函：
+  定source="定name=\"知行语言\"。"
+  定tokens=tokenize source。
+  定str_token=入tokens 2。
+  return assert_eq('STR', 入str_token 1, "字符串token类型")且assert_eq('知行语言', 入str_token 2, "字符串值")
+
+定test_lexer_numbers=函：
+  定source="123 456。"
+  定tokens=tokenize source。
+  return assert_eq('NUM', 入tokens 0 1, "数字token")且assert_eq('123', 入tokens 0 2, "数字值")
+
+-- ============ 语法分析测试 ============
+
+定test_parser_define=函：
+  定source="定x=加1 2。"
+  定tokens=tokenize source。
+  定parse_result=parse tokens。
+  定ast=入parse_result 0。
+  定errors=入parse_result 1。
+  return assert_eq('Program', 入ast 0, "程序节点")且assert_eq(0, 长errors, "无错误")
+
+定test_parser_if=函：
+  定source="若x大0则印x否则印0。"
+  定tokens=tokenize source。
+  定parse_result=parse tokens。
+  定ast=入parse_result 0。
+  return assert_eq('Program', 入ast 0, "程序节点")
+
+定test_parser_while=函：
+  定source="当i小10则定i=加i 1。"
+  定tokens=tokenize source。
+  定parse_result=parse tokens。
+  定errors=入parse_result 1。
+  return assert_eq(0, 长errors, "while语句无错误")
+
+-- ============ 代码生成测试 ============
+
+定test_codegen_define=函：
+  定source="定x=1。"
+  定result=compile source。
+  定code=入result 0。
+  return assert_true(code包含'x = 1', "变量定义代码生成")
+
+定test_codegen_add=函：
+  定source="定x=加1 2。"
+  定result=compile source。
+  定code=入result 0。
+  return assert_true(code包含'1 + 2', "加法代码生成")
+
+定test_codegen_print=函：
+  定source="印\"Hello\"。"
+  定result=compile source。
+  定code=入result 0。
+  return assert_true(code包含'print("Hello")', "打印代码生成")
+
+-- ============ 端到端测试 ============
+
+定test_end_to_end=函：
+  定source="定x=加1 2。定y=乘x 3。印y。"
+  定result=compile source。
+  定code=入result 0。
+  定errors=入result 1。
+  
+  {{
+  # 在Python中执行生成的代码
+  local_names = {}
+  exec(code, {}, local_names)
+  }}
+  
+  return assert_eq(0, 长errors, "无编译错误")
+
+-- ============ 运行所有测试 ============
+
+定run_all_tests=函：
+  印"="，连60，"="。
+  印"运行言语言编译器测试套件"。
+  印"="，连60，"="。
+  印空。
+  
+  定passed=0。
+  定total=0。
+  
+  -- 词法分析测试
+  印"【词法分析测试】"。
+  passed = 加passed 若run_test("基本词法分析", test_lexer_basic)则1否则0。
+  total = 加total 1。
+  passed = 加passed 若run_test("字符串解析", test_lexer_string)则1否则0。
+  total = 加total 1。
+  passed = 加passed 若run_test("数字解析", test_lexer_numbers)则1否则0。
+  total = 加total 1。
+  印空。
+  
+  -- 语法分析测试
+  印"【语法分析测试】"。
+  passed = 加passed 若run_test("定义语句", test_parser_define)则1否则0。
+  total = 加total 1。
+  passed = 加passed 若run_test("条件语句", test_parser_if)则1否则0。
+  total = 加total 1。
+  passed = 加passed 若run_test("循环语句", test_parser_while)则1否则0。
+  total = 加total 1。
+  印空。
+  
+  -- 代码生成测试
+  印"【代码生成测试】"。
+  passed = 加passed 若run_test("变量定义", test_codegen_define)则1否则0。
+  total = 加total 1。
+  passed = 加passed 若run_test("加法运算", test_codegen_add)则1否则0。
+  total = 加total 1。
+  passed = 加passed 若run_test("打印语句", test_codegen_print)则1否则0。
+  total = 加total 1。
+  印空。
+  
+  -- 端到端测试
+  印"【端到端测试】"。
+  passed = 加passed 若run_test("完整程序", test_end_to_end)则1否则0。
+  total = 加total 1。
+  印空。
+  
+  -- 统计结果
+  印"="，连60，"="。
+  印连"测试结果: "，passed，"/"，total，" 通过"。
+  若passed等total则：
+    印"✓ 所有测试通过！"。
+  否则：
+    印"✗ 部分测试失败"。
+  印"="，连60，"="。
+
+-- 运行测试套件
+run_all_tests。

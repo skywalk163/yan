@@ -75,6 +75,10 @@ class Lexer:
             '等于',
             # 循环
             '遍历', '当', '于',
+            # 模块系统（新增）
+            '导入', '模块', '导出', '从',
+            # 结构体系统（新增）
+            '结构', '类型', '字段',
             # 数学库
             '正弦', '余弦', '正切', '反正弦', '反余弦', '反正切',
             '指数', '对数', '对数10', '开方', '取整', '进位', '四舍五入',
@@ -98,8 +102,12 @@ class Lexer:
             '首', '余', '入', '长', '添', '连', '含', '空', '范围',
             '皆', '只', '归', '潜',
             '印', '读', '写',
-            '若', '则', '定', '函', '行',
+            '若', '则', '定', '函', '返回', '行', '无',
             '真', '假',
+            # 新增列表操作
+            '反', '排', '最大', '最小', '求和', '计数',
+            # 新增字典操作
+            '键', '值', '项', '删键',
             # 测试框架
             '套', '测',
         }
@@ -110,6 +118,47 @@ class Lexer:
         self.surnames = BAIJIAXING
         self.conflicting_surnames = CONFLICTING_SURNAMES
         self.max_surname_len = max(len(k) for k in self.surnames) if self.surnames else 2
+
+    def _scan_user_defs(self, source: str) -> Set[str]:
+        """轻量扫描：收集所有用户定义的函数名/变量名
+        
+        寻找 '定 X =' 或 '定 X = 函' 模式的标识符 X
+        """
+        names = set()
+        i = 0
+        while i < len(source):
+            # 跳过空白和注释
+            while i < len(source) and source[i] in ' \t\r\n':
+                i += 1
+            if i >= len(source):
+                break
+            if source[i:i+2] == '--' or source[i] == '注':
+                while i < len(source) and source[i] != '\n':
+                    i += 1
+                continue
+            
+            # 查找 '定'
+            if source[i] == '定':
+                j = i + 1
+                # 跳过空白
+                while j < len(source) and source[j] in ' \t':
+                    j += 1
+                # 收集标识符
+                k = j
+                while k < len(source) and (source[k].isalnum() or ord(source[k]) >= 0x4E00 and ord(source[k]) <= 0x9FFF):
+                    k += 1
+                if k > j:
+                    name = source[j:k]
+                    # 跳过空白检查 '='
+                    m = k
+                    while m < len(source) and source[m] in ' \t':
+                        m += 1
+                    if m < len(source) and source[m] == '=':
+                        names.add(name)
+                    i = k
+                    continue
+            i += 1
+        return names
 
     def _is_han(self, ch: str) -> bool:
         """判断是否为汉字"""
@@ -157,6 +206,10 @@ class Lexer:
         i = 0
         line, col = 1, 1
 
+        # 第一阶段：轻量扫描收集所有用户定义的标识符
+        # 这些标识符在后续 tokenize 过程中不会被关键字拆分
+        user_defined_names = self._scan_user_defs(source)
+
         while i < len(source):
             ch = source[i]
 
@@ -183,6 +236,60 @@ class Lexer:
                 while i < len(source) and source[i] != '\n':
                     i += 1
                 continue
+
+            # 单引号字符串：'...'（用于转义序列）
+            # 检测逻辑：找到开始的 ' 后，向前看是否有结束的 '
+            if ch == "'":
+                j = i + 1
+                found_closing = False
+                temp_j = j
+                while temp_j < len(source):
+                    if source[temp_j] == '\\' and temp_j + 1 < len(source):
+                        temp_j += 2
+                    elif source[temp_j] == "'":
+                        found_closing = True
+                        break
+                    elif source[temp_j] == '\n':
+                        break
+                    else:
+                        temp_j += 1
+                if found_closing:
+                    chars = []
+                    has_escape = False
+                    while j < len(source) and source[j] != "'":
+                        if source[j] == '\\' and j + 1 < len(source):
+                            has_escape = True
+                            next_ch = source[j + 1]
+                            if next_ch == 't':
+                                chars.append('\t')
+                                j += 2
+                            elif next_ch == 'n':
+                                chars.append('\n')
+                                j += 2
+                            elif next_ch == 'r':
+                                chars.append('\r')
+                                j += 2
+                            elif next_ch == '\\':
+                                chars.append('\\')
+                                j += 2
+                            elif next_ch == "'":
+                                chars.append("'")
+                                j += 2
+                            else:
+                                chars.append(source[j])
+                                j += 1
+                        elif source[j] == '\n':
+                            break
+                        else:
+                            chars.append(source[j])
+                            j += 1
+                    if j >= len(source) or source[j] != "'":
+                        raise LexerError("单引号字符串未闭合", line, col)
+                    value = ''.join(chars)
+                    tokens.append(Token(TokenType.STR, value, line, col))
+                    col += j - i + 1
+                    i = j + 1
+                    continue
 
             # 引用符号：' (Lisp-style quote)
             if ch == "'":
@@ -273,17 +380,41 @@ class Lexer:
                 i = j + 2  # 跳过 }}
                 continue
 
-            # 字符串："..."
+            # 字符串："..."（支持转义序列）
             if ch == '"':
                 j = i + 1
+                chars = []
                 while j < len(source) and source[j] != '"':
-                    if source[j] == '\n':
+                    if source[j] == '\\' and j + 1 < len(source):
+                        next_ch = source[j + 1]
+                        if next_ch == 't':
+                            chars.append('\t')
+                            j += 2
+                        elif next_ch == 'n':
+                            chars.append('\n')
+                            j += 2
+                        elif next_ch == 'r':
+                            chars.append('\r')
+                            j += 2
+                        elif next_ch == '\\':
+                            chars.append('\\')
+                            j += 2
+                        elif next_ch == '"':
+                            chars.append('"')
+                            j += 2
+                        else:
+                            chars.append(source[j])
+                            j += 1
+                    elif source[j] == '\n':
                         line += 1
                         col = 1
-                    j += 1
+                        j += 1
+                    else:
+                        chars.append(source[j])
+                        j += 1
                 if j >= len(source):
                     raise LexerError("字符串未闭合", line, col)
-                value = source[i+1:j]
+                value = ''.join(chars)
                 tokens.append(Token(TokenType.STR, value, line, col))
                 col += j - i + 1
                 i = j + 1
@@ -317,20 +448,24 @@ class Lexer:
             if self._is_ident_char(ch):
                 # 尝试最长匹配用户定义的词
                 if self._is_han(ch) and self.user_words:
+                    matched_user_word = False
                     for length in range(min(10, len(source) - i), 0, -1):  # 最多10个字
                         candidate = source[i:i+length]
                         if candidate in self.user_words:
                             tokens.append(Token(TokenType.WORD, candidate, line, col))
                             col += length
                             i += length
-                            continue
+                            matched_user_word = True
+                            break
+                    if matched_user_word:
+                        continue
 
                 # 尝试最长匹配关键字（只对汉字关键字）
                 if self._is_han(ch):
                     # 优先级1：检查是否是"定"后面的变量名
                     if tokens and tokens[-1].type == TokenType.WORD and tokens[-1].value == '定':
                         j = i
-                        while j < len(source) and (self._is_han(source[j]) or source[j].isdigit()):
+                        while j < len(source) and (self._is_han(source[j]) or source[j].isdigit() or (source[j].isascii() and source[j].isalpha())):
                             j += 1
                         # 跳过空白
                         k = j
@@ -344,6 +479,49 @@ class Lexer:
                             col += len(value)
                             i = j
                             continue
+
+                    # 优先级1.5：处理"函"后面的参数
+                    # 每个参数跟在函后面，按关键字边界分割
+                    if tokens and tokens[-1].type == TokenType.WORD and tokens[-1].value == '函':
+                        j = i
+                        # 只收集非关键字的连续汉字作为单个参数
+                        while j < len(source) and self._is_han(source[j]):
+                            # 检查从j开始是否有匹配的关键字
+                            is_keyword = False
+                            for kl in range(min(self.max_keyword_len, len(source) - j), 0, -1):
+                                candidate = source[j:j+kl]
+                                if candidate in self.keywords:
+                                    is_keyword = True
+                                    break
+                            if is_keyword and j > i:
+                                # 关键字开始，参数收集结束
+                                break
+                            if is_keyword:
+                                # 当前字符是关键字的开始，不是参数
+                                break
+                            j += 1
+                        value = source[i:j]
+                        if value:
+                            tokens.append(Token(TokenType.WORD, value, line, col))
+                            col += len(value)
+                            i = j
+                            continue
+
+                    # 优先级1.75：检查用户定义的函数名（优先于关键字拆分）
+                    # 如"更新"中的"更"是关键字，"扩展"中的"扩"也是关键字
+                    # 但用户定义的函数名应该保持完整
+                    found_user_name = False
+                    if self._is_han(ch):
+                        for length in range(min(10, len(source) - i), 1, -1):
+                            candidate = source[i:i+length]
+                            if candidate in user_defined_names:
+                                tokens.append(Token(TokenType.WORD, candidate, line, col))
+                                col += length
+                                i += length
+                                found_user_name = True
+                                break
+                    if found_user_name:
+                        continue
 
                     # 优先级2：尝试匹配关键字（最长匹配优先）
                     matched = None
@@ -463,8 +641,37 @@ class Lexer:
                         # 检查是否遇到关键字
                         candidate = source[j:j+1]
                         if candidate in self.keywords:
-                            break
-                        # 检查下一个多字是否是关键字
+                            # 如果是用户定义的标识符的一部分，不拆分
+                            full_so_far = source[i:j+1]
+                            if full_so_far in user_defined_names:
+                                j += 1
+                                continue
+                            # "则"、"若"、"定"、"函"、"真"、"假"等结构关键字
+                            # 仅在后面恰好只跟一个汉字时才作为标识符的一部分
+                            # 如"规则表"（则+表=1字）是合法标识符
+                            # 如"带则扩展"（则+扩展=2字）、"符号则"（则后非汉字）都应按关键字处理
+                            if candidate in {'则', '若', '定', '函', '真', '假'}:
+                                if (j + 2 < len(source) and 
+                                    self._is_han(source[j+1]) and 
+                                    not self._is_han(source[j+2])):
+                                    j += 1
+                                    continue  # 关键字后恰跟一个汉字，作为标识符一部分
+                                if (j + 1 == len(source) - 1 and 
+                                    self._is_han(source[j+1])):
+                                    j += 1
+                                    continue  # 关键字后恰跟一个汉字（行尾），作为标识符一部分
+                            # 检查是否为多字关键字且整个是用户定义的标识符
+                            for length in range(min(self.max_keyword_len, len(source) - j), 1, -1):
+                                kw_candidate = source[j:j+length]
+                                if kw_candidate in self.keywords:
+                                    full_kw = source[i:j+length]
+                                    if full_kw in user_defined_names:
+                                        j += length
+                                        break
+                            else:
+                                break  # 遇到关键字，停止收集
+                            continue
+                        # 检查下一个多字是否是关键字（长度>=2）
                         found_keyword = False
                         for length in range(min(self.max_keyword_len, len(source) - j), 1, -1):
                             if source[j:j+length] in self.keywords:

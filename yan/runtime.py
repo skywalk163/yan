@@ -56,6 +56,14 @@ def _concat(lst1, lst2): return lst1 + lst2
 def _contains(lst, item): return item in lst
 def _empty(lst): return len(lst) == 0
 
+# 新增列表操作函数
+def _reverse(lst): return list(reversed(lst))
+def _sort(lst): return sorted(lst)
+def _max(lst): return max(lst) if lst else None
+def _min(lst): return min(lst) if lst else None
+def _sum(lst): return sum(lst)
+def _count(lst, item): return lst.count(item)
+
 
 # ============ 高阶函数 ============
 
@@ -129,6 +137,34 @@ def curry(func, arity):
     return wrapper
 
 
+# ============ 字典操作 ============
+
+def _dict(*args):
+    """创建字典：典'key1' val1 'key2' val2"""
+    d = {}
+    for i in range(0, len(args), 2):
+        if i + 1 < len(args):
+            d[args[i]] = args[i + 1]
+    return d
+
+def _keys(d): return list(d.keys())
+def _values(d): return list(d.values())
+def _items(d): return list(d.items())
+def _delkey(d, key):
+    if key in d:
+        del d[key]
+    return d
+
+# 字典操作
+DICT_BUILTINS = {
+    '典': (_dict, -1),
+    '键': (_keys, 1),
+    '值': (_values, 1),
+    '项': (_items, 1),
+    '删键': (_delkey, 2),
+}
+
+
 # ============ 内置动词映射 ============
 
 BUILTINS = {
@@ -155,6 +191,13 @@ BUILTINS = {
     '连': (_concat, 2),
     '含': (_contains, 2),
     '空': (_empty, 1),
+    # 新增列表操作
+    '反': (_reverse, 1),
+    '排': (_sort, 1),
+    '最大': (_max, 1),
+    '最小': (_min, 1),
+    '求和': (_sum, 1),
+    '计数': (_count, 2),
 
     # 比较
     '大': (_gt, 2),
@@ -352,6 +395,7 @@ TYPE_BUILTINS = {
 
 ALL_BUILTINS = {
     **BUILTINS,
+    **DICT_BUILTINS,
     **MATH_BUILTINS,
     **STRING_BUILTINS,
     **FILE_BUILTINS,

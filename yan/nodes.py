@@ -3,7 +3,7 @@
 """
 
 from dataclasses import dataclass
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 
 
 @dataclass
@@ -143,3 +143,30 @@ class TestSuite(Node):
     tests: List['Test']
     setup: Optional[Node] = None
     teardown: Optional[Node] = None
+
+
+@dataclass
+class Import(Node):
+    """导入语句"""
+    module_name: str
+    names: Optional[List[str]] = None
+
+
+@dataclass
+class Export(Node):
+    """导出语句"""
+    names: List[str]
+
+
+@dataclass
+class StructDef(Node):
+    """结构体定义"""
+    name: str
+    fields: List[tuple]  # [(字段名, 类型名), ...]
+
+
+@dataclass
+class StructInit(Node):
+    """结构体实例化"""
+    struct_name: str
+    field_values: Dict[str, Node]
