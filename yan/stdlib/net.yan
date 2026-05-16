@@ -1,0 +1,192 @@
+-- 网络请求模块 (net.yan)
+-- 提供HTTP请求功能
+
+-- 发送GET请求
+定 GET 函 url headers timeout:
+    {{ requests.get(url, headers=headers, timeout=timeout) }}
+。
+
+-- 发送POST请求
+定 POST 函 url data json headers timeout:
+    {{ requests.post(url, data=data, json=json, headers=headers, timeout=timeout) }}
+。
+
+-- 发送PUT请求
+定 PUT 函 url data json headers timeout:
+    {{ requests.put(url, data=data, json=json, headers=headers, timeout=timeout) }}
+。
+
+-- 发送DELETE请求
+定 DELETE 函 url headers timeout:
+    {{ requests.delete(url, headers=headers, timeout=timeout) }}
+。
+
+-- 发送PATCH请求
+定 PATCH 函 url data json headers timeout:
+    {{ requests.patch(url, data=data, json=json, headers=headers, timeout=timeout) }}
+。
+
+-- 发送HEAD请求
+定 HEAD 函 url headers timeout:
+    {{ requests.head(url, headers=headers, timeout=timeout) }}
+。
+
+-- 发送OPTIONS请求
+定 OPTIONS 函 url headers timeout:
+    {{ requests.options(url, headers=headers, timeout=timeout) }}
+。
+
+-- 获取响应状态码
+定 状态码 函 response:
+    {{ response.status_code }}
+。
+
+-- 获取响应内容
+定 内容 函 response:
+    {{ response.text }}
+。
+
+-- 获取响应JSON
+定 JSON内容 函 response:
+    {{ response.json() }}
+。
+
+-- 获取响应头
+定 响应头 函 response name:
+    {{ response.headers.get(name) }}
+。
+
+-- 获取所有响应头
+定 所有响应头 函 response:
+    {{ dict(response.headers) }}
+。
+
+-- 检查响应是否成功
+定 成功? 函 response:
+    {{ response.ok }}
+。
+
+-- 获取响应URL
+定 响应URL 函 response:
+    {{ response.url }}
+。
+
+-- 获取响应编码
+定 编码 函 response:
+    {{ response.encoding }}
+。
+
+-- 设置响应编码
+定 设置编码 函 response encoding:
+    {{ response.encoding = encoding }}
+。
+
+-- 获取Cookie
+定 Cookie 函 response name:
+    {{ response.cookies.get(name) }}
+。
+
+-- 获取所有Cookie
+定 所有Cookie 函 response:
+    {{ dict(response.cookies) }}
+。
+
+-- 获取请求历史
+定 请求历史 函 response:
+    {{ response.history }}
+。
+
+-- 创建Session
+定 创建Session 函:
+    {{ requests.Session() }}
+。
+
+-- Session发送GET请求
+定 Session_GET 函 session url headers timeout:
+    {{ session.get(url, headers=headers, timeout=timeout) }}
+。
+
+-- Session发送POST请求
+定 Session_POST 函 session url data json headers timeout:
+    {{ session.post(url, data=data, json=json, headers=headers, timeout=timeout) }}
+。
+
+-- Session保存Cookie到文件
+定 保存Cookie 函 session filename:
+    {{ session.cookies.save(filename) }}
+。
+
+-- Session从文件加载Cookie
+定 加载Cookie 函 session filename:
+    {{ session.cookies.load(filename) }}
+。
+
+-- URL编码
+定 URL编码 函 params:
+    {{ requests.utils.quote(params) }}
+。
+
+-- URL解码
+定 URL解码 函 url:
+    {{ requests.utils.unquote(url) }}
+。
+
+-- 构建查询参数
+定 构建参数 函 params:
+    {{ requests.utils.urlencode(params) }}
+。
+
+-- 解析URL
+定 解析URL 函 url:
+    {{ requests.utils.urlparse(url) }}
+。
+
+-- 构建完整URL
+定 构建URL 函 base_url path params:
+    {{ requests.utils.urljoin(base_url, path) + '?' + requests.utils.urlencode(params) if params else requests.utils.urljoin(base_url, path) }}
+。
+
+-- 获取重定向历史
+定 重定向历史 函 response:
+    {{ [r.url for r in response.history] }}
+。
+
+-- 检查是否重定向
+定 重定向? 函 response:
+    {{ len(response.history) > 0 }}
+。
+
+-- 超时设置
+定 超时 函 seconds:
+    {{ seconds }}
+。
+
+-- 用户代理
+定 用户代理 函 ua:
+    {{ {"User-Agent": ua} }}
+。
+
+-- 基础认证头
+定 基础认证 函 username password:
+    {{ requests.auth.HTTPBasicAuth(username, password) }}
+。
+
+-- Bearer Token头
+定 Bearer令牌 函 token:
+    {{ {"Authorization": "Bearer " + token} }}
+。
+
+-- JSON内容类型头
+定 JSON头 函:
+    {{ {"Content-Type": "application/json"} }}
+。
+
+-- Form内容类型头
+定 Form头 函:
+    {{ {"Content-Type": "application/x-www-form-urlencoded"} }}
+。
+
+-- Multipart内容类型头
+定 Multipart头 函:
+    {{ {"Content-Type": "multipart/form-data"} }}
+。

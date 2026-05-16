@@ -84,6 +84,70 @@
 印"等待2秒后继续"。
 ```
 
+### 5. string - 字符串处理模块
+
+字符串操作和处理函数。
+
+**核心函数：**
+- `长度` - 获取字符串长度
+- `拼接` - 字符串拼接
+- `大写` - 转换为大写
+- `小写` - 转换为小写
+- `替换` - 字符串替换
+- `分割` - 字符串分割
+- `去空白` - 去除首尾空白
+- `查找` - 查找子字符串
+
+**示例：**
+```yan
+定s="Hello World"。
+印大写s。  -- 输出: HELLO WORLD
+印小写s。  -- 输出: hello world
+印长度s。  -- 输出: 11
+```
+
+### 6. net - 网络请求模块
+
+HTTP请求和网络通信功能。
+
+**核心函数：**
+- `GET` - 发送GET请求
+- `POST` - 发送POST请求
+- `PUT` - 发送PUT请求
+- `DELETE` - 发送DELETE请求
+- `状态码` - 获取响应状态码
+- `内容` - 获取响应内容
+- `JSON内容` - 获取响应JSON
+
+**示例：**
+```yan
+定resp=GET"https://api.example.com/data"。
+印状态码resp。
+印内容resp。
+```
+
+### 7. json - JSON处理模块
+
+JSON编码和解码功能。
+
+**核心函数：**
+- `解析` - 解析JSON字符串
+- `生成` - 生成JSON字符串
+- `读文件` - 读取JSON文件
+- `写文件` - 写入JSON文件
+- `有效?` - 检查是否为有效JSON
+- `合并` - 合并两个JSON对象
+- `过滤` - 过滤JSON数据
+
+**示例：**
+```yan
+定obj=解析'{"name":"Alice","age":30}'。
+印obj["name"]。
+
+定json_str=生成obj。
+印json_str。
+```
+
 ## 🔧 使用方法
 
 ### 导入单个模块
@@ -98,6 +162,9 @@
 引 collections。
 引 math。
 引 io。
+引 string。
+引 net。
+引 json。
 ```
 
 ### 导入模块中的特定函数
@@ -107,11 +174,31 @@
 印阶乘5。
 ```
 
+### 使用网络请求
+```yan
+引 net。
+
+定 resp = GET "https://api.github.com/users"。
+印 状态码 resp。
+印 JSON内容 resp。
+```
+
+### 使用JSON处理
+```yan
+引 json。
+
+定 data = 解析 '{"name":"Alice","score":95}'。
+印 data["name"]。
+
+定 json_str = 生成 data。
+```
+
 ## 📚 更多资源
 
 - [语言规范](../docs/LANGUAGE_SPEC.md)
 - [入门教程](../docs/TUTORIAL.md)
 - [自举成功报告](../selfhost/BOOTSTRAP_SUCCESS_REPORT.md)
+- [工具链文档](../docs/TOOLCHAIN.md)
 
 ## 📝 贡献指南
 
@@ -121,6 +208,7 @@
 2. 遵循言语言语法规范
 3. 添加完整的函数文档注释
 4. 编写测试用例
+5. 更新本 README.md 文档
 
 ## 📄 许可证
 
