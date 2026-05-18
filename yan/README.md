@@ -1,5 +1,9 @@
 # 言 (Yán) — 中文函数式编程语言
 
+[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/skywalk163/yan)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Build Status](https://img.shields.io/badge/build-passing-green.svg)](https://github.com/skywalk163/yan)
+
 一门以中文为语法核心的函数式编程语言，转译到 Python 执行。
 
 ## 特性
@@ -130,7 +134,23 @@ yan/
 
 ## 文档
 
-- [语法手册](docs/SYNTAX.md) — 从零开始学习言语言
+### 教程
+- [入门教程（第1章）](docs/tutorial/01-intro.md) — 环境搭建和第一个程序
+- [入门教程（第2章）](docs/tutorial/02-basics.md) — 基础语法
+- [入门教程（第3章）](docs/tutorial/03-functional.md) — 函数式编程
+- [入门教程（第4章）](docs/tutorial/04-modules.md) — 模块系统
+- [入门教程（第5章）](docs/tutorial/05-project.md) — 综合实战
+- [进阶教程（第6章）](docs/tutorial/06-advanced.md) — 高阶函数、闭包、递归
+- [进阶教程（第7章）](docs/tutorial/07-stdlib.md) — 标准库深度解析
+- [进阶教程（第8章）](docs/tutorial/08-project.md) — 项目实战
+- [进阶教程（第9章）](docs/tutorial/09-best-practices.md) — 最佳实践
+- [进阶教程（第10章）](docs/tutorial/10-deployment.md) — 部署与发布
+
+### 参考
+- [语法手册](docs/SYNTAX.md) — 语言语法规范
+- [语言规范](docs/LANGUAGE_SPEC.md) — 完整语言规范
+- [错误格式规范](docs/ERROR_FORMAT_SPEC.md) — 错误处理规范
+- [CHANGELOG](CHANGELOG.md) — 版本变更记录
 
 ## 核心概念
 
@@ -200,6 +220,99 @@ yan/
 - 列表断言：列表长度、列表为空、列表相等
 - 字典断言：字典包含键、字典相等
 - 组合断言：全部通过、任意通过
+
+### 标准库
+
+言语言提供完整的标准库，涵盖网络、数据处理、加密等常用功能：
+
+**网络模块（net）：**
+```
+-- HTTP 请求
+定 响应 = 请求 "https://api.example.com/data"。
+定 内容 = 响应.内容。
+
+-- 文件下载
+下载 "https://example.com/file.zip" "本地文件.zip"。
+
+-- 文件上传
+上传 "https://api.example.com/upload" "文件路径"。
+```
+
+**JSON 模块：**
+```
+-- JSON 编码
+定 数据 = 典 "name" "张三" "age" 25。
+定 JSON串 = 编码 数据。
+
+-- JSON 解码
+定 解析数据 = 解码 JSON串。
+印 解析数据.name。
+```
+
+**正则模块（regex）：**
+```
+-- 模式匹配
+定 文本 = "邮箱：test@example.com"。
+定 结果 = 匹配 文本 "\\w+@\\w+\\.\\w+"。
+印 结果.组0。
+
+-- 替换
+定 新文本 = 替换 文本 "\\d+" "数字"。
+
+-- 分割
+定 列表 = 分割 "a,b,c" ","。
+```
+
+**日期模块（datetime）：**
+```
+-- 当前时间
+定 现在 = 当前时间。
+印 格式化 现在 "%Y-%m-%d %H:%M:%S"。
+
+-- 日期计算
+定 明天 = 加天数 现在 1。
+定 差值 = 日期差 现在 明天。
+
+-- 解析日期
+定 日期 = 解析日期 "2026-05-18" "%Y-%m-%d"。
+```
+
+**加密模块（crypto）：**
+```
+-- 哈希
+定 哈希值 = 哈希 "password" "sha256"。
+
+-- Base64 编码
+定 编码串 = 编码Base64 "Hello"。
+定 原文 = 解码Base64 编码串。
+
+-- 对称加密
+定 密文 = 加密 "敏感数据" "密钥"。
+定 明文 = 解密 密文 "密钥"。
+```
+
+**数据库模块（database）：**
+```
+-- 连接数据库
+定 连接 = 连接数据库 "sqlite:///test.db"。
+
+-- 执行查询
+定 结果 = 查询 连接 "SELECT * FROM users WHERE age > ?" 列 18。
+
+-- 执行更新
+执行 连接 "INSERT INTO users (name, age) VALUES (?, ?)" 列 "张三" 25。
+
+-- 事务
+开始事务 连接。
+执行 连接 "UPDATE accounts SET balance = balance - 100"。
+执行 连接 "UPDATE accounts SET balance = balance + 100"。
+提交 连接。
+```
+
+**标准库统计：**
+- 总模块数：11个（collections、io、math、time、string、net、json、regex、datetime、crypto、database）
+- 总函数数：~120个
+- 覆盖领域：数据处理、网络通信、加密安全、数据库访问
 
 ## 运行测试
 
