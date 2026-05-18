@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Yan Test Suite" tests="17" failures="0" errors="0" skipped="0">
+  <testcase name="等断言" classname="基础断言测试">
+  </testcase>
+  <testcase name="为假断言" classname="基础断言测试">
+  </testcase>
+  <testcase name="不等断言" classname="基础断言测试">
+  </testcase>
+  <testcase name="为真断言" classname="基础断言测试">
+  </testcase>
+  <testcase name="包含断言" classname="集合断言测试">
+  </testcase>
+  <testcase name="为空断言" classname="集合断言测试">
+  </testcase>
+  <testcase name="不包含断言" classname="集合断言测试">
+  </testcase>
+  <testcase name="不为空断言" classname="集合断言测试">
+  </testcase>
+  <testcase name="串结束于断言" classname="字符串断言测试">
+  </testcase>
+  <testcase name="串开始于断言" classname="字符串断言测试">
+  </testcase>
+  <testcase name="串包含断言" classname="字符串断言测试">
+  </testcase>
+  <testcase name="接近断言" classname="数值断言测试">
+  </testcase>
+  <testcase name="大于断言" classname="数值断言测试">
+  </testcase>
+  <testcase name="在范围内断言" classname="数值断言测试">
+  </testcase>
+  <testcase name="小于断言" classname="数值断言测试">
+  </testcase>
+  <testcase name="类型检查断言" classname="类型断言测试">
+  </testcase>
+  <testcase name="引发异常断言" classname="异常断言测试">
+  </testcase>
+</testsuite>

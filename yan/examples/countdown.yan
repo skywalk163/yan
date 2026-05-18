@@ -1,0 +1,15 @@
+注 倒计时器
+
+{{
+import time
+
+def 倒计时(秒数):
+    for i in range(秒数):
+        剩余 = 秒数 - i
+        print(f"{剩余}...", end='\r')
+        time.sleep(1)
+    print()
+    print("时间到！")
+
+倒计时(5)
+}}。

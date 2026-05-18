@@ -338,6 +338,24 @@ class Lexer:
                 i += 3; col += 3
                 continue
 
+            # 英文点号：用于模块成员访问（如 JSON.解析）
+            if ch == '.':
+                tokens.append(Token(TokenType.DOT, '.', line, col))
+                i += 1; col += 1
+                continue
+
+            # 英文左括号：用于函数调用（如 JSON.解析(...)）
+            if ch == '(':
+                tokens.append(Token(TokenType.WORD, '(', line, col))
+                i += 1; col += 1
+                continue
+
+            # 英文右括号：用于函数调用
+            if ch == ')':
+                tokens.append(Token(TokenType.WORD, ')', line, col))
+                i += 1; col += 1
+                continue
+
             if ch == '=':
                 tokens.append(Token(TokenType.EQUALS, '=', line, col))
                 i += 1; col += 1

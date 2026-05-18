@@ -52,7 +52,10 @@ def _tail(lst): return lst[1:] if len(lst) > 1 else []
 def _nth(lst, n): return lst[n] if -len(lst) <= n < len(lst) else None
 def _len(lst): return len(lst)
 def _append(lst, item): return lst + [item]
-def _concat(lst1, lst2): return lst1 + lst2
+def _concat(lst1, lst2):
+    if isinstance(lst1, str) or isinstance(lst2, str):
+        return str(lst1) + str(lst2)
+    return lst1 + lst2
 def _contains(lst, item): return item in lst
 def _empty(lst): return len(lst) == 0
 

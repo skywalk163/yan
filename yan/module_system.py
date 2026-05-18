@@ -61,10 +61,15 @@ class ModuleSystem:
         # 当前工作目录
         self.search_paths.append(Path.cwd())
         
-        # 标准库目录
-        stdlib_path = Path(__file__).parent / "stdlib"
+        # 标准库目录（lib）
+        stdlib_path = Path(__file__).parent / "lib"
         if stdlib_path.exists():
             self.search_paths.append(stdlib_path)
+        
+        # 备用标准库目录（stdlib）
+        stdlib_path_backup = Path(__file__).parent / "stdlib"
+        if stdlib_path_backup.exists():
+            self.search_paths.append(stdlib_path_backup)
     
     def resolve_module(self, module_path: str, current_file: Optional[Path] = None) -> Optional[Path]:
         """

@@ -96,6 +96,18 @@ class PythonCodeGen:
         """生成函数调用"""
         verb_name = node.verb.name
 
+        # 处理成员访问：obj.attr -> obj.attr
+        if verb_name == '.':
+            if len(node.args) >= 2:
+                obj = self.generate(node.args[0])
+                attr = self.generate(node.args[1])
+                # 如果是 Word，直接用点访问；否则需要特殊处理
+                if isinstance(node.args[1], Word):
+                    return f'{obj}.{attr}'
+                else:
+                    return f'{obj}[{attr}]'
+            return verb_name
+
         # 处理返回语句：返回 value -> return value
         if verb_name == '返回':
             if node.args:

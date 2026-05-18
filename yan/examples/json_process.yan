@@ -1,0 +1,15 @@
+注 JSON数据处理示例
+
+{{
+import json
+
+数据 = json.loads('{"users": [{"name": "张三", "age": 25}, {"name": "李四", "age": 30}]}')
+
+print("所有用户：")
+for 用户 in 数据["users"]:
+    print(f"{用户['name']}，年龄：{用户['age']}")
+
+成年用户 = [u for u in 数据["users"] if u["age"] >= 18]
+print("\n成年用户：")
+print(成年用户)
+}}。

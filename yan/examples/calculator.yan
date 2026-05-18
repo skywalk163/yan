@@ -1,16 +1,26 @@
--- 简单的计算器示例
-定 a = 10。
-定 b = 5。
+注 简单计算器
 
-印"加法: "。
-印 加a b。
-印"减法: "。
-印 减a b。
-印"乘法: "。
-印 乘a b。
-印"除法: "。
-印 除a b。
-印"模运算: "。
-印 模a b。
-印"幂运算: "。
-印 幂a 2。
+定 计算 = 函 表达式
+  {{
+import re
+tokens = re.findall(r'(\d+\.?\d*|[+\-*/])', 表达式)
+result = float(tokens[0])
+for i in range(1, len(tokens), 2):
+    op = tokens[i]
+    num = float(tokens[i+1])
+    if op == '+':
+        result += num
+    elif op == '-':
+        result -= num
+    elif op == '*':
+        result *= num
+    elif op == '/':
+        result /= num
+result
+}}。
+
+印 "简单计算器"。
+印 "输入表达式（如：1+2*3）："。
+定 输入 = 读。
+定 结果 = 计算 输入。
+印 "结果："连结果。

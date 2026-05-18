@@ -855,7 +855,23 @@ class Parser:
 
         # 普通标识符（变量名）
         if self._current().type == TokenType.WORD:
-            return Word(self._advance().value)
+            node = Word(self._advance().value)
+            
+            # 检查是否是成员访问：标识符.标识符
+            # 注意：成员名不能是关键字，避免干扰控制流
+            while (not self._is_at_end() and 
+                   self._current().type == TokenType.DOT and
+                   self._peek(1).type == TokenType.WORD):
+                # 检查下一个词是否是关键字，如果是则不进行成员访问
+                next_word = self._peek(1).value
+                if next_word in {'若', '则', '否则', '定', '函', '返回', '遍历', '当', '真', '假', '空', '无', '印', '读', '写', '行', '皆', '只', '归', '潜', '加', '减', '乘', '除', '模', '幂', '大', '小', '等', '不等', '且', '或', '非', '首', '余', '入', '长', '添', '连', '含', '空', '范围', '引', '出'}:
+                    break
+                self._advance()  # 消耗 '.'
+                member_name = self._advance().value
+                # 创建成员访问表达式
+                node = Call(Word('.'), [node, Word(member_name)])
+            
+            return node
 
         raise ParserError(f"意外的 token: {self._current()}",
                          self._current().line, self._current().col)
