@@ -92,6 +92,7 @@ class Lambda(Node):
     """匿名函数"""
     params: List[str]
     body: Node
+    varargs: bool = False
 
 
 @dataclass

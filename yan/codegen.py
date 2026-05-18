@@ -6,6 +6,13 @@ from typing import Dict, Tuple, Any
 from nodes import *
 from runtime import ALL_BUILTINS as BUILTINS
 
+# 导入新模块节点类
+try:
+    from module_system import ImportNode, ExportNode
+except ImportError:
+    ImportNode = None
+    ExportNode = None
+
 
 class CodeGenError(Exception):
     pass
@@ -60,6 +67,10 @@ class PythonCodeGen:
             return self._gen_import(node)
         elif isinstance(node, Export):
             return self._gen_export(node)
+        elif ImportNode and isinstance(node, ImportNode):
+            return self._gen_import_node(node)
+        elif ExportNode and isinstance(node, ExportNode):
+            return self._gen_export_node(node)
         elif isinstance(node, StructDef):
             return self._gen_struct_def(node)
         elif isinstance(node, StructInit):
@@ -359,7 +370,14 @@ class PythonCodeGen:
 
     def _gen_lambda(self, node: Lambda) -> str:
         """生成匿名函数"""
-        params = ', '.join(node.params) if node.params else '_'
+        # 处理 varargs
+        if node.varargs:
+            if node.params:
+                params = ', '.join(node.params) + ', *args'
+            else:
+                params = '*args'
+        else:
+            params = ', '.join(node.params) if node.params else '_'
         
         # 如果函数体是 Block，需要特殊处理
         if isinstance(node.body, Block):
@@ -527,6 +545,50 @@ class PythonCodeGen:
         # Python 使用 __all__ 来控制导出
         names_str = ', '.join(f"'{name}'" for name in node.names)
         return f'__all__ = [{names_str}]'
+    
+    def _gen_import_node(self, node: 'ImportNode') -> str:
+        """生成 ImportNode 节点的 Python 代码生成"""
+        # 处理不同的导入语法
+        module_name = node.path
+        
+        # 如果是相对路径，转换为模块名
+        if module_name.startswith('./') or module_name.startswith('../'):
+            # 简化处理：使用文件名 -> 文件名
+            module_name = module_name.replace('/', '.').replace('\\', '.')
+            if module_name.endswith('.yan'):
+                module_name = module_name[:-4]
+        
+        if node.selective:
+            # 选择性导入：取 name1, name2
+            names_str = ', '.join(node.selective)
+            if node.alias:
+                # 选择性导入 + 别名
+                return f'from {module_name} import {names_str} as {node.alias}'
+            else:
+                return f'from {module_name} import {names_str}'
+        elif node.alias:
+            # 别名导入
+            return f'import {module_name} as {node.alias}'
+        else:
+            # 普通导入
+            return f'import {module_name}'
+    
+    def _gen_export_node(self, node: 'ExportNode') -> str:
+        """生成 ExportNode 节点的 Python 代码生成"""
+        lines = []
+        
+        # 先生成内部的定义
+        for defn in node.definitions:
+            if hasattr(defn, 'name'):
+                code = self.generate(defn)
+                lines.append(code)
+        
+        # 然后添加 __all__ 导出列表
+        if node.names:
+            names_str = ', '.join(f"'{name}'" for name in node.names)
+            lines.append(f'__all__ = [{names_str}]')
+        
+        return '\n'.join(lines)
     
     def _gen_struct_def(self, node: StructDef) -> str:
         """生成结构体定义的 Python 代码"""

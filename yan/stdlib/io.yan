@@ -1,178 +1,120 @@
 -- 文件操作模块（io.yan）
+-- 提供文件和IO操作函数
 
--- 注：本模块提供文件和IO操作函数
+-- 导出声明
+出 读文件, 读行, 读前行, 读后行,
+    写文件, 追加文件,
+    存在文件, 是文件, 是目录,
+    文件大小, 文件修改时间,
+    复制文件, 移动文件, 删除文件,
+    建目录, 删目录, 列目录,
+    当前目录, 改目录,
+    绝对路径, 取文件名, 取目录名, 取扩展名, 连路径, 标准化路径,
+    读输入, 印输入, 印错误, 刷新输出,
+    读JSON, 写JSON, 解JSON, 生JSON,
+    读CSV, 写CSV。
 
 -- 读取整个文件
-定读文件=函文件名：
-  {{ read_file(filename) }}
-。
+定 读文件 = 函 文件名：{{ read_file(filename) }}。
 
 -- 读取文件所有行
-定读行=函文件名：
-  {{ read_lines(filename) }}
-．
+定 读行 = 函 文件名：{{ read_lines(filename) }}。
 
 -- 读取文件前n行
-定读前行=函文件名n：
-  {{ read_lines(filename)[:n] }}
-．
+定 读前行 = 函 文件名 n：{{ read_lines(filename)[:n] }}。
 
 -- 读取文件后n行
-定读后行=函文件名n：
-  {{ read_lines(filename)[-n:] if len(read_lines(filename)) > n else read_lines(filename) }}
-．
+定 读后行 = 函 文件名 n：{{ read_lines(filename)[-n:] if len(read_lines(filename)) > n else read_lines(filename) }}。
 
 -- 写入文件
-定写文件=函文件名内容：
-  {{ write_file(filename, content) }}
-．
+定 写文件 = 函 文件名 内容：{{ write_file(filename, content) }}。
 
 -- 追加写入文件
-定追加文件=函文件名内容：
-  {{ append_file(filename, content) }}
-．
+定 追加文件 = 函 文件名 内容：{{ append_file(filename, content) }}。
 
 -- 判断文件是否存在
-定存在文件=函文件名：
-  {{ file_exists(filename) }}
-．
+定 存在文件 = 函 文件名：{{ file_exists(filename) }}。
 
 -- 判断是否为文件
-定是文件=函文件名：
-  {{ is_file(filename) }}
-．
+定 是文件 = 函 文件名：{{ is_file(filename) }}。
 
 -- 判断是否为目录
-定是目录=函路径：
-  {{ is_directory(path) }}
-．
+定 是目录 = 函 路径：{{ is_directory(path) }}。
 
 -- 获取文件大小
-定文件大小=函文件名：
-  {{ file_size(filename) }}
-．
+定 文件大小 = 函 文件名：{{ file_size(filename) }}。
 
 -- 获取文件修改时间
-定文件修改时间=函文件名：
-  {{ file_mtime(filename) }}
-．
+定 文件修改时间 = 函 文件名：{{ file_mtime(filename) }}。
 
 -- 复制文件
-定复制文件=函源目标：
-  {{ copy_file(source, target) }}
-．
+定 复制文件 = 函 源 目标：{{ copy_file(source, target) }}。
 
 -- 移动文件
-定移动文件=函源目标：
-  {{ move_file(source, target) }}
-．
+定 移动文件 = 函 源 目标：{{ move_file(source, target) }}。
 
 -- 删除文件
-定删除文件=函文件名：
-  {{ delete_file(filename) }}
-．
+定 删除文件 = 函 文件名：{{ delete_file(filename) }}。
 
 -- 创建目录
-定建目录=函目录名：
-  {{ make_directory(dirname) }}
-．
+定 建目录 = 函 目录名：{{ make_directory(dirname) }}。
 
 -- 删除目录
-定删目录=函目录名：
-  {{ remove_directory(dirname) }}
-．
+定 删目录 = 函 目录名：{{ remove_directory(dirname) }}。
 
 -- 列出目录内容
-定列目录=函目录名：
-  {{ list_directory(dirname) }}
-．
+定 列目录 = 函 目录名：{{ list_directory(dirname) }}。
 
 -- 获取当前工作目录
-定当前目录=函：
-  {{ get_current_directory() }}
-．
+定 当前目录 = 函：{{ get_current_directory() }}。
 
 -- 改变当前目录
-定改目录=函目录名：
-  {{ change_directory(dirname) }}
-．
+定 改目录 = 函 目录名：{{ change_directory(dirname) }}。
 
 -- 获取绝对路径
-定绝对路径=函路径：
-  {{ get_absolute_path(path) }}
-．
+定 绝对路径 = 函 路径：{{ get_absolute_path(path) }}。
 
 -- 获取文件名
-定取文件名=函路径：
-  {{ get_file_name(path) }}
-．
+定 取文件名 = 函 路径：{{ get_file_name(path) }}。
 
 -- 获取目录名
-定取目录名=函路径：
-  {{ get_directory_name(path) }}
-．
+定 取目录名 = 函 路径：{{ get_directory_name(path) }}。
 
 -- 获取文件扩展名
-定取扩展名=函文件名：
-  {{ get_extension(filename) }}
-．
+定 取扩展名 = 函 文件名：{{ get_extension(filename) }}。
 
 -- 连接路径
-定连路径=函路径1路径2：
-  {{ join_path(path1, path2) }}
-．
+定 连路径 = 函 路径1 路径2：{{ join_path(path1, path2) }}。
 
 -- 标准化路径
-定标准化路径=函路径：
-  {{ normalize_path(path) }}
-．
+定 标准化路径 = 函 路径：{{ normalize_path(path) }}。
 
 -- 读取标准输入
-定读输入=函：
-  {{ read_input() }}
-．
+定 读输入 = 函：{{ read_input() }}。
 
 -- 打印并读取输入
-定印输入=函提示：
-  {{ print(prompt); read_input() }}
-．
+定 印输入 = 函 提示：{{ print(prompt); read_input() }}。
 
 -- 打印到标准错误
-定印错误=函消息：
-  {{ print(msg, file=sys.stderr) }}
-．
+定 印错误 = 函 消息：{{ print(msg, file=sys.stderr) }}。
 
 -- 刷新输出缓冲区
-定刷新输出=函：
-  {{ flush_output() }}
-．
+定 刷新输出 = 函：{{ flush_output() }}。
 
 -- 读取JSON文件
-定读JSON=函文件名：
-  {{ read_json_file(filename) }}
-．
+定 读JSON = 函 文件名：{{ read_json_file(filename) }}。
 
 -- 写入JSON文件
-定写JSON=函文件名数据：
-  {{ write_json_file(filename, data) }}
-．
+定 写JSON = 函 文件名 数据：{{ write_json_file(filename, data) }}。
 
 -- 解析JSON字符串
-定解JSON=函字符串：
-  {{ parse_json(json_str) }}
-．
+定 解JSON = 函 字符串：{{ parse_json(json_str) }}。
 
 -- 生成JSON字符串
-定生JSON=函数据：
-  {{ generate_json(data) }}
-．
+定 生JSON = 函 数据：{{ generate_json(data) }}。
 
 -- 读取CSV文件
-定读CSV=函文件名：
-  {{ read_csv_file(filename) }}
-．
+定 读CSV = 函 文件名：{{ read_csv_file(filename) }}。
 
 -- 写入CSV文件
-定写CSV=函文件名数据：
-  {{ write_csv_file(filename, data) }}
-．
+定 写CSV = 函 文件名 数据：{{ write_csv_file(filename, data) }}。

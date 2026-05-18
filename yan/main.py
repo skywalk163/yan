@@ -4,10 +4,12 @@
 """
 
 import sys
-from typing import Any, Optional, Dict
+from pathlib import Path
+from typing import Any, Optional, Dict, List
 from lexer import Lexer, LexerError
 from parser import Parser, ParserError, process_adverbs, add_global_user_verb, _global_user_verbs
 from codegen import PythonCodeGen, CodeGenError
+from module_system import ModuleSystem, ModuleError, ImportNode
 from runtime import (
     _add, _sub, _mul, _div, _mod, _pow, _abs, _neg,
     _gt, _lt, _eq, _ne,
@@ -34,14 +36,163 @@ from runtime import (
 # 全局环境，用于交互模式
 _global_env: Optional[Dict[str, Any]] = None
 
+# 模块系统实例
+_module_system = ModuleSystem()
+
 
 def create_env() -> Dict[str, Any]:
     """创建新的执行环境"""
-    env = globals().copy()
+    env = {}
+    env.update({
+        '_add': _add,
+        '_sub': _sub,
+        '_mul': _mul,
+        '_div': _div,
+        '_mod': _mod,
+        '_pow': _pow,
+        '_abs': _abs,
+        '_neg': _neg,
+        '_gt': _gt,
+        '_lt': _lt,
+        '_eq': _eq,
+        '_ne': _ne,
+        '_and': _and,
+        '_or': _or,
+        '_not': _not,
+        '_list': _list,
+        '_head': _head,
+        '_tail': _tail,
+        '_nth': _nth,
+        '_len': _len,
+        '_append': _append,
+        '_concat': _concat,
+        '_contains': _contains,
+        '_empty': _empty,
+        '_range': _range,
+        '_map': _map,
+        '_filter': _filter,
+        '_reduce': _reduce,
+        '_sin': _sin,
+        '_cos': _cos,
+        '_tan': _tan,
+        '_asin': _asin,
+        '_acos': _acos,
+        '_atan': _atan,
+        '_exp': _exp,
+        '_log': _log,
+        '_log10': _log10,
+        '_sqrt': _sqrt,
+        '_floor': _floor,
+        '_ceil': _ceil,
+        '_round': _round,
+        '_random': _random,
+        '_randint': _randint,
+        '_pi': _pi,
+        '_e': _e,
+        '_strlen': _strlen,
+        '_strcat': _strcat,
+        '_strsplit': _strsplit,
+        '_strreplace': _strreplace,
+        '_strslice': _strslice,
+        '_strlower': _strlower,
+        '_strupper': _strupper,
+        '_strfind': _strfind,
+        '_strcontains': _strcontains,
+        '_strstrip': _strstrip,
+        '_strstartswith': _strstartswith,
+        '_strendswith': _strendswith,
+        '_readfile': _readfile,
+        '_writefile': _writefile,
+        '_appendfile': _appendfile,
+        '_fileexists': _fileexists,
+        '_isfile': _isfile,
+        '_isdir': _isdir,
+        '_listdir': _listdir,
+        '_mkdir': _mkdir,
+        '_removefile': _removefile,
+        '_removedir': _removedir,
+        '_getcwd': _getcwd,
+        '_basename': _basename,
+        '_dirname': _dirname,
+        '_extname': _extname,
+        '_now': _now,
+        '_date': _date,
+        '_time': _time,
+        '_datetime': _datetime,
+        '_strftime': _strftime,
+        '_sleep': _sleep,
+        '_isnum': _isnum,
+        '_isstr': _isstr,
+        '_islist': _islist,
+        '_isfunc': _isfunc,
+        '_isbool': _isbool,
+        '_isnone': _isnone,
+        '_typeof': _typeof,
+        'BUILTINS': BUILTINS,
+        'ALL_BUILTINS': ALL_BUILTINS,
+    })
+    import math
+    env['math'] = math
+    import random
+    env['random'] = random
+    import time
+    env['time'] = time
+    import os
+    env['os'] = os
     return env
 
 
-def run(source: str, debug: bool = False, env: Optional[Dict[str, Any]] = None, use_global_verbs: bool = False) -> Any:
+def _process_imports(statements: List, current_file: Optional[Path] = None, visited_modules: Optional[set] = None) -> List:
+    """递归处理导入语句，检测循环依赖"""
+    if visited_modules is None:
+        visited_modules = set()
+    
+    processed_statements = []
+    
+    for stmt in statements:
+        if isinstance(stmt, ImportNode):
+            # 检查循环依赖
+            module_path = stmt.path
+            resolved_path = _module_system.resolve_module(module_path, current_file)
+            
+            if resolved_path:
+                module_key = str(resolved_path.resolve())
+                if module_key in visited_modules:
+                    raise ModuleError(f"循环依赖检测：{module_path} 已在导入链中", module_path)
+                
+                visited_modules.add(module_key)
+                
+                # 加载模块
+                try:
+                    module = _module_system.load_module(module_path, current_file)
+                    
+                    # 递归处理模块的导入
+                    if module.source:
+                        # 解析模块内容
+                        lexer = Lexer()
+                        tokens = lexer.tokenize(module.source)
+                        parser = Parser()
+                        module_ast = parser.parse(tokens, module.source)
+                        
+                        # 递归处理模块的导入
+                        if hasattr(module_ast, 'statements'):
+                            processed_imports = _process_imports(
+                                module_ast.statements, 
+                                module.path, 
+                                visited_modules.copy()
+                            )
+                            processed_statements.extend(processed_imports)
+                    
+                    visited_modules.remove(module_key)
+                except ModuleError as e:
+                    raise e
+        
+        processed_statements.append(stmt)
+    
+    return processed_statements
+
+
+def run(source: str, debug: bool = False, env: Optional[Dict[str, Any]] = None, use_global_verbs: bool = False, current_file: Optional[Path] = None) -> Any:
     """运行言语言代码
     
     Args:
@@ -49,6 +200,7 @@ def run(source: str, debug: bool = False, env: Optional[Dict[str, Any]] = None, 
         debug: 是否显示调试信息
         env: 执行环境（可选，用于保持全局变量）
         use_global_verbs: 是否使用全局用户动词集合（交互模式）
+        current_file: 当前文件路径（用于模块路径解析）
     
     Returns:
         执行结果
@@ -66,14 +218,22 @@ def run(source: str, debug: bool = False, env: Optional[Dict[str, Any]] = None, 
 
         # 2. 语法分析
         parser = Parser(use_global_verbs=use_global_verbs)
-        ast = parser.parse(tokens)
+        ast = parser.parse(tokens, source)
         ast = process_adverbs(ast)
         if debug:
             print("=== AST ===")
             print(f"  {ast}")
             print()
 
-        # 3. 生成 Python 代码
+        # 3. 处理模块导入（包括循环依赖检测）
+        if hasattr(ast, 'statements'):
+            try:
+                ast.statements = _process_imports(ast.statements, current_file)
+            except ModuleError as e:
+                print(f"模块错误: {e}", file=sys.stderr)
+                return None
+
+        # 4. 生成 Python 代码
         codegen = PythonCodeGen()
         py_code = codegen.generate(ast)
         if debug:
@@ -81,7 +241,7 @@ def run(source: str, debug: bool = False, env: Optional[Dict[str, Any]] = None, 
             print(py_code)
             print()
 
-        # 4. 执行
+        # 5. 执行
         if env is None:
             env = create_env()
 
@@ -125,6 +285,9 @@ def run(source: str, debug: bool = False, env: Optional[Dict[str, Any]] = None, 
         return None
     except CodeGenError as e:
         print(f"代码生成错误: {e}", file=sys.stderr)
+        return None
+    except ModuleError as e:
+        print(f"模块错误: {e}", file=sys.stderr)
         return None
     except Exception as e:
         print(f"运行时错误: {e}", file=sys.stderr)
@@ -204,7 +367,9 @@ def main():
         print(f"文件不存在: {filename}", file=sys.stderr)
         return
 
-    result = run(source, debug=debug, use_global_verbs=True)
+    # 传递当前文件路径用于模块路径解析
+    current_file = Path(filename)
+    result = run(source, debug=debug, use_global_verbs=True, current_file=current_file)
     if result is not None:
         print(result)
 

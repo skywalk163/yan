@@ -6,6 +6,9 @@
 from typing import Optional, List, Tuple
 from dataclasses import dataclass
 
+from error_formatter import ErrorFormatter, ErrorContext as FormattedErrorContext
+from error_suggestions import ErrorSuggestionGenerator
+
 
 @dataclass
 class SourceLocation:
@@ -22,6 +25,9 @@ class SourceLocation:
 
 class YanError(Exception):
     """言语言错误基类"""
+    
+    _formatter = ErrorFormatter(use_color=True)
+    _suggester = ErrorSuggestionGenerator()
     
     def __init__(
         self,
@@ -40,55 +46,22 @@ class YanError(Exception):
     
     def _format_message(self) -> str:
         """格式化错误信息"""
-        lines = []
-        
-        # 错误标题
-        lines.append(f"{self.error_type}: {self.message}")
-        lines.append(f"  位置: {self.location}")
-        
-        # 源代码片段
+        source_lines = []
         if self.source:
-            snippet = self._get_source_snippet()
-            if snippet:
-                lines.append("")
-                lines.append(snippet)
+            source_lines = self.source.split('\n')
         
-        # 建议
-        if self.suggestion:
-            lines.append("")
-            lines.append(f"  提示: {self.suggestion}")
+        context = FormattedErrorContext(
+            error_type=self.error_type,
+            file_path=self.location.filename or "未知文件",
+            line=self.location.line,
+            column=self.location.col,
+            end_column=self.location.col + 1,
+            source_lines=source_lines,
+            message=self.message,
+            suggestion=self.suggestion
+        )
         
-        return '\n'.join(lines)
-    
-    def _get_source_snippet(self) -> str:
-        """获取源代码片段，带高亮"""
-        if not self.source:
-            return ""
-        
-        source_lines = self.source.split('\n')
-        if self.location.line <= 0 or self.location.line > len(source_lines):
-            return ""
-        
-        # 获取错误行
-        error_line = source_lines[self.location.line - 1]
-        
-        # 构建片段（显示前后各 2 行）
-        start_line = max(1, self.location.line - 2)
-        end_line = min(len(source_lines), self.location.line + 2)
-        
-        lines = []
-        for i in range(start_line, end_line + 1):
-            line_content = source_lines[i - 1]
-            prefix = "  > " if i == self.location.line else "    "
-            lines.append(f"{prefix}{i:4d} | {line_content}")
-            
-            # 在错误行下方显示指示符
-            if i == self.location.line:
-                indent = len(prefix) + 7  # 前缀 + 行号 + " | "
-                pointer = ' ' * (self.location.col - 1) + '^' + '~' * (len(error_line) - self.location.col)
-                lines.append(' ' * indent + pointer)
-        
-        return '\n'.join(lines)
+        return self._formatter.format(context)
 
 
 class LexerError(YanError):
@@ -193,7 +166,11 @@ class ErrorSuggester:
         '期望 \'则\'': '条件语句需要使用"则"关键字，例如：若条件则分支',
         '字符串未闭合': '字符串需要用双引号包裹，例如："hello"',
         '数学表达式未闭合': '数学表达式需要用 $() 包裹，例如：$(1+2)',
-        'Python 代码块未闭合': 'Python 代码块需要用 {{}} 包裹，例如：{{x = 1}}',
+        'Python代码块未闭合': 'Python代码块需要用 {{}} 包裹，例如：{{x = 1}}',
+        '期望变量名': '请提供有效的变量名',
+        '期望结构体名称': '请提供结构体的名称',
+        '期望 于': '遍历循环需要使用"于"关键字，例如：遍历x于列表：...',
+        '期望 于': '遍历循环需要使用"于"关键字，例如：遍历x于列表：...',
     }
     
     # 相似动词建议
@@ -207,6 +184,23 @@ class ErrorSuggester:
         '印': ['读', '写'],
         '若': ['遍历', '当'],
         '定': ['函'],
+        '函': ['定'],
+        '遍历': ['当', '若'],
+        '当': ['遍历', '若'],
+    }
+    
+    # 拼写相似的汉字
+    SIMILAR_CHARS = {
+        '定': ['丁', '订', '盯'],
+        '函': ['函', '涵', '寒'],
+        '若': ['苦', '偌', '诺'],
+        '则': ['侧', '测', '册'],
+        '加': ['架', '茄', '贺'],
+        '减': ['咸', '感', '碱'],
+        '乘': ['剩', '乖', '乘'],
+        '除': ['余', '途', '涂'],
+        '列': ['烈', '裂', '冽'],
+        '印': ['仰', '抑', '迎'],
     }
     
     @classmethod
@@ -223,6 +217,22 @@ class ErrorSuggester:
             for wrong, correct in cls.COMMON_ERRORS.items():
                 if wrong in context and wrong != correct:
                     return f'您是否想使用 "{correct}"？'
+        
+        # 检查相似动词
+        if context:
+            for verb, suggestions in cls.SIMILAR_VERBS.items():
+                if verb in context:
+                    similar_str = '、'.join(suggestions)
+                    return f'相关动词：{similar_str}'
+        
+        # 检查未定义变量可能的拼写
+        if context and '未定义' in error_message:
+            # 尝试找到可能的正确拼写
+            for correct, wrong_list in cls.COMMON_ERRORS.items():
+                if isinstance(wrong_list, list):
+                    for wrong in wrong_list:
+                        if wrong in context:
+                            return f'您是否想使用 "{correct}"？'
         
         return None
     

@@ -11,6 +11,9 @@ import sys
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# 导入错误处理模块
+from error import SourceLocation, LexerError as EnhancedLexerError, ErrorSuggester
+
 # 导入百家姓数据
 try:
     from data.surnames import BAIJIAXING, CONFLICTING_SURNAMES
@@ -34,6 +37,7 @@ class TokenType(Enum):
     COMMA = auto()     # ，
     DOT = auto()       # 。
     SEMI = auto()      # ；
+    ELLIPSIS = auto()  # ... (可变参数)
     COLON = auto()     # ：（块开始）
     EQUALS = auto()    # =
     MATH = auto()      # $(...) 数学表达式
@@ -52,6 +56,7 @@ class Token:
         return f"Token({self.type.name}, {self.value!r})"
 
 
+# 向后兼容：保留旧的 LexerError 类
 class LexerError(Exception):
     def __init__(self, message: str, line: int, col: int):
         self.message = message
@@ -68,6 +73,7 @@ class Lexer:
     HAN_END = 0x9FFF
 
     def __init__(self, keywords: Optional[Set[str]] = None, user_words: Optional[Set[str]] = None):
+        self._source = None  # 保存源代码用于错误显示
         self.keywords = keywords or {
             # 多字动词
             '定义', '阶乘', '平方', '否则', '如果', '那么', '不等',
@@ -76,7 +82,7 @@ class Lexer:
             # 循环
             '遍历', '当', '于',
             # 模块系统（新增）
-            '导入', '模块', '导出', '从',
+            '导入', '模块', '导出', '从', '引', '出',
             # 结构体系统（新增）
             '结构', '类型', '字段',
             # 数学库
@@ -200,8 +206,15 @@ class Lexer:
             return ch2 == '_' or ch2.isalnum()
         return False
 
+    def _create_error(self, message: str, line: int, col: int):
+        """创建增强的词法错误"""
+        location = SourceLocation(line, col)
+        suggestion = ErrorSuggester.suggest(message)
+        return EnhancedLexerError(message, location, self._source, suggestion)
+
     def tokenize(self, source: str) -> List[Token]:
         """将源码转为 Token 流"""
+        self._source = source  # 保存源代码用于错误显示
         tokens = []
         i = 0
         line, col = 1, 1
@@ -284,7 +297,7 @@ class Lexer:
                             chars.append(source[j])
                             j += 1
                     if j >= len(source) or source[j] != "'":
-                        raise LexerError("单引号字符串未闭合", line, col)
+                        raise self._create_error("单引号字符串未闭合", line, col)
                     value = ''.join(chars)
                     tokens.append(Token(TokenType.STR, value, line, col))
                     col += j - i + 1
@@ -298,7 +311,7 @@ class Lexer:
                 continue
 
             # 结构符
-            if ch == '。':
+            if ch == '。' or ch == '．':
                 tokens.append(Token(TokenType.DOT, '。', line, col))
                 i += 1; col += 1
                 continue
@@ -308,9 +321,21 @@ class Lexer:
                 i += 1; col += 1
                 continue
 
+            # 支持英文逗号（作为中文逗号的别名）
+            if ch == ',':
+                tokens.append(Token(TokenType.COMMA, '，', line, col))
+                i += 1; col += 1
+                continue
+
             if ch == '；':
                 tokens.append(Token(TokenType.SEMI, '；', line, col))
                 i += 1; col += 1
+                continue
+
+            # 省略号：可变参数
+            if ch == '.' and i + 2 < len(source) and source[i:i+3] == '...':
+                tokens.append(Token(TokenType.ELLIPSIS, '...', line, col))
+                i += 3; col += 3
                 continue
 
             if ch == '=':
@@ -342,7 +367,7 @@ class Lexer:
                     j += 1
                     col += 1
                 if depth > 0:
-                    raise LexerError("数学表达式未闭合", start_line, start_col)
+                    raise self._create_error("数学表达式未闭合", start_line, start_col)
                 value = source[i:j-1]  # 不包含最后的 )
                 tokens.append(Token(TokenType.MATH, value, start_line, start_col))
                 i = j
@@ -374,7 +399,7 @@ class Lexer:
                         j += 1
                         col += 1
                 if depth > 0:
-                    raise LexerError("Python 代码块未闭合", start_line, start_col)
+                    raise self._create_error("Python 代码块未闭合", start_line, start_col)
                 value = source[i:j]  # 不包含最后的 }}
                 tokens.append(Token(TokenType.PYTHON, value, start_line, start_col))
                 i = j + 2  # 跳过 }}
@@ -413,7 +438,7 @@ class Lexer:
                         chars.append(source[j])
                         j += 1
                 if j >= len(source):
-                    raise LexerError("字符串未闭合", line, col)
+                    raise self._create_error("字符串未闭合", line, col)
                 value = ''.join(chars)
                 tokens.append(Token(TokenType.STR, value, line, col))
                 col += j - i + 1
@@ -441,7 +466,7 @@ class Lexer:
                     col += j - i
                     i = j
                 except ValueError:
-                    raise LexerError(f"无效数字: {value_str}", line, col)
+                    raise self._create_error(f"无效数字: {value_str}", line, col)
                 continue
 
             # 汉字或字母标识符
@@ -697,7 +722,7 @@ class Lexer:
                 continue
 
             # 未知字符
-            raise LexerError(f"未知字符: {ch}", line, col)
+            raise self._create_error(f"未知字符: {ch}", line, col)
 
         tokens.append(Token(TokenType.EOF, None, line, col))
         return tokens

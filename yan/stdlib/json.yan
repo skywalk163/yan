@@ -1,217 +1,182 @@
 -- JSON处理模块 (json.yan)
 -- 提供JSON编码和解码功能
 
+-- 导出声明
+出 解析, 生成, 紧凑, 美化,
+    读文件, 写文件,
+    转字符串, 转对象,
+    有效?, 错误信息,
+    编码, 解码,
+    漂亮打印, 序列化选项, 反序列化选项,
+    转字节, 从字节,
+    验证Schema, JSON路径,
+    合并, 过滤, 映射,
+    列表映射, 列表过滤,
+    重命名键, 深度复制, 比较, 差集。
+
 -- 解析JSON字符串
-定 解析 函 json_str:
-    {{ json.loads(json_str) }}
-。
+定 解析 = 函 json_str：{{ json.loads(json_str) }}。
 
 -- 生成JSON字符串
-定 生成 函 obj indent:
-    {{ json.dumps(obj, indent=indent, ensure_ascii=False) }}
-。
+定 生成 = 函 obj indent：{{ json.dumps(obj, indent=indent, ensure_ascii=False) }}。
 
 -- 紧凑JSON（无缩进）
-定 紧凑 函 obj:
-    {{ json.dumps(obj, separators=(',', ':'), ensure_ascii=False) }}
-。
+定 紧凑 = 函 obj：{{ json.dumps(obj, separators=(',', ':'), ensure_ascii=False) }}。
 
 -- 美化JSON（带缩进）
-定 美化 函 obj indent_char:
-    {{ json.dumps(obj, indent=indent_char or 2, ensure_ascii=False) }}
-。
+定 美化 = 函 obj indent_char：{{ json.dumps(obj, indent=indent_char or 2, ensure_ascii=False) }}。
 
 -- 读取JSON文件
-定 读文件 函 filename:
-    {{ json.load(open(filename, 'r', encoding='utf-8')) }}
-。
+定 读文件 = 函 filename：{{ json.load(open(filename, 'r', encoding='utf-8')) }}。
 
 -- 写入JSON文件
-定 写文件 函 filename obj indent:
-    {{ json.dump(obj, open(filename, 'w', encoding='utf-8'), indent=indent or 2, ensure_ascii=False) }}
-。
+定 写文件 = 函 filename obj indent：{{ json.dump(obj, open(filename, 'w', encoding='utf-8'), indent=indent or 2, ensure_ascii=False) }}。
 
 -- JSON转字符串
-定 转字符串 函 obj:
-    {{ json.dumps(obj, ensure_ascii=False) }}
-。
+定 转字符串 = 函 obj：{{ json.dumps(obj, ensure_ascii=False) }}。
 
 -- 字符串转JSON
-定 转对象 函 json_str:
-    {{ json.loads(json_str) }}
-。
+定 转对象 = 函 json_str：{{ json.loads(json_str) }}。
 
 -- 检查是否为有效JSON
-定 有效? 函 json_str:
-    {{ try: json.loads(json_str); True except: False }}
-。
+定 有效? = 函 json_str：{{ try: json.loads(json_str); True except: False }}。
 
 -- 获取JSON错误信息
-定 错误信息 函 json_str:
-    {{ try: json.loads(json_str); None except Exception as e: str(e) }}
-。
+定 错误信息 = 函 json_str：{{ try: json.loads(json_str); None except Exception as e: str(e) }}。
 
 -- JSON编码（别名）
-定 编码 函 obj:
-    {{ json.dumps(obj, ensure_ascii=False) }}
-。
+定 编码 = 函 obj：{{ json.dumps(obj, ensure_ascii=False) }}。
 
 -- JSON解码（别名）
-定 解码 函 json_str:
-    {{ json.loads(json_str) }}
-。
+定 解码 = 函 json_str：{{ json.loads(json_str) }}。
 
 -- 漂亮打印JSON
-定 漂亮打印 函 obj:
-    {{ json.dumps(obj, indent=2, ensure_ascii=False, sort_keys=True) }}
-。
+定 漂亮打印 = 函 obj：{{ json.dumps(obj, indent=2, ensure_ascii=False, sort_keys=True) }}。
 
 -- JSON序列化选项
-定 序列化选项 函 obj **kwargs:
-    {{ json.dumps(obj, **kwargs) }}
-。
+定 序列化选项 = 函 obj **kwargs：{{ json.dumps(obj, **kwargs) }}。
 
 -- JSON反序列化选项
-定 反序列化选项 函 json_str **kwargs:
-    {{ json.loads(json_str, **kwargs) }}
-。
+定 反序列化选项 = 函 json_str **kwargs：{{ json.loads(json_str, **kwargs) }}。
 
 -- 对象转JSON字节
-定 转字节 函 obj:
-    {{ json.dumps(obj, ensure_ascii=False).encode('utf-8') }}
-。
+定 转字节 = 函 obj：{{ json.dumps(obj, ensure_ascii=False).encode('utf-8') }}。
 
 -- 字节转JSON对象
-定 从字节 函 json_bytes:
-    {{ json.loads(json_bytes.decode('utf-8')) }}
-。
+定 从字节 = 函 json_bytes：{{ json.loads(json_bytes.decode('utf-8')) }}。
 
 -- JSON Schema验证
-定 验证Schema 函 data schema:
-    {{ try: jsonschema.validate(data, schema); True except: False }}
-。
+定 验证Schema = 函 data schema：{{ try: jsonschema.validate(data, schema); True except: False }}。
 
 -- JSON Path查询
-定 JSON路径 函 obj path:
-    {{ jsonpath.jsonpath(obj, path) }}
-．
+定 JSON路径 = 函 obj path：{{ jsonpath.jsonpath(obj, path) }}。
 
 -- JSON合并
-定 合并 函 obj1 obj2:
-    定 result {}。
-    定 keys1 取键 obj1。
-    定 i 0。
-    当 i < 长 keys1:
-        定 k keys1[i]。
-        result[k] obj1[k]。
-        i i 加 1。
-    。
-    定 keys2 取键 obj2。
-    i 0。
-    当 i < 长 keys2:
-        定 k keys2[i]。
-        result[k] obj2[k]。
-        i i 加 1。
-    。
-    result
-。
+定 合并 = 函 obj1 obj2：
+  定 result = 典。
+  定 keys1 = 取键 obj1。
+  定 i = 0。
+  当 i 小于 长 keys1：
+    定 k = keys1[i]。
+    定 result = 典 k obj1[k]。
+    i = 加 i 1。
+  。
+  定 keys2 = 取键 obj2。
+  定 i = 0。
+  当 i 小于 长 keys2：
+    定 k = keys2[i]。
+    定 result = 典 k obj2[k]。
+    i = 加 i 1。
+  。
+  返回 result。
+．
 
 -- JSON过滤
-定 过滤 函 obj predicate:
-    定 result {}。
-    定 keys 取键 obj。
-    定 i 0。
-    当 i < 长 keys:
-        定 k keys[i]。
-        定 v obj[k]。
-        当 predicate(v):
-            result[k] v。
-        。
-        i i 加 1。
-    。
-    result
-。
+定 过滤 = 函 obj predicate：
+  定 result = 典。
+  定 keys = 取键 obj。
+  定 i = 0。
+  当 i 小于 长 keys：
+    定 k = keys[i]。
+    定 v = obj[k]。
+    当 predicate(v)：定 result = 典 k v。。
+    i = 加 i 1。
+  。
+  返回 result。
+．
 
 -- JSON映射
-定 映射 函 obj transformer:
-    定 result {}。
-    定 keys 取键 obj。
-    定 i 0。
-    当 i < 长 keys:
-        定 k keys[i]。
-        result[k] transformer(obj[k])。
-        i i 加 1。
-    。
-    result
-。
+定 映射 = 函 obj transformer：
+  定 result = 典。
+  定 keys = 取键 obj。
+  定 i = 0。
+  当 i 小于 长 keys：
+    定 k = keys[i]。
+    定 result = 典 k transformer(obj[k])。
+    i = 加 i 1。
+  。
+  返回 result。
+．
 
 -- JSON列表映射
-定 列表映射 函 arr transformer:
-    定 result []。
-    定 i 0。
-    当 i < 长 arr:
-        result[i] transformer(arr[i])。
-        i i 加 1。
-    。
-    result
-。
+定 列表映射 = 函 arr transformer：
+  定 result = 列。
+  定 i = 0。
+  当 i 小于 长 arr：
+    连 result 列 transformer(arr[i])。
+    i = 加 i 1。
+  。
+  返回 result。
+．
 
 -- JSON列表过滤
-定 列表过滤 函 arr predicate:
-    定 result []。
-    定 i 0。
-    当 i < 长 arr:
-        当 predicate(arr[i]):
-            result[长 result] arr[i]。
-        。
-        i i 加 1。
-    。
-    result
-。
+定 列表过滤 = 函 arr predicate：
+  定 result = 列。
+  定 i = 0。
+  当 i 小于 长 arr：
+    当 predicate(arr[i])：连 result 列 arr[i]。。
+    i = 加 i 1。
+  。
+  返回 result。
+．
 
 -- JSON键重命名
-定 重命名键 函 obj rename_map:
-    定 result {}。
-    定 keys 取键 obj。
-    定 i 0。
-    当 i < 长 keys:
-        定 k keys[i]。
-        定 new_k rename_map[k]。
-        当 new_k:
-            result[new_k] obj[k]。
-        否则:
-            result[k] obj[k]。
-        。
-        i i 加 1。
+定 重命名键 = 函 obj rename_map：
+  定 result = 典。
+  定 keys = 取键 obj。
+  定 i = 0。
+  当 i 小于 长 keys：
+    定 k = keys[i]。
+    定 new_k = 入 rename_map k。
+    当 new_k：
+      定 result = 典 new_k obj[k]。
     。
-    result
-。
+    当 不 new_k：
+      定 result = 典 k obj[k]。
+    。
+    i = 加 i 1。
+  。
+  返回 result。
+．
 
 -- JSON深度复制
-定 深度复制 函 obj:
-    {{ json.loads(json.dumps(obj, ensure_ascii=False)) }}
-。
+定 深度复制 = 函 obj：{{ json.loads(json.dumps(obj, ensure_ascii=False)) }}。
 
 -- JSON比较
-定 比较 函 obj1 obj2:
-    {{ json.dumps(obj1, sort_keys=True) == json.dumps(obj2, sort_keys=True) }}
-。
+定 比较 = 函 obj1 obj2：{{ json.dumps(obj1, sort_keys=True) == json.dumps(obj2, sort_keys=True) }}。
 
 -- JSON差集
-定 差集 函 obj1 obj2:
-    定 result []。
-    定 keys1 取键 obj1。
-    定 i 0。
-    当 i < 长 keys1:
-        定 k keys1[i]。
-        当 不 含 obj2 k:
-            result[长 result] k。
-        否则:
-            当 obj1[k] != obj2[k]:
-                result[长 result] k.
-            。
-        。
-        i i 加 1。
+定 差集 = 函 obj1 obj2：
+  定 result = 列。
+  定 keys1 = 取键 obj1。
+  定 i = 0。
+  当 i 小于 长 keys1：
+    定 k = keys1[i]。
+    当 不 含 obj2 k：连 result 列 k。。
+    当 含 obj2 k：
+      当 obj1[k] != obj2[k]：连 result 列 k。。
     。
-    result
-。
+    i = 加 i 1。
+  。
+  返回 result。
+．

@@ -1,228 +1,153 @@
 -- 字符串处理模块 (string.yan)
 -- 提供丰富的字符串操作功能
 
+-- 导出声明
+出 长度, 空?, 拼接, 多拼接, 重复,
+    大写, 小写, 首字母大写, 转标题,
+    去空白, 去左空白, 去右空白,
+    替换, 替换N, 查找, 右查找, 包含?,
+    开头?, 结尾?, 分割, 按空白分割, 分割行, 连接,
+    子串, 取字符, 转数字, 转字符串,
+    统计, 居中, 左对齐, 右对齐, 补零,
+    是数字?, 是字母?, 是字母数字?, 是空白?, 是标题?,
+    反转, 转义, 取消转义, 格式, 格式数字, 比较, 相等?。
+
 -- 字符串长度
-定 长度 函 str:
-    {{ len(str) }}
-。
+定 长度 = 函 str：{{ len(str) }}。
 
 -- 判断字符串是否为空
-定 空? 函 str:
-    str == ""
-。
+定 空? = 函 str：str == ""。
 
 -- 字符串拼接
-定 拼接 函 a b:
-    a 连 b
-。
+定 拼接 = 函 a b：a 连 b。
 
 -- 多字符串拼接
-定 多拼接 函 ...:
-    定 result ""。
-    定 i 0。
-    当 i < 长参数:
-        result result 连 参数[i]。
-        i i 加 1。
-    。
-    result
-。
+定 多拼接 = 函 ...：
+  定 result = ""。
+  定 i = 0。
+  当 i 小于 长参数：
+    result = result 连 参数[i]。
+    i = i 加 1。
+  。
+  result。
+．
 
 -- 字符串重复
-定 重复 函 str times:
-    {{ str * times }}
-。
+定 重复 = 函 str times：{{ str * times }}。
 
 -- 字符串大写
-定 大写 函 str:
-    {{ str.upper() }}
-。
+定 大写 = 函 str：{{ str.upper() }}。
 
 -- 字符串小写
-定 小写 函 str:
-    {{ str.lower() }}
-。
+定 小写 = 函 str：{{ str.lower() }}。
 
 -- 首字母大写
-定 首字母大写 函 str:
-    {{ str.capitalize() }}
-。
+定 首字母大写 = 函 str：{{ str.capitalize() }}。
 
 -- 去除首尾空白
-定 去空白 函 str:
-    {{ str.strip() }}
-。
+定 去空白 = 函 str：{{ str.strip() }}。
 
 -- 去除左侧空白
-定 去左空白 函 str:
-    {{ str.lstrip() }}
-。
+定 去左空白 = 函 str：{{ str.lstrip() }}。
 
 -- 去除右侧空白
-定 去右空白 函 str:
-    {{ str.rstrip() }}
-。
+定 去右空白 = 函 str：{{ str.rstrip() }}。
 
 -- 字符串替换
-定 替换 函 str old new:
-    {{ str.replace(old, new) }}
-。
+定 替换 = 函 str old new：{{ str.replace(old, new) }}。
 
 -- 字符串替换（指定次数）
-定 替换N 函 str old new count:
-    {{ str.replace(old, new, count) }}
-。
+定 替换N = 函 str old new count：{{ str.replace(old, new, count) }}。
 
 -- 查找子字符串
-定 查找 函 str substr:
-    {{ str.find(substr) }}
-。
+定 查找 = 函 str substr：{{ str.find(substr) }}。
 
 -- 从右侧查找子字符串
-定 右查找 函 str substr:
-    {{ str.rfind(substr) }}
-。
+定 右查找 = 函 str substr：{{ str.rfind(substr) }}。
 
 -- 检查字符串是否包含子字符串
-定 包含? 函 str substr:
-    {{ substr in str }}
-。
+定 包含? = 函 str substr：{{ substr in str }}。
 
 -- 检查字符串是否以某前缀开头
-定 开头? 函 str prefix:
-    {{ str.startswith(prefix) }}
-。
+定 开头? = 函 str prefix：{{ str.startswith(prefix) }}。
 
 -- 检查字符串是否以某后缀结尾
-定 结尾? 函 str suffix:
-    {{ str.endswith(suffix) }}
-。
+定 结尾? = 函 str suffix：{{ str.endswith(suffix) }}。
 
 -- 分割字符串
-定 分割 函 str separator:
-    {{ str.split(separator) }}
-。
+定 分割 = 函 str separator：{{ str.split(separator) }}。
 
 -- 按空白分割
-定 按空白分割 函 str:
-    {{ str.split() }}
-。
+定 按空白分割 = 函 str：{{ str.split() }}。
 
 -- 分割行
-定 分割行 函 str:
-    {{ str.splitlines() }}
-。
+定 分割行 = 函 str：{{ str.splitlines() }}。
 
 -- 字符串连接
-定 连接 函 separator strlist:
-    {{ separator.join(strlist) }}
-。
+定 连接 = 函 separator strlist：{{ separator.join(strlist) }}。
 
 -- 获取子字符串
-定 子串 函 str start end:
-    {{ str[start:end] }}
-。
+定 子串 = 函 str start end：{{ str[start:end] }}。
 
 -- 获取指定位置字符
-定 取字符 函 str index:
-    {{ str[index] }}
-。
+定 取字符 = 函 str index：{{ str[index] }}。
 
 -- 转换为数字
-定 转数字 函 str:
-    {{ int(str) if str.isdigit() else (float(str) if str.replace('.', '', 1).isdigit() else None) }}
-。
+定 转数字 = 函 str：{{ int(str) if str.isdigit() else (float(str) if str.replace('.', '', 1).isdigit() else None) }}。
 
 -- 数字转字符串
-定 转字符串 函 num:
-    {{ str(num) }}
-。
+定 转字符串 = 函 num：{{ str(num) }}。
 
 -- 统计子字符串出现次数
-定 统计 函 str substr:
-    {{ str.count(substr) }}
-。
+定 统计 = 函 str substr：{{ str.count(substr) }}。
 
 -- 居中对齐
-定 居中 函 str width fillchar:
-    {{ str.center(width, fillchar) if fillchar else str.center(width) }}
-。
+定 居中 = 函 str width fillchar：{{ str.center(width, fillchar) if fillchar else str.center(width) }}。
 
 -- 左对齐
-定 左对齐 函 str width fillchar:
-    {{ str.ljust(width, fillchar) if fillchar else str.ljust(width) }}
-。
+定 左对齐 = 函 str width fillchar：{{ str.ljust(width, fillchar) if fillchar else str.ljust(width) }}。
 
 -- 右对齐
-定 右对齐 函 str width fillchar:
-    {{ str.rjust(width, fillchar) if fillchar else str.rjust(width) }}
-。
+定 右对齐 = 函 str width fillchar：{{ str.rjust(width, fillchar) if fillchar else str.rjust(width) }}。
 
 -- 补零
-定 补零 函 str width:
-    {{ str.zfill(width) }}
-。
+定 补零 = 函 str width：{{ str.zfill(width) }}。
 
 -- 判断是否是数字
-定 是数字? 函 str:
-    {{ str.isdigit() }}
-。
+定 是数字? = 函 str：{{ str.isdigit() }}。
 
 -- 判断是否是字母
-定 是字母? 函 str:
-    {{ str.isalpha() }}
-。
+定 是字母? = 函 str：{{ str.isalpha() }}。
 
 -- 判断是否是字母或数字
-定 是字母数字? 函 str:
-    {{ str.isalnum() }}
-。
+定 是字母数字? = 函 str：{{ str.isalnum() }}。
 
 -- 判断是否是空白
-定 是空白? 函 str:
-    {{ str.isspace() }}
-。
+定 是空白? = 函 str：{{ str.isspace() }}。
 
 -- 判断是否是标题格式
-定 是标题? 函 str:
-    {{ str.istitle() }}
-。
+定 是标题? = 函 str：{{ str.istitle() }}。
 
 -- 转换为标题格式
-定 转标题 函 str:
-    {{ str.title() }}
-。
+定 转标题 = 函 str：{{ str.title() }}。
 
 -- 反转字符串
-定 反转 函 str:
-    {{ str[::-1] }}
-。
+定 反转 = 函 str：{{ str[::-1] }}。
 
 -- 转义特殊字符
-定 转义 函 str:
-    {{ str.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\t', '\\t') }}
-。
+定 转义 = 函 str：{{ str.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\t', '\\t') }}。
 
 -- 取消转义
-定 取消转义 函 str:
-    {{ str.encode('latin-1', 'backslashreplace').decode('unicode-escape') }}
-。
+定 取消转义 = 函 str：{{ str.encode('latin-1', 'backslashreplace').decode('unicode-escape') }}。
 
 -- 格式字符串（简单版）
-定 格式 函 template ...:
-    {{ template.format(*args) }}
-。
+定 格式 = 函 template ...：{{ template.format(*args) }}。
 
 -- 格式化数字
-定 格式数字 函 num fmt:
-    {{ format(num, fmt) }}
-。
+定 格式数字 = 函 num fmt：{{ format(num, fmt) }}。
 
 -- 比较字符串
-定 比较 函 a b:
-    {{ (a > b) - (a < b) }}
-。
+定 比较 = 函 a b：{{ (a > b) - (a < b) }}。
 
 -- 字符串相等
-定 相等? 函 a b:
-    a == b
-。
+定 相等? = 函 a b：a == b。

@@ -10,6 +10,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from lexer import Lexer
 from parser import Parser
 from codegen import PythonCodeGen
+from error_formatter import ErrorFormatter, ErrorContext
+from error_suggestions import ErrorSuggestionGenerator
 
 class TestSuite:
     """测试套件"""
@@ -241,6 +243,85 @@ def test_integration_new_builtins():
     assert '_min' in python_code
     assert '_sum' in python_code
 
+# ============ 错误处理测试 ============
+
+def test_error_formatter_basic():
+    """测试错误格式化器基本功能"""
+    formatter = ErrorFormatter()
+    
+    context = ErrorContext(
+        error_type="测试错误",
+        file_path="test.yan",
+        line=1,
+        column=5,
+        end_column=10,
+        source_lines=["定 数据 = 42。"],
+        message="测试消息"
+    )
+    
+    result = formatter.format(context)
+    
+    assert "错误：测试错误" in result
+    assert "test.yan" in result
+    assert "第 1 行" in result
+
+def test_error_formatter_with_suggestion():
+    """测试错误格式化器带建议"""
+    formatter = ErrorFormatter()
+    
+    context = ErrorContext(
+        error_type="未定义的变量",
+        file_path="test.yan",
+        line=1,
+        column=5,
+        end_column=8,
+        source_lines=["印 数据x。"],
+        message="未定义的变量：数据x",
+        suggestion="您是否想使用：数据？"
+    )
+    
+    result = formatter.format(context)
+    
+    assert "建议" in result
+    assert "数据" in result
+
+def test_error_suggester_similar_name():
+    """测试相似名称建议"""
+    suggester = ErrorSuggestionGenerator()
+    
+    candidates = {"数据", "列表", "函数"}
+    suggestions = suggester.suggest_similar_name("数据x", candidates)
+    
+    assert "数据" in suggestions
+
+def test_error_suggester_arity():
+    """测试参数数量建议"""
+    suggester = ErrorSuggestionGenerator()
+    
+    suggestion = suggester.suggest_arity_fix("加", 2, 1)
+    
+    assert "加" in suggestion
+    assert "2" in suggestion
+    assert "1" in suggestion
+
+def test_error_suggester_index():
+    """测试索引越界建议"""
+    suggester = ErrorSuggestionGenerator()
+    
+    suggestion = suggester.suggest_index_fix(5, 3)
+    
+    assert "5" in suggestion
+    assert "3" in suggestion
+
+def test_error_suggester_type():
+    """测试类型错误建议"""
+    suggester = ErrorSuggestionGenerator()
+    
+    suggestion = suggester.suggest_type_fix("数", "串")
+    
+    assert "数" in suggestion
+    assert "串" in suggestion
+
 # ============ 运行测试 ============
 
 def run_all_tests():
@@ -276,6 +357,15 @@ def run_all_tests():
     suite.test("斐波那契数列", test_integration_fibonacci)
     suite.test("高阶函数", test_integration_higher_order)
     suite.test("新增内置函数", test_integration_new_builtins)
+    
+    # 错误处理测试
+    print("\n--- 错误处理测试 ---")
+    suite.test("错误格式化器基本功能", test_error_formatter_basic)
+    suite.test("错误格式化器带建议", test_error_formatter_with_suggestion)
+    suite.test("相似名称建议", test_error_suggester_similar_name)
+    suite.test("参数数量建议", test_error_suggester_arity)
+    suite.test("索引越界建议", test_error_suggester_index)
+    suite.test("类型错误建议", test_error_suggester_type)
     
     # 生成报告
     suite.report()
