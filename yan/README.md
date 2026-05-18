@@ -10,6 +10,8 @@
 - **双轨设计** — 中文负责逻辑，`$()` 数学表达式，`{{}}` Python 代码
 - **块结构** — 函数支持多语句、局部变量
 - **Python 生态** — 可直接调用 Python 库
+- **智能错误提示** — 源代码片段、位置高亮、智能建议
+- **性能优化** — Token缓存、惰性列表、流式处理
 
 ## 快速开始
 
@@ -73,20 +75,57 @@ python main.py examples/factorial.yan --debug
 '加1 2。              -- 返回 AST，不执行
 ```
 
+### 错误提示
+
+```
+错误：未定义的变量
+  文件：demo.yan
+  位置：第 3 行，第 5-8 列
+
+    1 | 定 数据 = 列 1 2 3。
+    2 | 定 平方 = 函 x 乘 x x。
+    3 | 定 值 = 皆 平方 数据x。
+                              ^^^^
+                              未定义的变量：数据x
+                              您是否想使用：数据？
+
+建议：检查变量名拼写，或确认变量已定义。
+```
+
+### 性能优化
+
+```
+-- 惰性列表（延迟计算）
+定 大数据 = 惰性列表 1 1000000。
+定 平方 = 函 x 乘 x x。
+定 结果 = 皆 平方 大数据。  -- 不立即计算
+
+-- 流式处理
+大数据，过滤大10，映射平方，取首10。
+```
+
 ## 项目结构
 
 ```
 yan/
-├── lexer.py      # 词法分析
-├── parser.py     # 语法分析
-├── codegen.py    # Python 代码生成
-├── nodes.py      # AST 节点定义
-├── runtime.py    # 运行时函数
-├── main.py       # 入口
-├── test.py       # 测试用例
+├── lexer.py              # 词法分析
+├── parser.py             # 语法分析
+├── codegen.py            # Python 代码生成
+├── nodes.py              # AST 节点定义
+├── runtime.py            # 运行时函数
+├── main.py               # 入口
+├── test.py               # 测试用例
+├── error_types.py        # 错误分类系统
+├── error_context.py      # 上下文感知错误
+├── error_messages.py     # 错误消息模板
+├── error_suggestions_v2.py # 智能建议引擎
+├── lexer_optimized.py    # 词法分析器优化版
+├── list_optimized.py     # 惰性列表实现
 ├── docs/
-│   └── SYNTAX.md # 语法手册
-└── examples/     # 示例代码
+│   ├── SYNTAX.md         # 语法手册
+│   ├── LANGUAGE_SPEC.md  # 语言规范
+│   └── ERROR_FORMAT_SPEC.md # 错误格式规范
+└── examples/             # 示例代码
 ```
 
 ## 文档
