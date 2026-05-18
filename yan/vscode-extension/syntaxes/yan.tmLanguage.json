@@ -19,7 +19,13 @@
       "include": "#verbs"
     },
     {
+      "include": "#builtin-functions"
+    },
+    {
       "include": "#operators"
+    },
+    {
+      "include": "member-access"
     },
     {
       "include": "#identifiers"
@@ -35,6 +41,11 @@
         {
           "name": "comment.line.note.yan",
           "match": "注.*$"
+        },
+        {
+          "name": "comment.block.yan",
+          "begin": "注\\n",
+          "end": "\\n注"
         }
       ]
     },
@@ -80,11 +91,15 @@
       "patterns": [
         {
           "name": "keyword.control.yan",
-          "match": "\\b(定|函|若|则|否则|当|遍历|于|返回|导入|导出|结构|类型|字段)\\b"
+          "match": "\\b(定|函|若|则|否则|当|遍历|于|返回|导入|导出|结构|类型|字段|尝试|除|套|测|引|出)\\b"
         },
         {
           "name": "constant.language.yan",
           "match": "\\b(真|假|空|无)\\b"
+        },
+        {
+          "name": "support.type.yan",
+          "match": "\\b(列|典|序)\\b"
         }
       ]
     },
@@ -92,7 +107,19 @@
       "patterns": [
         {
           "name": "entity.name.function.yan",
-          "match": "\\b(加|减|乘|除|模|幂|绝对|负|大|小|等|不等|且|或|非|首|余|入|长|添|连|含|空|皆|只|归|潜|印|读|写|行|列|典|序|范围|长度|连接|分割|替换|截取|小写|大写|查找|包含|去空|开头是|结尾是|正弦|余弦|正切|反正弦|反余弦|反正切|指数|对数|对数10|开方|取整|进位|四舍五入|随机|随机整数|圆周率|自然常数|当前时间|日期|时间|日期时间|格式化时间|睡眠|读文件|写文件|追加文件|存在|是文件|是目录|列目录|建目录|删文件|删目录|当前目录|文件名|目录名|扩展名|是数|是串|是表|是函|是真|是空|类型|反|排|最大|最小|求和|计数|键|值|项|删键)\\b"
+          "match": "\\b(加|减|乘|除|模|幂|绝对|负|大|小|等|不等|且|或|非|首|余|入|长|添|连|含|空|皆|只|归|潜|印|读|写|行|范围|长度|连接|分割|替换|截取|小写|大写|查找|包含|去空|开头是|结尾是|正弦|余弦|正切|反正弦|反余弦|反正切|指数|对数|对数10|开方|取整|进位|四舍五入|随机|随机整数|圆周率|自然常数|当前时间|日期|时间|日期时间|格式化时间|睡眠|读文件|写文件|追加文件|存在|是文件|是目录|列目录|建目录|删文件|删目录|当前目录|文件名|目录名|扩展名|是数|是串|是表|是函|是真|是空|类型|反|排|最大|最小|求和|计数|键|值|项|删键)\\b"
+        }
+      ]
+    },
+    "builtin-functions": {
+      "patterns": [
+        {
+          "name": "support.function.builtin.yan",
+          "match": "\\b(JSON|正则|日期|网络|加密|数据库)\\b"
+        },
+        {
+          "name": "support.function.test.yan",
+          "match": "\\b(套|测)\\b"
         }
       ]
     },
@@ -100,7 +127,19 @@
       "patterns": [
         {
           "name": "keyword.operator.yan",
-          "match": "(。|，|：|；|=)"
+          "match": "(。|，|：|；|=|\\||→)"
+        },
+        {
+          "name": "keyword.operator.dot.yan",
+          "match": "\\."
+        }
+      ]
+    },
+    "member-access": {
+      "patterns": [
+        {
+          "name": "variable.object.property.yan",
+          "match": "(?<=\\.)[\\u4e00-\\u9fa5a-zA-Z_][\\u4e00-\\u9fa5a-zA-Z0-9_]*"
         }
       ]
     },
@@ -109,6 +148,10 @@
         {
           "name": "variable.other.yan",
           "match": "[\\u4e00-\\u9fa5]+[\\u4e00-\\u9fa50-9a-zA-Z_]*"
+        },
+        {
+          "name": "variable.parameter.yan",
+          "match": "(?<=函\\s)[\\u4e00-\\u9fa5a-zA-Z_][\\u4e00-\\u9fa5a-zA-Z0-9_]*"
         }
       ]
     }
