@@ -356,6 +356,50 @@ def main():
         repl()
         return
 
+    # 检查是否是包管理器命令
+    if sys.argv[1] == "包":
+        from yan_package_manager import PackageManager
+        
+        pm = PackageManager()
+        command = sys.argv[2] if len(sys.argv) > 2 else ""
+        args = sys.argv[3:]
+        
+        if command == "安装":
+            if not args:
+                print("错误：请指定包名")
+                return
+            package_name = args[0]
+            version = args[1] if len(args) > 1 else None
+            pm.install(package_name, version)
+        elif command == "卸载":
+            if not args:
+                print("错误：请指定包名")
+                return
+            pm.uninstall(args[0])
+        elif command == "列表":
+            pm.list_packages()
+        elif command == "搜索":
+            if not args:
+                print("错误：请指定搜索关键词")
+                return
+            pm.search(args[0])
+        elif command == "初始化":
+            project_name = args[0] if args else None
+            pm.init(project_name)
+        elif command == "链接":
+            if not args:
+                print("错误：请指定本地路径")
+                return
+            pm.link(args[0])
+        elif command == "发布":
+            pm.publish()
+        elif command == "帮助" or not command:
+            pm.help()
+        else:
+            print(f"未知命令: {command}")
+            print("使用 'yan 包 帮助' 查看所有命令")
+        return
+
     filename = sys.argv[1]
     debug = '--debug' in sys.argv
 

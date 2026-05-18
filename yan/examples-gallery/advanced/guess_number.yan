@@ -1,0 +1,26 @@
+注 猜数字游戏
+
+{{
+import random
+
+def 猜数字():
+    答案 = random.randint(1, 100)
+    尝试次数 = 0
+    
+    print("猜数字游戏！")
+    print("我想了一个1-100之间的数字。")
+    
+    while True:
+        猜测 = int(input("请输入你的猜测："))
+        尝试次数 += 1
+        
+        if 猜测 == 答案:
+            print(f"恭喜！你猜对了！用了{尝试次数}次。")
+            return
+        elif 猜测 < 答案:
+            print("太小了！")
+        else:
+            print("太大了！")
+
+猜数字()
+}}。

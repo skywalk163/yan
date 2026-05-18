@@ -1,0 +1,20 @@
+注 词频统计
+
+{{
+import re
+
+def 统计词频(文本):
+    词频 = {}
+    单词 = re.findall(r'[\w]+', 文本.lower())
+    for 词 in 单词:
+        if 词 in 词频:
+            词频[词] += 1
+        else:
+            词频[词] = 1
+    return 词频
+
+文本 = "Hello world hello Python world programming"
+结果 = 统计词频(文本)
+print("词频统计结果：")
+print(结果)
+}}。
