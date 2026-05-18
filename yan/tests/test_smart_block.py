@@ -382,9 +382,10 @@ class TestLoopWithBlock:
         assert hasattr(outer_foreach, 'var')
         assert outer_foreach.var == 'x'
         # 验证外层循环体包含内层循环
-        # 当循环体只有一个语句时，_parse_block 返回该语句本身
-        assert hasattr(outer_foreach.body, 'var')
-        assert outer_foreach.body.var == 'y'
+        # 循环体是一个 Block，包含内层循环
+        inner_foreach = outer_foreach.body.statements[0]
+        assert hasattr(inner_foreach, 'var')
+        assert inner_foreach.var == 'y'
 
     def test_while_with_complex_condition(self):
         """测试带复杂条件的当循环"""

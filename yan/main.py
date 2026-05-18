@@ -43,6 +43,12 @@ _module_system = ModuleSystem()
 def create_env() -> Dict[str, Any]:
     """创建新的执行环境"""
     env = {}
+    
+    # 添加中文动词名称
+    for name, (func, arity) in ALL_BUILTINS.items():
+        env[name] = func
+    
+    # 添加内部函数引用
     env.update({
         '_add': _add,
         '_sub': _sub,
@@ -218,7 +224,7 @@ def run(source: str, debug: bool = False, env: Optional[Dict[str, Any]] = None, 
 
         # 2. 语法分析
         parser = Parser(use_global_verbs=use_global_verbs)
-        ast = parser.parse(tokens, source)
+        ast = parser.parse(tokens)
         ast = process_adverbs(ast)
         if debug:
             print("=== AST ===")
@@ -261,11 +267,12 @@ def run(source: str, debug: bool = False, env: Optional[Dict[str, Any]] = None, 
             if '_result' in env:
                 return env['_result']
             # 尝试获取最后一个表达式的结果
+            # 但不要重新执行函数调用
             lines = py_code.strip().split('\n')
             if lines:
                 last_line = lines[-1].strip()
-                # 如果最后一行是表达式（不是赋值，不是 print 调用），计算它
-                if ('=' not in last_line or last_line.count('=') == last_line.count('==')) and not last_line.startswith('print'):
+                # 如果最后一行是表达式（不是赋值，不是 print 调用，不是函数调用），计算它
+                if ('=' not in last_line or last_line.count('=') == last_line.count('==')) and not last_line.startswith('print') and '(' not in last_line:
                     try:
                         result = eval(last_line, env)
                         return result

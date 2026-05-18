@@ -133,6 +133,10 @@ class PythonCodeGen:
         if len(args) == 0 and verb_name in self.user_defined and self.user_defined[verb_name] == -1 and pipeline_arg is None:
             return py_func_name
 
+        # 可变参数动词（arity=-1）：直接调用，不柯里化
+        if arity == -1:
+            return f'{py_func_name}({", ".join(args)})'
+
         # 柯里化：参数不足时生成 lambda
         # 规则：已有参数绑定到右侧，管道值（或新生成的参数）绑定到左侧
         if arity > 0 and len(args) < arity and pipeline_arg is None:
@@ -342,14 +346,7 @@ class PythonCodeGen:
                     if line.strip():
                         lines.append(f'    {line}')
             else:
-                # 最后一个语句作为返回值
-                if i == len(node.body.statements) - 1:
-                    if code.startswith('return '):
-                        lines.append(f'    {code}')
-                    else:
-                        lines.append(f'    return {code}')
-                else:
-                    lines.append(f'    {code}')
+                lines.append(f'    {code}')
         
         body_code = '\n'.join(lines)
         return f'def {name}({params}):\n{body_code}'
@@ -435,8 +432,6 @@ class PythonCodeGen:
                     for line in code_lines:
                         if line.strip():
                             then_lines.append(f'    {line}')
-                elif is_last:
-                    then_lines.append(f'    return {code}')
                 else:
                     then_lines.append(f'    {code}')
             lines.append(f'if {cond}:')
@@ -453,14 +448,12 @@ class PythonCodeGen:
                             for line in code_lines:
                                 if line.strip():
                                     lines.append(f'    {line}')
-                        elif is_last:
-                            lines.append(f'    return {code}')
                         else:
                             lines.append(f'    {code}')
                 else:
                     else_code = self.generate(node.else_branch)
                     lines.append('else:')
-                    lines.append(f'    return {else_code}')
+                    lines.append(f'    {else_code}')
             
             return '\n'.join(lines)
         

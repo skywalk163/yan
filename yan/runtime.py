@@ -391,6 +391,13 @@ TYPE_BUILTINS = {
 }
 
 
+# ============ 测试断言 ============
+
+class YanAssertionError(Exception):
+    """言语言断言错误"""
+    pass
+
+
 # ============ 合并所有内置函数 ============
 
 ALL_BUILTINS = {
