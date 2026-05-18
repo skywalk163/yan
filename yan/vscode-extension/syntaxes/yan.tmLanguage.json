@@ -1,65 +1,40 @@
 {
-  "$schema": "https://raw.githubusercontent.com/Microsoft/vscode/master/src/vs/workbench/services/textMate/common/TMScopeRegistry.ts",
-  "name": "yan",
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Yan",
   "scopeName": "source.yan",
-  "fileTypes": ["yan"],
   "patterns": [
     {
-      "name": "comment.line.yan",
-      "match": "^\\s*--.*$"
+      "include": "#comments"
     },
     {
-      "name": "string.quoted.double.yan",
-      "begin": "\"",
-      "end": "\"",
-      "patterns": [
-        {
-          "name": "constant.character.escape.yan",
-          "match": "\\\\."
-        }
-      ]
+      "include": "#strings"
     },
     {
-      "name": "constant.numeric.yan",
-      "match": "\\b\\d+\\.?\\d*\\b"
+      "include": "#numbers"
     },
     {
-      "name": "keyword.control.yan",
-      "match": "^(定|函|若|则|遍历|于|当|跳出|返回)\\s+"
+      "include": "#keywords"
     },
     {
-      "name": "keyword.import.yan",
-      "match": "^(引|出)\\s+"
+      "include": "#verbs"
     },
     {
-      "name": "support.function.yan",
-      "match": "\\b(加|减|乘|除|等|大|小|且|或|非|印|列|首|余|入|长|添|连|含|空|皆|只|归|正弦|余弦|正切|开方|取整|进位|四舍五入|随机|随机整数|圆周率|自然常数|读文件|写文件|追加文件|存在|是文件|是目录|列目录|建目录|删文件|删目录|文件名|目录名|扩展名|当前时间|日期|时间|日期时间|格式化时间|睡眠|类型|是数|是串|是表|是函|是真|是空|断言等|断言不等|断言大|断言小|断言真|断言假|断言空|断言非空|断言包含|断言长度|断言抛|转JSON|解JSON)\\b"
+      "include": "#operators"
     },
     {
-      "name": "entity.name.function.yan",
-      "match": "\\b[\\u4e00-\\u9fa5]+\\b"
-    },
-    {
-      "name": "meta.brace.yan",
-      "match": "[{}「」【】]"
-    },
-    {
-      "name": "support.other.yan",
-      "begin": "{{",
-      "end": "}}",
-      "patterns": [
-        {
-          "include": "source.python"
-        }
-      ]
+      "include": "#identifiers"
     }
   ],
   "repository": {
     "comments": {
       "patterns": [
         {
-          "name": "comment.line.yan",
+          "name": "comment.line.double-dash.yan",
           "match": "--.*$"
+        },
+        {
+          "name": "comment.line.note.yan",
+          "match": "注.*$"
         }
       ]
     },
@@ -68,7 +43,72 @@
         {
           "name": "string.quoted.double.yan",
           "begin": "\"",
-          "end": "\""
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.yan",
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.yan",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.yan",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.float.yan",
+          "match": "\\b[0-9]+\\.[0-9]+\\b"
+        },
+        {
+          "name": "constant.numeric.integer.yan",
+          "match": "\\b[0-9]+\\b"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.yan",
+          "match": "\\b(定|函|若|则|否则|当|遍历|于|返回|导入|导出|结构|类型|字段)\\b"
+        },
+        {
+          "name": "constant.language.yan",
+          "match": "\\b(真|假|空|无)\\b"
+        }
+      ]
+    },
+    "verbs": {
+      "patterns": [
+        {
+          "name": "entity.name.function.yan",
+          "match": "\\b(加|减|乘|除|模|幂|绝对|负|大|小|等|不等|且|或|非|首|余|入|长|添|连|含|空|皆|只|归|潜|印|读|写|行|列|典|序|范围|长度|连接|分割|替换|截取|小写|大写|查找|包含|去空|开头是|结尾是|正弦|余弦|正切|反正弦|反余弦|反正切|指数|对数|对数10|开方|取整|进位|四舍五入|随机|随机整数|圆周率|自然常数|当前时间|日期|时间|日期时间|格式化时间|睡眠|读文件|写文件|追加文件|存在|是文件|是目录|列目录|建目录|删文件|删目录|当前目录|文件名|目录名|扩展名|是数|是串|是表|是函|是真|是空|类型|反|排|最大|最小|求和|计数|键|值|项|删键)\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.yan",
+          "match": "(。|，|：|；|=)"
+        }
+      ]
+    },
+    "identifiers": {
+      "patterns": [
+        {
+          "name": "variable.other.yan",
+          "match": "[\\u4e00-\\u9fa5]+[\\u4e00-\\u9fa50-9a-zA-Z_]*"
         }
       ]
     }

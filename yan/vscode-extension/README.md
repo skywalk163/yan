@@ -1,102 +1,104 @@
-# 言语言 VS Code 扩展
+# 言语言 VS Code 插件
 
-言语言的官方 VS Code 扩展，提供完整的 IDE 支持。
+文言为表，函数为里。
 
-## 功能特性
+## 特性
 
-- **语法高亮** - 完整的言语言语法高亮支持
-- **自动补全** - 内置函数和用户定义函数的自动补全
-- **悬停提示** - 函数文档悬停显示
-- **跳转定义** - 跳转到函数/变量定义
-- **查找引用** - 查找符号的所有引用
-- **重命名** - 符号重命名重构
-- **错误诊断** - 实时语法和语义错误检查
-- **代码格式化** - 代码格式化支持
-- **代码片段** - 常用代码模板
-- **调试支持** - 基础调试功能
+- ✅ 语法高亮
+- ✅ 自动补全
+- ✅ 错误诊断
+- ✅ 悬停提示
+- ✅ 代码格式化
 
 ## 安装
 
-### 方式一：从 VSIX 安装
+### 从 VS Code 市场安装
+
+1. 打开 VS Code
+2. 按 `Ctrl+Shift+X` 打开扩展面板
+3. 搜索 "Yan Language"
+4. 点击安装
+
+### 从源码安装
 
 ```bash
-code --install-extension yan-language-0.5.0.vsix
-```
-
-### 方式二：本地开发安装
-
-```bash
-cd vscode-extension
+cd yan/vscode-extension
 npm install
 npm run compile
 ```
 
-然后在 VS Code 中按 `F5` 启动调试。
+## 使用
+
+### 创建言语言文件
+
+1. 创建新文件，扩展名为 `.yan`
+2. 编写言语言代码：
+
+```yan
+定 平方 = 函 x 乘 x x。
+印 平方 5。
+```
+
+### 编译和运行
+
+- 按 `Ctrl+Shift+P` 打开命令面板
+- 输入 "言语言：编译当前文件"
+- 或右键选择 "言语言：运行当前文件"
 
 ## 配置
 
-在 VS Code 设置中可以配置以下选项：
+在 `settings.json` 中配置：
 
 ```json
 {
-  "yan.languageServer.enabled": true,
-  "yan.format.enable": true,
-  "yan.linter.enable": true
+  "yan.compilerPath": "path/to/yan/compiler",
+  "yan.enableDiagnostics": true,
+  "yan.enableCompletion": true
 }
 ```
 
-## 快捷键
+## 示例
 
-| 快捷键 | 功能 |
-|--------|------|
-| `Ctrl+Shift+P` -> `Yan: 运行文件` | 运行当前文件 |
-| `Ctrl+Shift+P` -> `Yan: 格式化` | 格式化代码 |
-| `Ctrl+Shift+P` -> `Yan: 帮助` | 显示帮助文档 |
+### 基础运算
 
-## 项目结构
-
-```
-vscode-extension/
-├── package.json          # 扩展配置
-├── extension.js         # 扩展入口
-├── debugger.js          # 调试适配器
-├── language-configuration.json
-├── syntaxes/
-│   ├── yan.tmLanguage.json    # 言语言语法
-│   └── yanmd.tmLanguage.json  # 言文档语法
-├── snippets/
-│   └── yan.json         # 代码片段
-└── server/
-    └── main.js          # LSP 服务器入口
+```yan
+加 1 2。
+乘 3 4。
+列 1 2 3 皆 乘 2。
 ```
 
-## 开发
+### 函数定义
 
-### 依赖
+```yan
+定 阶乘 = 函 n
+  若 等于 n 0
+    返回 1。
+  否则
+    返回 乘 n 阶乘 减 n 1。
+  。
+。
 
-- Node.js >= 16
-- npm >= 8
-- Python >= 3.8
-
-### 构建
-
-```bash
-npm install
-npm run compile
+印 阶乘 5。
 ```
 
-### 测试
+### 列表操作
 
-按 `F5` 启动调试会话，在新窗口中打开一个 `.yan` 文件进行测试。
-
-## 发布
-
-```bash
-npm install -g vsce
-vsce package
-vsce publish
+```yan
+定 数据 = 列 1 2 3 4 5。
+定 平方数据 = 皆 平方 数据。
+定 偶数数据 = 只 函 x 等于 模 x 2 0 数据。
+印 平方数据。
+印 偶数数据。
 ```
 
 ## 许可证
 
-MIT
+MIT License
+
+## 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+---
+
+**更新日期**：2026-05-18
