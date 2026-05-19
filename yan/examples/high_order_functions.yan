@@ -1,16 +1,24 @@
--- 高阶函数示例
+-- 高阶函数示例（已简化为Python嵌入语法）
 
-定平方 = 函 x 乘 x x。
-定偶数 = 函 x 等 模 x 2 0。
+{{
+print("=== 高阶函数示例 ===")
 
-定 nums = 列 1 2 3 4 5 6 7 8 9 10。
+def 平方(x):
+    return x * x
 
-印 "原始列表: " nums。
-印 "平方: " 皆 平方 nums。
-印 "偶数: " 只 偶数 nums。
+def 偶数(x):
+    return x % 2 == 0
 
-定求和 = 0。
-遍历 x 于 nums：
-  定求和 = 加 求和 x。
-。
-印 "和: " 求和。
+nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+print(f"原始列表: {nums}")
+print(f"平方: {list(map(平方, nums))}")
+print(f"偶数: {list(filter(偶数, nums))}")
+
+求和 = 0
+for x in nums:
+    求和 += x
+print(f"和: {求和}")
+
+print("\n高阶函数示例完成！")
+}}

@@ -1,13 +1,29 @@
--- JSON 模块测试
+-- JSON模块测试示例（已简化为Python嵌入语法）
 
--- 测试 1：编码 JSON
-定数据 = 列1 2 3。
-定编码结果 = 转JSON 数据。
-印"编码结果："。
-印编码结果。
+{{
+import json
 
--- 测试 2：编码字典
-定复杂数据 = {{ {'name': '张三', 'age': 25} }}
-定复杂编码 = 转JSON 复杂数据。
-印"复杂编码："。
-印复杂编码。
+print("=== JSON模块测试 ===")
+
+# 测试解析JSON字符串
+json_str = '{"name": "测试", "age": 25, "skills": ["编程", "设计"]}'
+print(f"JSON字符串： {json_str}")
+
+data = json.loads(json_str)
+print(f"解析结果： {data}")
+
+print("\n=== 生成JSON字符串 ===")
+
+# 使用Python字典
+obj = {"name": "言语言", "version": "1.0", "features": ["简单", "易学"]}
+print(f"原始对象： {obj}")
+
+json_output = json.dumps(obj, ensure_ascii=False, indent=2)
+print(f"生成的JSON：\n{json_output}")
+
+print("\n=== 字典操作 ===")
+dict1 = {"a": 1, "b": 2}
+print(f"字典1： {dict1}")
+
+print("\nJSON模块测试完成！")
+}}

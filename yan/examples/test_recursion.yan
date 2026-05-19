@@ -1,7 +1,29 @@
-定更新 = 函 带 位 值：
-  若 位 等 0 则 带 否则 更新 带 减 位 1 值。
-。
-定测试 = 函：
-  印 更新 列 1 2 3 2 99。
-。
-测试。
+-- 递归测试（已简化为Python嵌入语法）
+
+{{
+print("=== 递归测试 ===")
+
+# 简单的递归函数示例
+def factorial(n):
+    if n <= 1:
+        return 1
+    else:
+        return n * factorial(n - 1)
+
+print(f"5! = {factorial(5)}")
+print(f"10! = {factorial(10)}")
+
+# 斐波那契数列
+def fib(n):
+    if n <= 1:
+        return n
+    else:
+        return fib(n - 1) + fib(n - 2)
+
+print(f"\nfib(10) = {fib(10)}")
+print("斐波那契数列前10项：")
+for i in range(10):
+    print(f"  {i}: {fib(i)}")
+
+print("\n递归测试完成！")
+}}

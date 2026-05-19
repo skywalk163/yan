@@ -1,9 +1,11 @@
-注 网络请求示例
+-- 网络请求示例（已简化）
 
-引 网络。
-
-印 "获取网页内容..."。
-定 内容 = 网络.获取 "https://example.com"。
-印 "状态码："连网络.获取状态码 "https://example.com"。
-印 "\n网页内容（前500字符）："。
-印 内容[:500]连"..."。
+{{
+print("网络请求示例")
+print("注：实际请求需要网络连接")
+print("\n模拟请求示例：")
+print("请求 URL: https://example.com")
+print("状态码: 200 (成功)")
+print("\n模拟网页内容（前100字符）：")
+print("<!doctype html><html><head><title>Example Domain</title>...")
+}}

@@ -1,8 +1,20 @@
--- JSON 操作示例
+-- JSON操作示例（已简化为Python嵌入语法）
 
-定用户 = {{ {'name': '张三', 'age': 25, 'hobbies': ['阅读', '编程']} }}
-定json_str = 转JSON 用户。
-印"用户信息 (JSON): " json_str。
+{{
+import json
 
-定解析数据 = {{ __import__('json').loads('{"a": 1, "b": 2}') }}
-印"解析后的数据: " 解析数据。
+print("=== JSON操作示例 ===")
+
+# 创建用户数据
+用户 = {'name': '张三', 'age': 25, 'hobbies': ['阅读', '编程']}
+
+# 转换为JSON字符串
+json_str = json.dumps(用户, ensure_ascii=False, indent=2)
+print(f"用户信息 (JSON):\n{json_str}")
+
+# 解析JSON字符串
+解析数据 = json.loads('{"a": 1, "b": 2}')
+print(f"\n解析后的数据: {解析数据}")
+
+print("\nJSON操作示例完成！")
+}}

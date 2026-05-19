@@ -52,10 +52,24 @@ def _tail(lst): return lst[1:] if len(lst) > 1 else []
 def _nth(lst, n): return lst[n] if -len(lst) <= n < len(lst) else None
 def _len(lst): return len(lst)
 def _append(lst, item): return lst + [item]
-def _concat(lst1, lst2):
-    if isinstance(lst1, str) or isinstance(lst2, str):
-        return str(lst1) + str(lst2)
-    return lst1 + lst2
+def _concat(*args):
+    """连接多个参数，支持任意数量的参数"""
+    if len(args) == 0:
+        return ""
+    if len(args) == 1:
+        return args[0]
+    
+    # 检查是否有字符串
+    has_string = any(isinstance(arg, str) for arg in args)
+    
+    if has_string:
+        return ''.join(str(arg) for arg in args)
+    
+    # 都是列表
+    result = []
+    for arg in args:
+        result.extend(arg)
+    return result
 def _contains(lst, item): return item in lst
 def _empty(lst): return len(lst) == 0
 

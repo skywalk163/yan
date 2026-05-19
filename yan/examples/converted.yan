@@ -1,62 +1,29 @@
-入时间。
-入JSON。
-入数学。
-入文件。
+-- 数据处理示例（已简化）
 
-'\n一个 Python 数据分析示例 - 用于测试 py2yan 转换\n'。
-定load_config=函path：
-  '加载配置文件'。
-  若非存在path则：
-      返回典。
-  定内容=读文件path。
-      定config=JSON解码f。
-  返回config。
-定analyze_numbers=函numbers：
-  '分析数字列表'。
-  若非numbers则：
-      返回典列'count'0 列'sum'0 列'mean'0 列'max'空 列'min'空。
-  定total=numbers，归加0。
-  定count=numbers，长。
-  定mean=total除count。
-  定max_val=最大numbers。
-  定min_val=最小numbers。
-  定result=典列'count'count 列'sum'total 列'mean'mean 列'max'max_val 列'min'min_val。
-  返回result。
-定fibonacci=函n：
-  '计算斐波那契数列'。
-  若n小等于1则：
-      返回n。
-    否则：
-      返回fibonacci n减1加fibonacci n减2。
-定process_data=函data：
-  '处理数据'。
-  定result=列。
-  遍历item于data：
-      若item大0则：
-            定processed=item乘2。
-            result，添processed。
-  返回result。
-定generate_report=函data title：
-  '生成报告'。
-  定stats=analyze_numbers data。
-  定timestamp=当前时间。
-  定report=""
-  Report: "+转字符串title+"
-  Date: "+转字符串timestamp+"
-  Count: "+转字符串stats，入'count'。+"
-  Sum: "+转字符串stats，入'sum'。+"
-  Mean: "+转字符串stats，入'mean'。+"
-  ""。
-  返回report，去空。
-定main=函_：
-  '主函数'。
-  定samples=列1 负2 3 负4 5 6 负7 8 9 10。
-  定fib_nums=范围10，皆函ifibonacci i。
-  印fib_nums。
-  印process_data samples。
-  印generate_report samples 'Sample Analysis'。
-  定pi=圆周率。
-  定sin_pi_4=正弦pi除4。
-  印sin_pi_4。
-若__name__等'__main__'则：
-  main。
+-- 使用Python嵌入语法，因为原转换文件有很多语法问题
+{{
+import json
+import time
+
+print("=== 数据处理示例 ===")
+
+# 示例数据
+samples = [1, -2, 3, -4, 5, 6, -7, 8, 9, 10]
+
+# 简单分析
+print("\n原始数据：", samples)
+print("数据总和：", sum(samples))
+print("数据长度：", len(samples))
+print("最大值：", max(samples))
+print("最小值：", min(samples))
+
+# 数据过滤
+processed = [x * 2 for x in samples if x > 0]
+print("\n处理后的数据（正数*2）：", processed)
+
+# JSON示例
+data = {"samples": samples, "processed": processed, "timestamp": time.time()}
+json_str = json.dumps(data, ensure_ascii=False, indent=2)
+print("\nJSON格式：")
+print(json_str)
+}}

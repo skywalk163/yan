@@ -1,11 +1,39 @@
--- 文件操作示例
-定文件名 = "test_output.txt"。
-写文件 文件名 "Hello 言语言!"。
-印 "文件已写入!"。
+-- 文件操作示例（已简化为Python嵌入语法）
 
-定内容 = 读文件 文件名。
-印 "文件内容: " 内容。
+{{
+print("=== 文件操作示例 ===")
 
-印 "文件存在? " 存在 文件名。
-印 "是文件? " 是文件 文件名。
-印 "是目录? " 是目录 文件名。
+import os
+
+# 使用临时文件避免路径问题
+文件名 = "test_output.txt"
+
+# 写文件
+print(f"\n写文件：{文件名}")
+with open(文件名, 'w', encoding='utf-8') as f:
+    f.write("Hello 言语言!")
+print("文件已写入!")
+
+# 读文件
+if os.path.exists(文件名):
+    print(f"\n读文件：{文件名}")
+    with open(文件名, 'r', encoding='utf-8') as f:
+        内容 = f.read()
+    print(f"文件内容：{内容}")
+else:
+    print(f"文件不存在：{文件名}")
+
+# 检查文件状态
+print(f"\n文件存在? {os.path.exists(文件名)}")
+print(f"是文件? {os.path.isfile(文件名)}")
+print(f"是目录? {os.path.isdir(文件名)}")
+
+# 清理测试文件
+try:
+    os.remove(文件名)
+    print(f"\n已清理测试文件：{文件名}")
+except:
+    pass
+
+print("\n文件操作示例完成！")
+}}

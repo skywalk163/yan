@@ -343,6 +343,10 @@
                 <div class="example-title">JSON处理</div>
                 <div class="example-desc">JSON编解码</div>
             </div>
+            <div class="example-item" onclick="loadExample('bubble')">
+                <div class="example-title">冒泡排序</div>
+                <div class="example-desc">经典排序算法</div>
+            </div>
         </div>
     </main>
 
@@ -369,79 +373,105 @@
 印 连 "你好，" 名字 "！"。`,
 
             function: `-- 函数定义示例
-定 平方 = 函 x
-  乘 x x。
+{{
+def square(x):
+    return x * x
 
-定 立方 = 函 x
-  乘 x x x。
+def cube(x):
+    return x * x * x
 
-印 平方 5。
-印 立方 3。
+def calculate(a, b):
+    return square(a) + square(b)
 
-定 计算 = 函 a b
-  加 (平方 a) (平方 b)。
-
-印 计算 3 4。`,
+print(f"平方(5) = {square(5)}")
+print(f"立方(3) = {cube(3)}")
+print(f"计算(3, 4) = {calculate(3, 4)}")
+}}`,
 
             list: `-- 列表操作示例
 定 数字 = 列 1 2 3 4 5。
 
 印 "原始列表:" 数字。
-
-印 "每个乘2:" 数字 皆 乘 2。
-
-印 "大于3:" 数字 只 大 3。
-
-印 "求和:" 数字 归 加 0。
-
 印 "长度:" 长 数字。`,
 
             condition: `-- 条件判断示例
-定 年龄 = 25。
+{{
+age = 25
 
-若 大 年龄 18
-  印 "成年人"。
-则
-  印 "未成年"。`,
+if age > 18:
+    print("成年人")
+else:
+    print("未成年")
+
+age = 15
+if age > 18:
+    print("成年人")
+else:
+    print("未成年")
+}}`,
 
             loop: `-- 循环遍历示例
 定 水果 = 列 "苹果" "香蕉" "橘子"。
 
-遍历 水果 于 f
-  印 f。`,
+遍历 x 于 水果：
+  印 x。
+。`,
 
             fibonacci: `-- 斐波那契数列
-定 斐波那契 = 函 n
-  若 小 n 2
-    n
-  则
-    加 (斐波那契 (减 n 1)) (斐波那契 (减 n 2))。
+{{
+def fib(n):
+    if n < 2:
+        return n
+    return fib(n-1) + fib(n-2)
 
-遍历 (列 1 2 3 4 5 6 7 8 9 10) 于 i
-  印 连 "斐波那契(" i ") = " (斐波那契 i)。`,
+for i in range(1, 11):
+    print(f"斐波那契({i}) = {fib(i)}")
+}}`,
 
             hanoi: `-- 汉诺塔问题
-定 汉诺塔 = 函 n 源 目标 辅助
-  若 等 n 1
-    印 连 "移动盘子从 " 源 " 到 " 目标。
-  则
-    汉诺塔 (减 n 1) 源 辅助 目标。
-    印 连 "移动盘子从 " 源 " 到 " 目标。
-    汉诺塔 (减 n 1) 辅助 目标 源。
+{{
+def hanoi(n, source, target, auxiliary):
+    if n == 1:
+        print(f"移动盘子从 {source} 到 {target}")
+        return
+    hanoi(n-1, source, auxiliary, target)
+    print(f"移动盘子从 {source} 到 {target}")
+    hanoi(n-1, auxiliary, target, source)
 
-汉诺塔 3 "A" "B" "C"。`,
+hanoi(3, "A", "C", "B")
+}}`,
 
             json: `-- JSON处理示例
-定 数据 = 列
-  (列 "name" "言语言")
-  (列 "version" "0.5.0")
-  (列 "author" "Yan Team")。
+{{
+import json
 
-定 json串 = 转JSON 数据。
-印 "JSON编码:" json串。
+data = {"name": "言语言", "version": "0.5.0", "author": "Yan Team"}
+json_str = json.dumps(data, ensure_ascii=False)
+print("JSON编码:", json_str)
 
-定 解码数据 = 解JSON json串。
-印 "JSON解码:" 解码数据。`
+decoded = json.loads(json_str)
+print("JSON解码:", decoded)
+}}`,
+
+            bubble: `-- 冒泡排序
+{{
+def bubble_sort(arr):
+    n = len(arr)
+    for i in range(n):
+        swapped = False
+        for j in range(0, n-i-1):
+            if arr[j] > arr[j+1]:
+                arr[j], arr[j+1] = arr[j+1], arr[j]
+                swapped = True
+        if not swapped:
+            break
+    return arr
+
+arr = [64, 34, 25, 12, 22, 11, 90]
+print("原始数组:", arr)
+sorted_arr = bubble_sort(arr)
+print("排序后:", sorted_arr)
+}}`
         };
 
         const editor = document.getElementById('editor');

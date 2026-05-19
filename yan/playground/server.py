@@ -12,6 +12,7 @@ import sys
 import os
 import json
 import subprocess
+import concurrent.futures
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 import threading
@@ -30,7 +31,7 @@ def execute_code_in_process(code: str) -> dict:
     try:
         result = subprocess.run(
             [sys.executable, str(MAIN_PY), "-c"],
-            input=code.encode('utf-8'),
+            input=code,
             capture_output=True,
             text=True,
             timeout=30,  # 30秒超时
@@ -64,23 +65,27 @@ def execute_code_in_process(code: str) -> dict:
 
 
 class YanExecutor:
-    """言语言代码执行器（使用进程池）"""
+    """言语言代码执行器（使用线程池避免阻塞）"""
     
     def __init__(self):
-        # 不预创建进程池，每次使用独立进程
-        pass
+        # 创建线程池，最多10个并发执行
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
     
     def execute(self, code: str) -> tuple:
         """执行言语言代码，返回(success, output, error)"""
         result = execute_code_in_process(code)
         return result["success"], result["output"], result["error"]
+    
+    def shutdown(self):
+        """关闭线程池"""
+        self.executor.shutdown(wait=False)
 
 
 class PlaygroundHandler(SimpleHTTPRequestHandler):
     """Playground HTTP 处理器"""
     
     executor = YanExecutor()
-    protocol_version = 'HTTP/1.1'
+    protocol_version = 'HTTP/1.0'  # 使用 HTTP/1.0 避免 keep-alive 问题
     
     def do_GET(self):
         """处理 GET 请求"""
@@ -224,15 +229,17 @@ class PlaygroundHandler(SimpleHTTPRequestHandler):
         self.send_header('Content-Type', 'application/json; charset=utf-8')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Content-Length', len(response.encode('utf-8')))
+        self.send_header('Connection', 'close')  # 关闭连接
         self.end_headers()
         self.wfile.write(response.encode('utf-8'))
+        self.wfile.flush()  # 强制刷新输出
     
     def log_message(self, format, *args):
         """自定义日志格式"""
         print(f"[{self.log_date_time_string()}] {format % args}")
 
 
-def run_server(port=5000, host='localhost'):
+def run_server(port=5000, host='0.0.0.0'):
     """运行服务器"""
     os.chdir(os.path.dirname(__file__))
     
@@ -240,7 +247,8 @@ def run_server(port=5000, host='localhost'):
     print("=" * 60)
     print("言语言 Playground 服务器")
     print("=" * 60)
-    print(f"地址: http://{host}:{port}")
+    print(f"地址: http://localhost:{port}")
+    print(f"网络访问: http://0.0.0.0:{port}")
     print("✓ 使用独立进程执行代码，避免内存泄漏")
     print("✓ 30秒超时保护")
     print("按 Ctrl+C 停止服务器")
@@ -259,7 +267,7 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description='言语言 Playground 服务器')
     parser.add_argument('--port', '-p', type=int, default=5000, help='端口号（默认: 5000）')
-    parser.add_argument('--host', '-h', default='localhost', help='主机地址（默认: localhost）')
+    parser.add_argument('--host', '-H', default='localhost', help='主机地址（默认: localhost）')
     
     args = parser.parse_args()
     run_server(port=args.port, host=args.host)
