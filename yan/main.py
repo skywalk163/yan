@@ -33,11 +33,34 @@ from runtime import (
     _isnum, _isstr, _islist, _isfunc, _isbool, _isnone, _typeof,
 )
 
-# 全局环境，用于交互模式
+# 全局环境，用于交互模式（延迟初始化，避免启动时占用内存）
 _global_env: Optional[Dict[str, Any]] = None
 
-# 模块系统实例
-_module_system = ModuleSystem()
+# 模块系统实例（不使用全局单例，每次需要时创建或使用上下文管理）
+# 注意：使用全局单例会导致内存无限增长，改为按需创建
+_module_system: Optional[ModuleSystem] = None
+
+
+def _get_module_system() -> ModuleSystem:
+    """获取或创建模块系统实例"""
+    global _module_system
+    if _module_system is None:
+        _module_system = ModuleSystem()
+    return _module_system
+
+
+def _reset_module_system():
+    """重置模块系统，释放内存"""
+    global _module_system
+    if _module_system is not None:
+        _module_system.clear_cache()
+        _module_system = None
+
+
+def _reset_global_env():
+    """重置全局环境，释放内存"""
+    global _global_env
+    _global_env = None
 
 
 def create_env() -> Dict[str, Any]:
@@ -148,10 +171,13 @@ def create_env() -> Dict[str, Any]:
     return env
 
 
-def _process_imports(statements: List, current_file: Optional[Path] = None, visited_modules: Optional[set] = None) -> List:
+def _process_imports(statements: List, current_file: Optional[Path] = None, visited_modules: Optional[set] = None, module_system: Optional[ModuleSystem] = None) -> List:
     """递归处理导入语句，检测循环依赖"""
     if visited_modules is None:
         visited_modules = set()
+    
+    if module_system is None:
+        module_system = _get_module_system()
     
     processed_statements = []
     
@@ -159,7 +185,7 @@ def _process_imports(statements: List, current_file: Optional[Path] = None, visi
         if isinstance(stmt, ImportNode):
             # 检查循环依赖
             module_path = stmt.path
-            resolved_path = _module_system.resolve_module(module_path, current_file)
+            resolved_path = module_system.resolve_module(module_path, current_file)
             
             if resolved_path:
                 module_key = str(resolved_path.resolve())
@@ -170,7 +196,7 @@ def _process_imports(statements: List, current_file: Optional[Path] = None, visi
                 
                 # 加载模块
                 try:
-                    module = _module_system.load_module(module_path, current_file)
+                    module = module_system.load_module(module_path, current_file)
                     
                     # 递归处理模块的导入
                     if module.source:
@@ -185,7 +211,8 @@ def _process_imports(statements: List, current_file: Optional[Path] = None, visi
                             processed_imports = _process_imports(
                                 module_ast.statements, 
                                 module.path, 
-                                visited_modules.copy()
+                                visited_modules.copy(),
+                                module_system
                             )
                             processed_statements.extend(processed_imports)
                     
@@ -198,7 +225,7 @@ def _process_imports(statements: List, current_file: Optional[Path] = None, visi
     return processed_statements
 
 
-def run(source: str, debug: bool = False, env: Optional[Dict[str, Any]] = None, use_global_verbs: bool = False, current_file: Optional[Path] = None) -> Any:
+def run(source: str, debug: bool = False, env: Optional[Dict[str, Any]] = None, use_global_verbs: bool = False, current_file: Optional[Path] = None, clear_cache: bool = True) -> Any:
     """运行言语言代码
     
     Args:
@@ -207,10 +234,15 @@ def run(source: str, debug: bool = False, env: Optional[Dict[str, Any]] = None, 
         env: 执行环境（可选，用于保持全局变量）
         use_global_verbs: 是否使用全局用户动词集合（交互模式）
         current_file: 当前文件路径（用于模块路径解析）
+        clear_cache: 是否在执行完成后清理缓存（避免内存泄漏）
     
     Returns:
         执行结果
     """
+    # 为单次执行创建独立的模块系统，避免全局污染
+    local_module_system = ModuleSystem()
+    result = None
+    
     try:
         # 1. 词法分析
         user_words = _global_user_verbs if use_global_verbs else None
@@ -234,7 +266,7 @@ def run(source: str, debug: bool = False, env: Optional[Dict[str, Any]] = None, 
         # 3. 处理模块导入（包括循环依赖检测）
         if hasattr(ast, 'statements'):
             try:
-                ast.statements = _process_imports(ast.statements, current_file)
+                ast.statements = _process_imports(ast.statements, current_file, module_system=local_module_system)
             except ModuleError as e:
                 print(f"模块错误: {e}", file=sys.stderr)
                 return None
@@ -255,7 +287,6 @@ def run(source: str, debug: bool = False, env: Optional[Dict[str, Any]] = None, 
         if '\n' not in py_code:
             try:
                 result = eval(py_code, env)
-                return result
             except SyntaxError:
                 pass
 
@@ -265,20 +296,18 @@ def run(source: str, debug: bool = False, env: Optional[Dict[str, Any]] = None, 
             exec(py_code, env, env)
             # 检查是否有 _result 变量（由代码生成器设置）
             if '_result' in env:
-                return env['_result']
+                result = env['_result']
             # 尝试获取最后一个表达式的结果
             # 但不要重新执行函数调用
             lines = py_code.strip().split('\n')
-            if lines:
+            if lines and result is None:
                 last_line = lines[-1].strip()
                 # 如果最后一行是表达式（不是赋值，不是 print 调用，不是函数调用），计算它
                 if ('=' not in last_line or last_line.count('=') == last_line.count('==')) and not last_line.startswith('print') and '(' not in last_line:
                     try:
                         result = eval(last_line, env)
-                        return result
                     except:
                         pass
-            return None
         except SyntaxError as e:
             print(f"Python 语法错误: {e}", file=sys.stderr)
             print(f"生成的代码:\n{py_code}", file=sys.stderr)
@@ -299,6 +328,12 @@ def run(source: str, debug: bool = False, env: Optional[Dict[str, Any]] = None, 
     except Exception as e:
         print(f"运行时错误: {e}", file=sys.stderr)
         return None
+    finally:
+        # 清理缓存避免内存泄漏
+        if clear_cache:
+            local_module_system.clear_cache()
+    
+    return result
 
 
 def run_repl(source: str, debug: bool = False) -> Any:
@@ -355,6 +390,19 @@ def main():
     if len(sys.argv) < 2:
         repl()
         return
+
+    # 检查是否是从stdin读取代码（Playground使用）
+    if sys.argv[1] == "-c" or sys.argv[1] == "--code":
+        try:
+            source = sys.stdin.read()
+            if source.strip():
+                result = run(source, debug=False, use_global_verbs=False, clear_cache=True)
+                if result is not None:
+                    print(result)
+            return
+        except Exception as e:
+            print(f"执行错误: {e}", file=sys.stderr)
+            return
 
     # 检查是否是包管理器命令
     if sys.argv[1] == "包":

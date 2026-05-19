@@ -48,9 +48,11 @@ class ModuleError(Exception):
 class ModuleSystem:
     """言语言模块系统"""
     
-    def __init__(self, search_paths: Optional[List[Path]] = None):
+    def __init__(self, search_paths: Optional[List[Path]] = None, max_cache_size: int = 100):
         self.search_paths: List[Path] = search_paths or []
         self.cache: Dict[str, Module] = {}  # 模块缓存
+        self.cache_order: List[str] = []  # LRU顺序
+        self.max_cache_size = max_cache_size  # 最大缓存大小
         self.current_path: Optional[Path] = None
         
         # 添加当前目录和标准库目录
@@ -120,6 +122,18 @@ class ModuleSystem:
         
         return None
     
+    def _update_lru(self, key: str):
+        """更新LRU缓存顺序"""
+        if key in self.cache_order:
+            self.cache_order.remove(key)
+        self.cache_order.append(key)
+        
+        # 如果超过最大缓存大小，移除最久未使用的
+        while len(self.cache_order) > self.max_cache_size:
+            oldest_key = self.cache_order.pop(0)
+            if oldest_key in self.cache:
+                del self.cache[oldest_key]
+    
     def load_module(self, module_path: str, current_file: Optional[Path] = None) -> Module:
         """
         加载一个模块
@@ -133,6 +147,8 @@ class ModuleSystem:
         # 使用绝对路径作为缓存键
         abs_path = str(resolved_path.resolve())
         if abs_path in self.cache:
+            # 命中缓存，更新LRU顺序
+            self._update_lru(abs_path)
             return self.cache[abs_path]
         
         # 读取模块源码
@@ -147,8 +163,9 @@ class ModuleSystem:
             source=source
         )
         
-        # 保存到缓存
+        # 保存到缓存（带LRU管理）
         self.cache[abs_path] = module
+        self._update_lru(abs_path)
         
         # 解析导入语句（第一遍扫描）
         imports = self._parse_imports(source)
