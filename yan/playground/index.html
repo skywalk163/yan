@@ -16,6 +16,7 @@
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             min-height: 100vh;
             color: #e0e0e0;
+            padding-bottom: 40px;
         }
 
         .header {
@@ -232,6 +233,115 @@
             justify-content: space-between;
         }
 
+        .syntax-doc-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .syntax-doc-content {
+            background: #1a1a2e;
+            border-radius: 12px;
+            max-width: 900px;
+            width: 95%;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .syntax-doc-header {
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .syntax-doc-header h2 {
+            color: #fff;
+            font-size: 24px;
+            margin: 0;
+        }
+
+        .close-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: #fff;
+            font-size: 32px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .syntax-doc-body {
+            padding: 30px;
+            overflow-y: auto;
+            max-height: calc(90vh - 80px);
+        }
+
+        .syntax-section {
+            margin-bottom: 30px;
+        }
+
+        .syntax-section h3 {
+            color: #4ecdc4;
+            font-size: 18px;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid rgba(78, 205, 196, 0.3);
+        }
+
+        .syntax-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            border-left: 4px solid #4ecdc4;
+        }
+
+        .syntax-title {
+            color: #f8d56b;
+            font-size: 16px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .syntax-code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 6px;
+            font-family: "Consolas", monospace;
+            color: #4ecdc4;
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .syntax-example {
+            font-family: "Consolas", monospace;
+            color: #e0e0e0;
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 8px;
+        }
+
         .loading {
             display: none;
             position: absolute;
@@ -268,6 +378,7 @@
         <div class="header-actions">
             <button class="btn btn-secondary" onclick="clearOutput()">清空输出</button>
             <button class="btn btn-secondary" onclick="showShareModal()">分享代码</button>
+            <button class="btn btn-secondary" onclick="showSyntaxDoc()">📖 语法文档</button>
             <button class="btn btn-primary" onclick="runCode()">▶ 运行代码</button>
         </div>
     </header>
@@ -343,9 +454,41 @@
                 <div class="example-title">JSON处理</div>
                 <div class="example-desc">JSON编解码</div>
             </div>
+            <div class="example-item" onclick="loadExample('eval')">
+                <div class="example-title">算术表达式求值</div>
+                <div class="example-desc">解析计算数学表达式</div>
+            </div>
+            <div class="example-item" onclick="loadExample('data_process')">
+                <div class="example-title">数据处理</div>
+                <div class="example-desc">列表与字符串操作</div>
+            </div>
+            <div class="example-item" onclick="loadExample('text_process')">
+                <div class="example-title">文本处理</div>
+                <div class="example-desc">字符串分割替换查找</div>
+            </div>
+            <div class="example-item" onclick="loadExample('interactive_calc')">
+                <div class="example-title">交互式计算器</div>
+                <div class="example-desc">终端交互模式</div>
+            </div>
+            <div class="example-item" onclick="loadExample('interactive_demo')">
+                <div class="example-title">交互式示例</div>
+                <div class="example-desc">完整交互演示</div>
+            </div>
             <div class="example-item" onclick="loadExample('bubble')">
                 <div class="example-title">冒泡排序</div>
                 <div class="example-desc">经典排序算法</div>
+            </div>
+            <div class="example-item" onclick="loadExample('idiom')">
+                <div class="example-title">成语接龙</div>
+                <div class="example-desc">经典成语接龙游戏</div>
+            </div>
+            <div class="example-item" onclick="loadExample('quick_sort')">
+                <div class="example-title">快速排序</div>
+                <div class="example-desc">高效排序算法</div>
+            </div>
+            <div class="example-item" onclick="loadExample('binary_search')">
+                <div class="example-title">二分查找</div>
+                <div class="example-desc">高效搜索算法</div>
             </div>
         </div>
     </main>
@@ -356,6 +499,186 @@
             <input type="text" class="share-url" id="shareUrl" readonly>
             <button class="btn btn-primary" onclick="copyShareUrl()">复制链接</button>
             <button class="btn btn-secondary" onclick="hideShareModal()" style="margin-left: 10px;">关闭</button>
+        </div>
+    </div>
+
+    <div class="syntax-doc-modal" id="syntaxDocModal">
+        <div class="syntax-doc-content">
+            <div class="syntax-doc-header">
+                <h2>言语言语法文档</h2>
+                <button class="close-btn" onclick="hideSyntaxDoc()">×</button>
+            </div>
+            <div class="syntax-doc-body">
+                <div class="syntax-section">
+                    <h3>📝 基础语法</h3>
+                    <div class="syntax-item">
+                        <div class="syntax-title">变量定义</div>
+                        <div class="syntax-code">定 变量名 = 值。</div>
+                        <div class="syntax-example">定 年龄 = 25。</div>
+                    </div>
+                    <div class="syntax-item">
+                        <div class="syntax-title">输出</div>
+                        <div class="syntax-code">印 值。</div>
+                        <div class="syntax-example">印 "你好"。</div>
+                    </div>
+                    <div class="syntax-item">
+                        <div class="syntax-title">字符串连接</div>
+                        <div class="syntax-code">连 "字符串" 变量 "字符串"。</div>
+                        <div class="syntax-example">印 连 "我叫" 名字 "！"。</div>
+                    </div>
+                </div>
+
+                <div class="syntax-section">
+                    <h3>🔧 函数定义</h3>
+                    <div class="syntax-item">
+                        <div class="syntax-title">函数声明</div>
+                        <div class="syntax-code">定 函数名 = 函 参数1 参数2：<br>
+&nbsp;&nbsp;函数体<br>
+。。</div>
+                        <div class="syntax-example">定 平方 = 函 x：<br>
+&nbsp;&nbsp;返回 乘 x x。<br>
+。。</div>
+                    </div>
+                    <div class="syntax-item">
+                        <div class="syntax-title">函数调用</div>
+                        <div class="syntax-code">函数名 参数1 参数2</div>
+                        <div class="syntax-example">平方 5</div>
+                    </div>
+                    <div class="syntax-item">
+                        <div class="syntax-title">返回值</div>
+                        <div class="syntax-code">返回 表达式。</div>
+                        <div class="syntax-example">返回 加 a b。</div>
+                    </div>
+                </div>
+
+                <div class="syntax-section">
+                    <h3>🔄 循环结构</h3>
+                    <div class="syntax-item">
+                        <div class="syntax-title">遍历循环</div>
+                        <div class="syntax-code">遍历 变量 于 列表：<br>
+&nbsp;&nbsp;循环体<br>
+。</div>
+                        <div class="syntax-example">遍历 x 于 范围 10：<br>
+&nbsp;&nbsp;印 x。<br>
+。</div>
+                    </div>
+                    <div class="syntax-item">
+                        <div class="syntax-title">条件循环（当...时）</div>
+                        <div class="syntax-code">当 条件：<br>
+&nbsp;&nbsp;循环体<br>
+。</div>
+                        <div class="syntax-example">当 小 i 10：<br>
+&nbsp;&nbsp;印 i。<br>
+&nbsp;&nbsp;定 i = 加 i 1。<br>
+。</div>
+                    </div>
+                </div>
+
+                <div class="syntax-section">
+                    <h3>⚡ 条件判断</h3>
+                    <div class="syntax-item">
+                        <div class="syntax-title">如果...则...</div>
+                        <div class="syntax-code">若 条件：<br>
+&nbsp;&nbsp;分支体<br>
+。</div>
+                        <div class="syntax-example">若 大 年龄 18：<br>
+&nbsp;&nbsp;印 "成年人"。<br>
+。</div>
+                    </div>
+                    <div class="syntax-item">
+                        <div class="syntax-title">如果...则...否则...</div>
+                        <div class="syntax-code">若 条件：<br>
+&nbsp;&nbsp;分支1<br>
+否则：<br>
+&nbsp;&nbsp;分支2<br>
+。。</div>
+                        <div class="syntax-example">若 大 a b：<br>
+&nbsp;&nbsp;印 "a大"。<br>
+否则：<br>
+&nbsp;&nbsp;印 "b大"。<br>
+。。</div>
+                    </div>
+                </div>
+
+                <div class="syntax-section">
+                    <h3>📦 数据结构</h3>
+                    <div class="syntax-item">
+                        <div class="syntax-title">列表</div>
+                        <div class="syntax-code">列 元素1 元素2 元素3</div>
+                        <div class="syntax-example">定 水果 = 列 "苹果" "香蕉" "橘子"。</div>
+                    </div>
+                    <div class="syntax-item">
+                        <div class="syntax-title">获取列表长度</div>
+                        <div class="syntax-code">长 列表</div>
+                        <div class="syntax-example">长 水果</div>
+                    </div>
+                    <div class="syntax-item">
+                        <div class="syntax-title">获取列表元素</div>
+                        <div class="syntax-code">取 列表 索引</div>
+                        <div class="syntax-example">取 水果 0</div>
+                    </div>
+                    <div class="syntax-item">
+                        <div class="syntax-title">设置列表元素</div>
+                        <div class="syntax-code">设 列表 索引 值</div>
+                        <div class="syntax-example">设 水果 0 "葡萄"。</div>
+                    </div>
+                </div>
+
+                <div class="syntax-section">
+                    <h3>🧮 数学运算</h3>
+                    <div class="syntax-item">
+                        <div class="syntax-title">基础运算</div>
+                        <div class="syntax-example">加 5 3  → 8<br>
+减 5 3  → 2<br>
+乘 5 3  → 15<br>
+除 5 3  → 1.67<br>
+模 5 3  → 2</div>
+                    </div>
+                    <div class="syntax-item">
+                        <div class="syntax-title">比较运算</div>
+                        <div class="syntax-example">等 a b    → 相等<br>
+大 a b    → a > b<br>
+小 a b    → a < b</div>
+                    </div>
+                    <div class="syntax-item">
+                        <div class="syntax-title">逻辑运算</div>
+                        <div class="syntax-example">非 真    → 假<br>
+且 真 假  → 假<br>
+或 真 假  → 真</div>
+                    </div>
+                </div>
+
+                <div class="syntax-section">
+                    <h3>💡 特殊语法</h3>
+                    <div class="syntax-item">
+                        <div class="syntax-title">块结束标记</div>
+                        <div class="syntax-code">。  单句号：语句分隔<br>
+。。 双句号：结束嵌套块</div>
+                        <div class="syntax-example">遍历 i 于 范围 10：<br>
+&nbsp;&nbsp;印 i。<br>
+。。  ← 结束遍历循环</div>
+                    </div>
+                    <div class="syntax-item">
+                        <div class="syntax-title">括号表达式</div>
+                        <div class="syntax-code">(表达式)</div>
+                        <div class="syntax-example">减 (乘 2 3) 1  → 5</div>
+                    </div>
+                </div>
+
+                <div class="syntax-section">
+                    <h3>📋 常用内置函数</h3>
+                    <div class="syntax-item">
+                        <div class="syntax-example">范围 n      → 生成 0 到 n-1 的序列<br>
+长 list    → 返回列表长度<br>
+取 list i  → 获取第 i 个元素<br>
+设 list i v → 设置第 i 个元素为 v<br>
+列 a b c   → 创建列表<br>
+印 value   → 打印值<br>
+行         → 读取一行输入<br>
+求值 expr  → 计算字符串表达式</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -373,20 +696,21 @@
 印 连 "你好，" 名字 "！"。`,
 
             function: `-- 函数定义示例
-{{
-def square(x):
-    return x * x
+定 平方 = 函 x：
+  返回 乘 x x。
+。。
 
-def cube(x):
-    return x * x * x
+定 立方 = 函 x：
+  返回 乘 乘 x x x。
+。。
 
-def calculate(a, b):
-    return square(a) + square(b)
+定 计算 = 函 a b：
+  返回 加 平方 a 平方 b。
+。。
 
-print(f"平方(5) = {square(5)}")
-print(f"立方(3) = {cube(3)}")
-print(f"计算(3, 4) = {calculate(3, 4)}")
-}}`,
+印 连 "平方(5) = " 平方 5。
+印 连 "立方(3) = " 立方 3。
+印 连 "计算(3, 4) = " 计算 3 4。`,
 
             list: `-- 列表操作示例
 定 数字 = 列 1 2 3 4 5。
@@ -395,20 +719,21 @@ print(f"计算(3, 4) = {calculate(3, 4)}")
 印 "长度:" 长 数字。`,
 
             condition: `-- 条件判断示例
-{{
-age = 25
+定 年龄 = 25。
 
-if age > 18:
-    print("成年人")
-else:
-    print("未成年")
+若 大 年龄 18：
+  印 "成年人"。
+否则：
+  印 "未成年"。
+。。
 
-age = 15
-if age > 18:
-    print("成年人")
-else:
-    print("未成年")
-}}`,
+定 年龄 = 15。
+
+若 大 年龄 18：
+  印 "成年人"。
+否则：
+  印 "未成年"。
+。。`,
 
             loop: `-- 循环遍历示例
 定 水果 = 列 "苹果" "香蕉" "橘子"。
@@ -418,28 +743,32 @@ else:
 。`,
 
             fibonacci: `-- 斐波那契数列
-{{
-def fib(n):
-    if n < 2:
-        return n
-    return fib(n-1) + fib(n-2)
+定 斐波那契 = 函 n：
+  若 小 n 2：
+    返回 n。
+  。
+  返回 加 斐波那契 减 n 1 斐波那契 减 n 2。
+。。
 
-for i in range(1, 11):
-    print(f"斐波那契({i}) = {fib(i)}")
-}}`,
+定 i = 1。
+当 小 i 11：
+  印 连 "斐波那契(" i ") = " 斐波那契 i。
+  定 i = 加 i 1。
+。`,
 
-            hanoi: `-- 汉诺塔问题
-{{
-def hanoi(n, source, target, auxiliary):
-    if n == 1:
-        print(f"移动盘子从 {source} 到 {target}")
-        return
-    hanoi(n-1, source, auxiliary, target)
-    print(f"移动盘子从 {source} 到 {target}")
-    hanoi(n-1, auxiliary, target, source)
+            hanoi: `-- 汉诺塔问题（纯言语言）
+定 汉诺塔 = 函 n 源 目标 辅助：
+  若 等 n 1：
+    印 连 "移动盘子从 " 源 " 到 " 目标。
+  。
+  若 大 n 1：
+    汉诺塔 (减 n 1) 源 辅助 目标。
+    印 连 "移动盘子从 " 源 " 到 " 目标。
+    汉诺塔 (减 n 1) 辅助 目标 源。
+  。
+。。
 
-hanoi(3, "A", "C", "B")
-}}`,
+汉诺塔 3 "A" "C" "B"。`,
 
             json: `-- JSON处理示例
 {{
@@ -453,25 +782,341 @@ decoded = json.loads(json_str)
 print("JSON解码:", decoded)
 }}`,
 
-            bubble: `-- 冒泡排序
-{{
-def bubble_sort(arr):
-    n = len(arr)
-    for i in range(n):
-        swapped = False
-        for j in range(0, n-i-1):
-            if arr[j] > arr[j+1]:
-                arr[j], arr[j+1] = arr[j+1], arr[j]
-                swapped = True
-        if not swapped:
-            break
-    return arr
+            eval: `-- 算术表达式求值器
+-- 支持加减乘除和括号，自动处理运算优先级
+印 "=== 算术表达式求值器 ==="。
 
-arr = [64, 34, 25, 12, 22, 11, 90]
-print("原始数组:", arr)
-sorted_arr = bubble_sort(arr)
-print("排序后:", sorted_arr)
-}}`
+印 连 "3 + 4 * 2 = " 求值 "3 + 4 * 2"。
+印 连 "(3 + 4) * 2 = " 求值 "(3 + 4) * 2"。
+印 连 "10 - (2 + 3) * 2 / 5 = " 求值 "10 - (2 + 3) * 2 / 5"。
+印 连 "1 + 2 = " 求值 " 1 +   2 "。
+印 连 "-5 + 3 = " 求值 "-5 + 3"。
+印 连 "(1 + 2) * (3 + 4) = " 求值 "(1 + 2) * (3 + 4)"。
+印 连 "100 / 4 / 2 = " 求值 "100 / 4 / 2"。
+印 连 "2 ^ 3 = " 求值 "2 * 2 * 2"。`,
+
+            data_process: `-- 数据处理示例
+-- 展示言语言的列表处理能力
+印 "=== 列表数据处理 ==="。
+
+-- 创建数字列表
+定 数字 = 列 85 72 91 68 95 55 78 63。
+印 "原始数字："。
+印 数字。
+
+-- 计算总和
+定 总和 = 0。
+定 i = 0。
+当 小 i 长 数字：
+  定 当前 = 取 数字 i。
+  定 总和 = 加 总和 当前。
+  定 i = 加 i 1。
+。
+印 连 "总和: " 总和。
+
+-- 计算平均
+定 平均 = 除 总和 长 数字。
+印 连 "平均: " 平均。
+
+-- 找出最大值
+定 最大 = 0。
+定 i = 0。
+当 小 i 长 数字：
+  定 当前 = 取 数字 i。
+  若 大 当前 最大：
+    定 最大 = 当前。
+  。
+  定 i = 加 i 1。
+。
+印 连 "最大值: " 最大。
+
+-- 字符串操作
+印 "=== 字符串处理 ==="。
+定 名字 = "言语言"。
+印 连 "你好，" 名字 "！"。`,
+
+            text_process: `-- 文本处理示例
+-- 展示言语言的字符串操作能力
+
+印 "=== 文本处理示例 ==="。
+印 ""。
+
+-- 1. 基本字符串操作
+印 "--- 1. 基本字符串操作 ---"。
+
+定 文本 = "  Hello, 言语言! 这是一个文本处理示例  "。
+印 连 "原始文本: \\"" 文本 "\\""。
+
+-- 去除首尾空格
+定 去空后 = 去空 文本。
+印 连 "去空后: \\"" 去空后 "\\""。
+
+-- 字符串长度
+定 长度值 = 长度 去空后。
+印 连 "长度: " 长度值。
+
+-- 转换大小写
+定 小写文本 = 小写 去空后。
+印 连 "小写: \\"" 小写文本 "\\""。
+
+定 大写文本 = 大写 去空后。
+印 连 "大写: \\"" 大写文本 "\\""。
+
+印 ""。
+
+-- 2. 查找与检测
+印 "--- 2. 查找与检测 ---"。
+
+-- 查找子串位置
+定 位置 = 查找 去空后 "言语言"。
+印 连 "\\"言语言\\" 的位置: " 位置。
+
+-- 检测包含
+定 包含结果 = 包含 去空后 "文本"。
+印 连 "包含 \\"文本\\": " 包含结果。
+
+-- 检测开头
+定 开头结果 = 开头是 去空后 "Hello"。
+印 连 "开头是 \\"Hello\\": " 开头结果。
+
+-- 检测结尾
+定 结尾结果 = 结尾是 去空后 "示例"。
+印 连 "结尾是 \\"示例\\": " 结尾结果。
+
+印 ""。
+
+-- 3. 字符串替换
+印 "--- 3. 字符串替换 ---"。
+
+定 模板 = "你好，{名字}！欢迎来到{地点}。"。
+印 连 "模板: " 模板。
+
+-- 替换名字
+定 步骤1 = 替换 模板 "{名字}" "张三"。
+印 连 "替换名字: " 步骤1。
+
+-- 替换地点
+定 步骤2 = 替换 步骤1 "{地点}" "北京"。
+印 连 "替换地点: " 步骤2。
+
+印 ""。
+印 "=== 文本处理完成 ==="。`,
+
+            interactive_calc: `-- 交互式计算器
+-- 在终端中运行：python main.py examples/interactive_calc.yan
+-- 输入数学表达式，自动计算结果
+-- 输入 q 退出
+印 "=== 交互式计算器 ==="。
+印 "示例：3 + 4 * 2"。
+印 "提示：支持 +, -, *, / 和括号 ()"。
+印 ""。
+
+-- 使用 读行 函数读取用户输入
+-- 使用 求值 函数计算表达式
+定 退出 = 假。
+
+当 非 退出：
+  印 "请输入表达式："。
+  定 输入 = 读行。
+  
+  若 等 输入 "q"：
+    印 "再见！"。
+    定 退出 = 真。
+  。
+  若 非 退出：
+    定 结果 = 求值 输入。
+    印 连 "结果: " 结果。
+  。
+。`,
+
+            interactive_demo: `-- 交互式程序示例
+-- 展示言语言的输入输出功能
+-- 在终端中运行：python main.py examples/interactive_demo.yan
+
+印 "=== 交互式程序 ==="。
+印 ""。
+印 "欢迎使用言语言交互式示例！"。
+印 ""。
+
+-- 1. 简单的输入输出
+印 "--- 1. 简单输入输出 ---"。
+印 "请告诉我你的名字："。
+定 名字 = "示例用户"。  -- Playground 中用默认值
+印 连 "你好，" 名字 "！很高兴认识你！"。
+印 ""。
+
+-- 2. 数字计算（简化版
+印 "--- 2. 数字计算 ---"。
+定 数1 = 10。
+定 数2 = 5。
+定 和 = 加 数1 数2。
+印 连 数1 " + " 数2 " = " 和。
+印 ""。
+
+-- 3. 简单菜单系统
+印 "--- 3. 菜单系统 ---"。
+印 "这是一个示例程序，展示了如何用言语言做交互！"。
+印 ""。
+印 "提示：在终端中运行才能真正交互！"。
+印 ""。`,
+
+            bubble: `-- 冒泡排序（纯言语言）
+定 冒泡排序 = 函 arr：
+  定 n = 长 arr。
+  遍历 i 于 范围 n：
+    定 已交换 = 假。
+    定 边界 = 减 (减 n i) 1。
+    定 j = 0。
+    当 小 j 边界：
+      定 当前 = 取 arr j。
+      定 下一个 = 取 arr (加 j 1)。
+      若 大 当前 下一个：
+        设 arr j 下一个。
+        设 arr (加 j 1) 当前。
+        定 已交换 = 真。
+      。
+      定 j = 加 j 1。
+    。
+    若 非 已交换：
+      返回 arr。
+    。
+  。。
+  返回 arr。
+。
+
+印 "原始数组: [64, 34, 25, 12, 22, 11, 90]"。
+定 原始 = 列 64 34 25 12 22 11 90。
+印 连 "原始数组: " 原始。
+定 排序后 = 冒泡排序 原始。
+印 连 "排序后: " 排序后。`,
+
+            idiom: `-- 成语接龙示例
+-- 展示言语言的字符串处理和逻辑判断能力
+印 "=== 成语接龙游戏 ==="。
+印 "规则：输入四字成语，下一个成语的第一个字要接上一个成语的最后一个字"。
+印 ""。
+
+-- 成语库
+定 成语库 = 列
+  "一心一意" "意气风发" "发愤图强" "强词夺理"
+  "理直气壮" "壮志凌云" "云开见日" "日新月异"
+  "异曲同工" "工欲善其事" "事半功倍" "倍道而行"
+  "行云流水" "水落石出" "出生入死" "死里逃生"
+  "生龙活虎" "虎虎生威" "威风凛凛" "凛若冰霜"
+  "霜露之病" "病入膏肓" "肓肉生肌" "肌无完肤"
+  "肤受之诉" "诉诸武力" "力不从心" "心花怒放"
+  "放虎归山" "山穷水尽" "尽善尽美" "美不胜收"
+。
+
+-- 获取成语的最后一个字
+定 取尾字 = 函 成语：
+  定 长度值 = 长度 成语。
+  定 尾字 = 取 成语 (减 长度值 1)。
+  返回 尾字。
+。
+
+-- 获取成语的首字
+定 取首字 = 函 成语：
+  返回 取 成语 0。
+。
+
+-- 查找可以接龙的成语
+定 找接龙 = 函 当前成语：
+  定 尾字 = 取尾字 当前成语。
+  定 可选列表 = 列。
+  遍历 y 于 成语库：
+    定 首字 = 取首字 y。
+    若 等 首字 尾字：
+      添 可选列表 y。
+    。
+  。
+  返回 可选列表。
+。
+
+-- 游戏演示
+印 "开始游戏！".
+印 ""。
+印 "第一个成语：一心一意"。
+印 ""。
+
+定 可选 = 找接龙 "一心一意"。
+印 "可以接龙的成语有："。
+印 可选。
+印 ""。
+
+定 下一个 = 取 可选 0。
+印 连 "选择：" 下一个。`,
+
+            quick_sort: `-- 快速排序（纯言语言）
+定 快速排序 = 函 arr：
+  定 n = 长 arr。
+  若 小 n 2：
+    返回 arr。
+  。
+
+  -- 取基准值
+  定 基准 = 取 arr 0。
+  定 左 = 列。
+  定 右 = 列。
+  定 i = 1。
+
+  当 小 i n：
+    定 当前 = 取 arr i。
+    若 小等于 当前 基准：
+      添 左 当前。
+    否则：
+      添 右 当前。
+    。
+    定 i = 加 i 1。
+  。
+
+  -- 递归排序
+  定 排序左 = 快速排序 左。
+  定 排序右 = 快速排序 右。
+
+  -- 合并结果（使用 Python）
+  定 结果 = {{ 排序左 + [基准] + 排序右 }}。
+  返回 结果。
+。
+
+-- 测试
+定 数组 = 列 64 34 25 12 22 11 90 45 33 77。
+印 "原始数组:" 数组。
+定 排序后 = 快速排序 数组。
+印 "排序后:" 排序后。`,
+
+            binary_search: `-- 二分查找（纯言语言）
+定 二分查找 = 函 arr 目标：
+  定 左 = 0。
+  定 右 = 减 长 arr 1。
+
+  当 小等于 左 右：
+    定 中 = 除 (加 左 右) 2。
+    定 中值 = 取 arr 中。
+
+    若 等 中值 目标：
+      返回 中。
+    。
+
+    若 小 中值 目标：
+      定 左 = 加 中 1。
+    否则：
+      定 右 = 减 中 1。
+    。
+  。
+
+  返回 负一。
+。
+
+-- 测试
+定 有序数组 = 列 1 3 5 7 9 11 13 15 17 19 21 25 30 35 40。
+印 "有序数组:" 有序数组。
+印 ""。
+
+印 "查找 11:" 二分查找 有序数组 11。
+印 "查找 16:" 二分查找 有序数组 16。
+印 "查找 1:" 二分查找 有序数组 1。
+印 "查找 40:" 二分查找 有序数组 40。`
         };
 
         const editor = document.getElementById('editor');
@@ -568,6 +1213,14 @@ print("排序后:", sorted_arr)
             document.getElementById('shareModal').style.display = 'none';
         }
 
+        function showSyntaxDoc() {
+            document.getElementById('syntaxDocModal').style.display = 'flex';
+        }
+
+        function hideSyntaxDoc() {
+            document.getElementById('syntaxDocModal').style.display = 'none';
+        }
+
         function copyShareUrl() {
             const urlInput = document.getElementById('shareUrl');
             urlInput.select();
@@ -586,6 +1239,18 @@ print("排序后:", sorted_arr)
                 console.error('Failed to decode shared code:', e);
             }
         }
+
+        document.getElementById('syntaxDocModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideSyntaxDoc();
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                hideSyntaxDoc();
+            }
+        });
     </script>
 </body>
 </html>
