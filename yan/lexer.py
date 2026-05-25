@@ -35,13 +35,16 @@ class TokenType(Enum):
     WORD = auto()      # 动词/标识符：加, 乘, 列, x, y
     QUOTE = auto()     # ' (引用)
     COMMA = auto()     # ，
-    DOT = auto()       # 。
+    DOT = auto()       # 。（中文句号，语句结束）
+    DOT_EN = auto()    # .（英文句号，成员访问）
     SEMI = auto()      # ；
     ELLIPSIS = auto()  # ... (可变参数)
     COLON = auto()     # ：（块开始）
     EQUALS = auto()    # =
     MATH = auto()      # $(...) 数学表达式
     PYTHON = auto()    # {{...}} Python 代码块
+    LPAREN = auto()    # ( 左括号
+    RPAREN = auto()    # ) 右括号
     EOF = auto()       # 结束
 
 
@@ -102,18 +105,20 @@ class Lexer:
             '是数', '是串', '是表', '是函', '是真', '是空', '类型',
             # 单字动词
             '加', '减', '乘', '除', '模', '幂', '绝对', '负',
-            '大', '小', '等',
+            '大', '大于', '大等于', '小', '小于', '小等于', '等', '等于', '不等于', '不等',
             '且', '或', '非',
             '列', '典', '序', '对',
             '首', '余', '入', '长', '添', '连', '含', '空', '范围',
             '皆', '只', '归', '潜',
-            '印', '读', '写',
+            '印', '读', '写', '读行',
             '若', '则', '定', '函', '返回', '行', '无',
             '真', '假',
             # 新增列表操作
             '反', '排', '最大', '最小', '求和', '计数',
             # 新增字典操作
             '键', '值', '项', '删键',
+            # 表达式求值
+            '求值',
             # 测试框架
             '套', '测',
         }
@@ -340,19 +345,19 @@ class Lexer:
 
             # 英文点号：用于模块成员访问（如 JSON.解析）
             if ch == '.':
-                tokens.append(Token(TokenType.DOT, '.', line, col))
+                tokens.append(Token(TokenType.DOT_EN, '.', line, col))
                 i += 1; col += 1
                 continue
 
-            # 英文左括号：用于函数调用（如 JSON.解析(...)）
+            # 英文左括号：用于分组表达式
             if ch == '(':
-                tokens.append(Token(TokenType.WORD, '(', line, col))
+                tokens.append(Token(TokenType.LPAREN, '(', line, col))
                 i += 1; col += 1
                 continue
 
-            # 英文右括号：用于函数调用
+            # 英文右括号：用于分组表达式
             if ch == ')':
-                tokens.append(Token(TokenType.WORD, ')', line, col))
+                tokens.append(Token(TokenType.RPAREN, ')', line, col))
                 i += 1; col += 1
                 continue
 

@@ -12,10 +12,10 @@ from codegen import PythonCodeGen, CodeGenError
 from module_system import ModuleSystem, ModuleError, ImportNode
 from runtime import (
     _add, _sub, _mul, _div, _mod, _pow, _abs, _neg,
-    _gt, _lt, _eq, _ne,
+    _gt, _gte, _lt, _lte, _eq, _ne,
     _and, _or, _not,
-    _list, _head, _tail, _nth, _len, _append, _concat, _contains, _empty,
-    _range,
+    _list, _head, _tail, _nth, _set_nth, _len, _append, _concat, _contains, _empty,
+    _range, _eval,
     _map, _filter, _reduce,
     BUILTINS, ALL_BUILTINS,
     # 数学库
@@ -31,6 +31,8 @@ from runtime import (
     _now, _date, _time, _datetime, _strftime, _sleep,
     # 类型检查
     _isnum, _isstr, _islist, _isfunc, _isbool, _isnone, _typeof,
+    # 字典操作
+    _dict, _keys, _values, _items, _get, _delkey,
 )
 
 # 全局环境，用于交互模式（延迟初始化，避免启动时占用内存）
@@ -82,7 +84,9 @@ def create_env() -> Dict[str, Any]:
         '_abs': _abs,
         '_neg': _neg,
         '_gt': _gt,
+        '_gte': _gte,
         '_lt': _lt,
+        '_lte': _lte,
         '_eq': _eq,
         '_ne': _ne,
         '_and': _and,
@@ -92,12 +96,14 @@ def create_env() -> Dict[str, Any]:
         '_head': _head,
         '_tail': _tail,
         '_nth': _nth,
+        '_set_nth': _set_nth,
         '_len': _len,
         '_append': _append,
         '_concat': _concat,
         '_contains': _contains,
         '_empty': _empty,
         '_range': _range,
+        '_eval': _eval,
         '_map': _map,
         '_filter': _filter,
         '_reduce': _reduce,
@@ -157,6 +163,12 @@ def create_env() -> Dict[str, Any]:
         '_isbool': _isbool,
         '_isnone': _isnone,
         '_typeof': _typeof,
+        '_dict': _dict,
+        '_keys': _keys,
+        '_values': _values,
+        '_items': _items,
+        '_get': _get,
+        '_delkey': _delkey,
         'BUILTINS': BUILTINS,
         'ALL_BUILTINS': ALL_BUILTINS,
     })

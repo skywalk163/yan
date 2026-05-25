@@ -125,6 +125,12 @@ class While(Node):
 
 
 @dataclass
+class Continue(Node):
+    """继续语句（跳过当前循环迭代）"""
+    pass
+
+
+@dataclass
 class Program(Node):
     """程序（多个语句）"""
     statements: List[Node]

@@ -25,9 +25,11 @@ def _neg(a): return -a
 # ============ 比较运算 ============
 
 def _gt(a, b): return a > b
+def _gte(a, b): return a >= b
 def _lt(a, b): return a < b
-def _eq(a, b): return a == b
+def _lte(a, b): return a <= b
 def _ne(a, b): return a != b
+def _eq(a, b): return a == b
 
 
 # ============ 逻辑运算 ============
@@ -35,6 +37,111 @@ def _ne(a, b): return a != b
 def _and(a, b): return a and b
 def _or(a, b): return a or b
 def _not(a): return not a
+
+
+# ============ 表达式求值 ============
+
+def _eval(expr_str):
+    """求值算术表达式字符串，支持加减乘除和括号"""
+    import re
+    import operator as op
+
+    def tokenize(s):
+        """将表达式字符串分解为token"""
+        tokens = []
+        i = 0
+        s = s.strip()
+        while i < len(s):
+            if s[i].isspace():
+                i += 1
+            elif s[i].isdigit() or (s[i] == '-' and (not tokens or tokens[-1] in {'(', '+', '-', '*', '/'})):
+                j = i
+                if s[i] == '-':
+                    j += 1
+                while j < len(s) and (s[j].isdigit() or s[j] == '.'):
+                    j += 1
+                tokens.append(('NUM', float(s[i:j]) if '.' in s[i:j] else int(s[i:j])))
+                i = j
+            elif s[i] in '+-*/()':
+                tokens.append(('OP', s[i]))
+                i += 1
+            else:
+                i += 1
+        return tokens
+
+    def parse(tokens):
+        """递归下降解析器"""
+        pos = [0]
+
+        def peek():
+            return tokens[pos[0]] if pos[0] < len(tokens) else None
+
+        def consume():
+            pos[0] += 1
+            return tokens[pos[0] - 1]
+
+        def parse_expr():
+            return parse_add_sub()
+
+        def parse_add_sub():
+            left = parse_mul_div()
+            while True:
+                tok = peek()
+                if tok and tok[0] == 'OP' and tok[1] in '+-':
+                    op_tok = consume()
+                    right = parse_mul_div()
+                    if op_tok[1] == '+':
+                        left = left + right
+                    else:
+                        left = left - right
+                else:
+                    break
+            return left
+
+        def parse_mul_div():
+            left = parse_unary()
+            while True:
+                tok = peek()
+                if tok and tok[0] == 'OP' and tok[1] in '*/':
+                    op_tok = consume()
+                    right = parse_unary()
+                    if op_tok[1] == '*':
+                        left = left * right
+                    else:
+                        left = left / right if right != 0 else 0
+                else:
+                    break
+            return left
+
+        def parse_unary():
+            tok = peek()
+            if tok and tok[0] == 'OP' and tok[1] == '-':
+                consume()
+                return -parse_unary()
+            return parse_primary()
+
+        def parse_primary():
+            tok = peek()
+            if not tok:
+                return 0
+            if tok[0] == 'NUM':
+                consume()
+                return tok[1]
+            if tok[0] == 'OP' and tok[1] == '(':
+                consume()  # (
+                result = parse_expr()
+                tok = peek()
+                if tok and tok[0] == 'OP' and tok[1] == ')':
+                    consume()  # )
+                return result
+            return 0
+
+        return parse_expr()
+
+    tokens = tokenize(expr_str)
+    if not tokens:
+        return 0
+    return parse(tokens)
 
 
 # ============ 范围生成 ============
@@ -50,8 +157,17 @@ def _list(*args): return list(args)
 def _head(lst): return lst[0] if lst else None
 def _tail(lst): return lst[1:] if len(lst) > 1 else []
 def _nth(lst, n): return lst[n] if -len(lst) <= n < len(lst) else None
+def _contains(lst, item): return item in lst
+def _set_nth(lst, n, value):
+    """设置列表中指定索引的值"""
+    if -len(lst) <= n < len(lst):
+        lst[n] = value
+        return lst
+    return None
 def _len(lst): return len(lst)
-def _append(lst, item): return lst + [item]
+def _append(lst, item): 
+    lst.append(item)
+    return lst
 def _concat(*args):
     """连接多个参数，支持任意数量的参数"""
     if len(args) == 0:
@@ -157,16 +273,25 @@ def curry(func, arity):
 # ============ 字典操作 ============
 
 def _dict(*args):
-    """创建字典：典'key1' val1 'key2' val2"""
+    """创建字典：典 'key1' val1 'key2' val2 或 典 key1 val1 key2 val2"""
     d = {}
     for i in range(0, len(args), 2):
         if i + 1 < len(args):
-            d[args[i]] = args[i + 1]
+            key = args[i]
+            # 如果键不是字符串，将其转换为字符串
+            if not isinstance(key, str):
+                key = str(key)
+            d[key] = args[i + 1]
     return d
 
 def _keys(d): return list(d.keys())
 def _values(d): return list(d.values())
 def _items(d): return list(d.items())
+def _get(d, key):
+    """获取字典中指定键的值"""
+    if isinstance(key, str) and key in d:
+        return d[key]
+    return None
 def _delkey(d, key):
     if key in d:
         del d[key]
@@ -176,10 +301,33 @@ def _delkey(d, key):
 DICT_BUILTINS = {
     '典': (_dict, -1),
     '键': (_keys, 1),
-    '值': (_values, 1),
+    '值': (_get, 2),
     '项': (_items, 1),
     '删键': (_delkey, 2),
 }
+
+
+# ============ I/O 辅助函数 ============
+
+def _read_char():
+    """读取单个字符"""
+    import sys
+    try:
+        import msvcrt
+        # Windows 系统
+        return msvcrt.getch().decode('utf-8', errors='ignore')
+    except ImportError:
+        # Unix 系统
+        import tty
+        import termios
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
 
 
 # ============ 内置动词映射 ============
@@ -200,9 +348,11 @@ BUILTINS = {
 
     # 列表
     '列': (_list, -1),
+        '求值': (_eval, 1),
     '首': (_head, 1),
     '余': (_tail, 1),
-    '入': (_nth, 2),
+    '取': (_nth, 2),
+    '设': (_set_nth, 3),
     '长': (_len, 1),
     '添': (_append, 2),
     '连': (_concat, 2),
@@ -218,7 +368,12 @@ BUILTINS = {
 
     # 比较
     '大': (_gt, 2),
+    '大于': (_gt, 2),
+    '大等于': (_gte, 2),
     '小': (_lt, 2),
+    '小于': (_lt, 2),
+    '小等于': (_lte, 2),
+    '不等于': (_ne, 2),
     '等': (_eq, 2),
     '等于': (_eq, 2),
     '不等': (_ne, 2),
@@ -235,6 +390,9 @@ BUILTINS = {
 
     # I/O
     '印': (print, 1),
+    '读行': (input, 0),  # 读取一行输入
+    '行': (input, 0),  # 向后兼容
+    '读': (_read_char, 0),  # 读取单个字符
 }
 
 

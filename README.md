@@ -108,6 +108,15 @@ yan 包 发布
 
 详见 [ROADMAP.md](ROADMAP.md)
 
+## 致谢
+
+本项目在开发过程中使用了 AI 辅助编程，特别感谢：
+
+- **[Trae](https://trae.cn/)** — 提供智能代码补全、错误诊断和重构建议
+- **[DuMate](https://www.dumate.cn/)** — 协助代码审查和功能实现
+
+AI 助手在语法解析、错误处理、性能优化等方面提供了宝贵的建议，帮助项目不断完善。
+
 ## 许可证
 
 MIT License

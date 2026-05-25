@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>言语言 - 交互式入门教程</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Microsoft YaHei", "微软雅黑", sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 30px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            font-size: 48px;
+            font-weight: bold;
+            color: #f8d56b;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo span {
+            color: #4ecdc4;
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: #aaa;
+            margin-top: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ecdc4, #44a08d);
+            transition: width 0.5s ease;
+        }
+
+        .main-content {
+            display: flex;
+            gap: 30px;
+        }
+
+        .sidebar {
+            width: 280px;
+            flex-shrink: 0;
+        }
+
+        .nav-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-item.active {
+            background: rgba(78, 205, 196, 0.1);
+            border-left-color: #4ecdc4;
+        }
+
+        .nav-title {
+            font-size: 14px;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .nav-desc {
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        .lesson-content {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 30px;
+            min-height: 500px;
+        }
+
+        .lesson-header {
+            margin-bottom: 30px;
+        }
+
+        .lesson-title {
+            font-size: 24px;
+            color: #f8d56b;
+            margin-bottom: 10px;
+        }
+
+        .lesson-number {
+            font-size: 14px;
+            color: #4ecdc4;
+            font-weight: 500;
+        }
+
+        .lesson-section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            color: #4ecdc4;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid rgba(78, 205, 196, 0.3);
+        }
+
+        .section-content {
+            line-height: 1.8;
+            color: #ccc;
+            font-size: 15px;
+        }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-x: auto;
+            border-left: 4px solid #4ecdc4;
+            color: #ccc;
+        }
+
+        .terminal {
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 14px;
+            margin: 15px 0;
+        }
+
+        .terminal-prompt {
+            color: #4ecdc4;
+        }
+
+        .terminal-output {
+            color: #e0e0e0;
+            margin-left: 20px;
+        }
+
+        .editor-container {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .editor-header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .editor-title {
+            font-size: 13px;
+            color: #aaa;
+        }
+
+        .editor-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        #editor {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            background: transparent;
+            border: none;
+            color: #e0e0e0;
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: vertical;
+            outline: none;
+        }
+
+        #editor::placeholder {
+            color: #555;
+        }
+
+        .output-area {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 14px;
+            min-height: 80px;
+        }
+
+        .output-success {
+            color: #4ecdc4;
+        }
+
+        .output-error {
+            color: #ff6b6b;
+        }
+
+        .quiz-section {
+            background: rgba(248, 213, 107, 0.1);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            border-left: 4px solid #f8d56b;
+        }
+
+        .quiz-question {
+            font-size: 16px;
+            color: #f8d56b;
+            margin-bottom: 15px;
+        }
+
+        .quiz-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .quiz-option {
+            padding: 12px 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .quiz-option:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .quiz-option.selected {
+            border-color: #4ecdc4;
+            background: rgba(78, 205, 196, 0.1);
+        }
+
+        .quiz-option.correct {
+            border-color: #4ecdc4;
+            background: rgba(78, 205, 196, 0.1);
+        }
+
+        .quiz-option.wrong {
+            border-color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.1);
+        }
+
+        .quiz-feedback {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .quiz-feedback.correct {
+            background: rgba(78, 205, 196, 0.1);
+            color: #4ecdc4;
+        }
+
+        .quiz-feedback.wrong {
+            background: rgba(255, 107, 107, 0.1);
+            color: #ff6b6b;
+        }
+
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .tip-box {
+            background: rgba(78, 205, 196, 0.1);
+            border-left: 4px solid #4ecdc4;
+            padding: 15px;
+            border-radius: 0 8px 8px 0;
+            margin: 15px 0;
+        }
+
+        .tip-title {
+            color: #4ecdc4;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .tip-content {
+            color: #ccc;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .highlight {
+            background: rgba(248, 213, 107, 0.2);
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #f8d56b;
+        }
+
+        ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">言<span>语言</span></div>
+            <div class="subtitle">交互式入门教程</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div style="font-size: 14px; color: #888;">完成进度: <span id="progressText">0/8</span></div>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar" id="sidebar">
+                <!-- 导航将通过 JavaScript 生成 -->
+            </div>
+
+            <div class="lesson-content" id="lessonContent">
+                <!-- 课程内容将通过 JavaScript 动态加载 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const lessons = [
+            {
+                id: 1,
+                title: "环境搭建",
+                description: "准备开发环境，运行第一个程序",
+                content: `
+                    <div class="lesson-header">
+                        <div class="lesson-number">第 1 章</div>
+                        <div class="lesson-title">环境搭建</div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">🎯 学习目标</div>
+                        <div class="section-content">
+                            本章将学习：<br>
+                            • 什么是言语言<br>
+                            • 如何安装和运行言语言<br>
+                            • 编写并运行第一个程序
+                        </div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">📖 什么是言语言</div>
+                        <div class="section-content">
+                            言语言（Yan Language）是一门以中文为关键字的函数式编程语言。它的设计目标是：
+                        </div>
+                        <ul>
+                            <li><span class="highlight">自然语言风格</span>：使用中文动词作为关键字，代码如读文章</li>
+                            <li><span class="highlight">函数式编程</span>：支持高阶函数、管道操作</li>
+                            <li><span class="highlight">Python 兼容</span>：编译为 Python，可无缝调用 Python 库</li>
+                        </ul>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">🚀 运行第一个程序</div>
+                        <div class="section-content">
+                            让我们直接在下方编辑器中编写你的第一个言语言程序！
+                        </div>
+
+                        <div class="editor-container">
+                            <div class="editor-header">
+                                <div class="editor-title">hello.yan</div>
+                                <div class="editor-actions">
+                                    <button class="btn btn-secondary" onclick="resetEditor()">重置</button>
+                                    <button class="btn btn-primary" onclick="runCode()">▶ 运行</button>
+                                </div>
+                            </div>
+                            <textarea id="editor">印 "你好，言语言！"。</textarea>
+                        </div>
+
+                        <div class="output-area" id="output"></div>
+                    </div>
+
+                    <div class="tip-box">
+                        <div class="tip-title">💡 小提示</div>
+                        <div class="tip-content">
+                            注意观察代码的特点：
+                            <ul>
+                                <li><span class="highlight">印</span> 是输出函数，相当于 Python 的 print</li>
+                                <li>每个语句以 <span class="highlight">。</span>（中文句号）结尾</li>
+                                <li>字符串用 <span class="highlight">"</span> 包围</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="quiz-section">
+                        <div class="quiz-question">❓ 言语言中，哪个关键字用于输出内容？</div>
+                        <div class="quiz-options" id="quiz1">
+                            <div class="quiz-option" data-correct="false">输出</div>
+                            <div class="quiz-option" data-correct="true">印</div>
+                            <div class="quiz-option" data-correct="false">print</div>
+                            <div class="quiz-option" data-correct="false">显示</div>
+                        </div>
+                        <div class="quiz-feedback" id="quiz1Feedback"></div>
+                    </div>
+                `
+            },
+            {
+                id: 2,
+                title: "基础语法",
+                description: "变量、数据类型、运算",
+                content: `
+                    <div class="lesson-header">
+                        <div class="lesson-number">第 2 章</div>
+                        <div class="lesson-title">基础语法</div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">📝 变量定义</div>
+                        <div class="section-content">
+                            使用 <span class="highlight">定</span> 关键字定义变量：
+                        </div>
+                        <div class="code-block">
+定 名字 = "张三"。
+定 年龄 = 25。
+定 身高 = 1.75。
+定 学生 = 真。
+</div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">🧮 数学运算</div>
+                        <div class="section-content">
+                            言语言支持常见的数学运算：
+                        </div>
+                        <div class="code-block">
+-- 基本运算
+印 加 10 5。      -- 15
+印 减 10 5。      -- 5
+印 乘 10 5。      -- 50
+印 除 10 3。      -- 3.333...
+印 模 10 3。      -- 1
+</div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">🔗 管道操作</div>
+                        <div class="section-content">
+                            使用 <span class="highlight">，</span>（中文逗号）连接多个操作：
+                        </div>
+                        <div class="code-block">
+-- 管道操作：前一步结果传给后一步
+印 10 加 5 ， 乘 2 ， 减 3。    -- ((10+5)*2)-3 = 27
+</div>
+
+                        <div class="tip-box">
+                            <div class="tip-title">💡 管道操作的优势</div>
+                            <div class="tip-content">
+                                管道操作让代码更流畅，避免嵌套括号。上面的代码相当于：
+                                <div class="code-block" style="margin-top: 10px;">
+印 减 (乘 (加 10 5) 2) 3。
+</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">✏️ 动手练习</div>
+                        <div class="section-content">
+                            尝试修改下面的代码，计算 (5 + 3) * (10 - 4) 的结果：
+                        </div>
+
+                        <div class="editor-container">
+                            <div class="editor-header">
+                                <div class="editor-title">practice.yan</div>
+                                <div class="editor-actions">
+                                    <button class="btn btn-secondary" onclick="resetEditor()">重置</button>
+                                    <button class="btn btn-primary" onclick="runCode()">▶ 运行</button>
+                                </div>
+                            </div>
+                            <textarea id="editor">
+-- 修改下面的代码
+定 结果 = 加 5 3。
+印 连 "结果是：" 结果。
+</textarea>
+                        </div>
+
+                        <div class="output-area" id="output"></div>
+                    </div>
+
+                    <div class="quiz-section">
+                        <div class="quiz-question">❓ 在言语言中，如何定义变量？</div>
+                        <div class="quiz-options" id="quiz2">
+                            <div class="quiz-option" data-correct="false">var 名字 = 值</div>
+                            <div class="quiz-option" data-correct="false">变量 名字 = 值</div>
+                            <div class="quiz-option" data-correct="true">定 名字 = 值。</div>
+                            <div class="quiz-option" data-correct="false">定义 名字 = 值</div>
+                        </div>
+                        <div class="quiz-feedback" id="quiz2Feedback"></div>
+                    </div>
+                `
+            },
+            {
+                id: 3,
+                title: "函数定义",
+                description: "创建和使用函数",
+                content: `
+                    <div class="lesson-header">
+                        <div class="lesson-number">第 3 章</div>
+                        <div class="lesson-title">函数定义</div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">🔧 函数声明</div>
+                        <div class="section-content">
+                            使用 <span class="highlight">函</span> 关键字定义函数：
+                        </div>
+                        <div class="code-block">
+定 平方 = 函 x：
+  返回 乘 x x。
+。
+
+-- 调用函数
+印 平方 5。      -- 25
+</div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">📦 多参数函数</div>
+                        <div class="code-block">
+定 求和 = 函 a b：
+  返回 加 a b。
+。
+
+定 计算面积 = 函 长 宽：
+  返回 乘 长 宽。
+。
+
+印 求和 10 20。        -- 30
+印 计算面积 5 3。     -- 15
+</div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">✏️ 动手练习</div>
+                        <div class="section-content">
+                            定义一个函数计算长方体的体积（长 × 宽 × 高）：
+                        </div>
+
+                        <div class="editor-container">
+                            <div class="editor-header">
+                                <div class="editor-title">volume.yan</div>
+                                <div class="editor-actions">
+                                    <button class="btn btn-secondary" onclick="resetEditor()">重置</button>
+                                    <button class="btn btn-primary" onclick="runCode()">▶ 运行</button>
+                                </div>
+                            </div>
+                            <textarea id="editor">
+-- 定义计算体积的函数
+定 体积 = 函 长 宽 高：
+  -- 在这里添加代码
+。
+
+-- 测试函数
+印 体积 2 3 4。    -- 应该输出 24
+</textarea>
+                        </div>
+
+                        <div class="output-area" id="output"></div>
+                    </div>
+
+                    <div class="quiz-section">
+                        <div class="quiz-question">❓ 如何定义一个带参数的函数？</div>
+                        <div class="quiz-options" id="quiz3">
+                            <div class="quiz-option" data-correct="false">函 函数名(参数)</div>
+                            <div class="quiz-option" data-correct="true">定 函数名 = 函 参数：...。</div>
+                            <div class="quiz-option" data-correct="false">函数 函数名(参数) { ... }</div>
+                            <div class="quiz-option" data-correct="false">def 函数名(参数)</div>
+                        </div>
+                        <div class="quiz-feedback" id="quiz3Feedback"></div>
+                    </div>
+                `
+            },
+            {
+                id: 4,
+                title: "条件判断",
+                description: "如果、否则、逻辑运算",
+                content: `
+                    <div class="lesson-header">
+                        <div class="lesson-number">第 4 章</div>
+                        <div class="lesson-title">条件判断</div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">⚡ 基本条件</div>
+                        <div class="section-content">
+                            使用 <span class="highlight">若</span> 关键字进行条件判断：
+                        </div>
+                        <div class="code-block">
+定 年龄 = 20。
+
+若 大 年龄 18：
+  印 "成年人"。
+。
+</div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">🔀 条件分支</div>
+                        <div class="code-block">
+定 分数 = 85。
+
+若 大 分数 90：
+  印 "优秀"。
+否则若 大 分数 80：
+  印 "良好"。
+否则若 大 分数 60：
+  印 "及格"。
+否则：
+  印 "不及格"。
+。
+</div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">✏️ 动手练习</div>
+                        <div class="section-content">
+                            根据输入的成绩等级输出对应的评语：
+                        </div>
+
+                        <div class="editor-container">
+                            <div class="editor-header">
+                                <div class="editor-title">grade.yan</div>
+                                <div class="editor-actions">
+                                    <button class="btn btn-secondary" onclick="resetEditor()">重置</button>
+                                    <button class="btn btn-primary" onclick="runCode()">▶ 运行</button>
+                                </div>
+                            </div>
+                            <textarea id="editor">
+定 等级 = "B"。
+
+若 等 等级 "A"：
+  印 "优秀！"。
+否则若 等 等级 "B"：
+  -- 添加 B 级的评语
+否则若 等 等级 "C"：
+  印 "继续努力！"。
+否则：
+  印 "需要加油！"。
+。
+</textarea>
+                        </div>
+
+                        <div class="output-area" id="output"></div>
+                    </div>
+
+                    <div class="quiz-section">
+                        <div class="quiz-question">❓ 言语言中表示"如果"的关键字是？</div>
+                        <div class="quiz-options" id="quiz4">
+                            <div class="quiz-option" data-correct="false">如果</div>
+                            <div class="quiz-option" data-correct="false">when</div>
+                            <div class="quiz-option" data-correct="true">若</div>
+                            <div class="quiz-option" data-correct="false">假如</div>
+                        </div>
+                        <div class="quiz-feedback" id="quiz4Feedback"></div>
+                    </div>
+                `
+            },
+            {
+                id: 5,
+                title: "列表操作",
+                description: "创建和操作列表",
+                content: `
+                    <div class="lesson-header">
+                        <div class="lesson-number">第 5 章</div>
+                        <div class="lesson-title">列表操作</div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">📋 创建列表</div>
+                        <div class="section-content">
+                            使用 <span class="highlight">列</span> 关键字创建列表：
+                        </div>
+                        <div class="code-block">
+-- 创建列表
+定 数字 = 列 1 2 3 4 5。
+定 水果 = 列 "苹果" "香蕉" "橘子"。
+
+印 数字。      -- [1, 2, 3, 4, 5]
+印 水果。      -- ["苹果", "香蕉", "橘子"]
+</div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">📏 列表操作</div>
+                        <div class="code-block">
+定 数字 = 列 1 2 3 4 5。
+
+-- 获取长度
+印 长 数字。        -- 5
+
+-- 获取元素
+印 取 数字 0。      -- 1（第一个元素）
+
+-- 添加元素
+添 数字 6。
+印 数字。        -- [1, 2, 3, 4, 5, 6]
+</div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">✏️ 动手练习</div>
+                        <div class="section-content">
+                            使用高阶函数计算列表中所有偶数的和：
+                        </div>
+
+                        <div class="editor-container">
+                            <div class="editor-header">
+                                <div class="editor-title">list_practice.yan</div>
+                                <div class="editor-actions">
+                                    <button class="btn btn-secondary" onclick="resetEditor()">重置</button>
+                                    <button class="btn btn-primary" onclick="runCode()">▶ 运行</button>
+                                </div>
+                            </div>
+                            <textarea id="editor">
+定 数字 = 列 1 2 3 4 5 6 7 8 9 10。
+
+-- 过滤出偶数，然后求和
+定 偶数 = 只 小等于 模 数字 2 0 数字。
+定 和 = 归 加 0 偶数。
+
+印 "偶数列表：" 偶数。
+印 "偶数之和：" 和。
+</textarea>
+                        </div>
+
+                        <div class="output-area" id="output"></div>
+                    </div>
+
+                    <div class="quiz-section">
+                        <div class="quiz-question">❓ 以下哪个是言语言的列表创建语法？</div>
+                        <div class="quiz-options" id="quiz5">
+                            <div class="quiz-option" data-correct="false">列表[1, 2, 3]</div>
+                            <div class="quiz-option" data-correct="true">列 1 2 3。</div>
+                            <div class="quiz-option" data-correct="false">[1, 2, 3]</div>
+                            <div class="quiz-option" data-correct="false">list(1, 2, 3)</div>
+                        </div>
+                        <div class="quiz-feedback" id="quiz5Feedback"></div>
+                    </div>
+                `
+            },
+            {
+                id: 6,
+                title: "循环遍历",
+                description: "遍历列表和循环结构",
+                content: `
+                    <div class="lesson-header">
+                        <div class="lesson-number">第 6 章</div>
+                        <div class="lesson-title">循环遍历</div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">🔄 遍历循环</div>
+                        <div class="section-content">
+                            使用 <span class="highlight">遍历</span> 关键字遍历列表：
+                        </div>
+                        <div class="code-block">
+定 水果 = 列 "苹果" "香蕉" "橘子"。
+
+遍历 x 于 水果：
+  印 x。
+。
+
+-- 输出：苹果 香蕉 橘子
+</div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">⏱️ 条件循环</div>
+                        <div class="section-content">
+                            使用 <span class="highlight">当</span> 关键字进行条件循环：
+                        </div>
+                        <div class="code-block">
+-- 计数从 1 到 5
+定 i = 1。
+
+当 小等于 i 5：
+  印 i。
+  定 i = 加 i 1。
+。
+
+-- 输出：1 2 3 4 5
+</div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">✏️ 动手练习</div>
+                        <div class="section-content">
+                            使用循环计算 1 到 100 的累加和：
+                        </div>
+
+                        <div class="editor-container">
+                            <div class="editor-header">
+                                <div class="editor-title">sum_loop.yan</div>
+                                <div class="editor-actions">
+                                    <button class="btn btn-secondary" onclick="resetEditor()">重置</button>
+                                    <button class="btn btn-primary" onclick="runCode()">▶ 运行</button>
+                                </div>
+                            </div>
+                            <textarea id="editor">
+-- 计算 1 到 100 的和
+定 和 = 0。
+定 i = 1。
+
+当 小等于 i 100：
+  定 和 = 加 和 i。
+  定 i = 加 i 1。
+。
+
+印 连 "1到100的和：" 和。
+</textarea>
+                        </div>
+
+                        <div class="output-area" id="output"></div>
+                    </div>
+
+                    <div class="quiz-section">
+                        <div class="quiz-question">❓ 如何遍历一个列表？</div>
+                        <div class="quiz-options" id="quiz6">
+                            <div class="quiz-option" data-correct="false">for x in list:</div>
+                            <div class="quiz-option" data-correct="true">遍历 x 于 列表：...。</div>
+                            <div class="quiz-option" data-correct="false">循环 x 从 列表：</div>
+                            <div class="quiz-option" data-correct="false">foreach x in 列表</div>
+                        </div>
+                        <div class="quiz-feedback" id="quiz6Feedback"></div>
+                    </div>
+                `
+            },
+            {
+                id: 7,
+                title: "递归函数",
+                description: "递归和高级函数",
+                content: `
+                    <div class="lesson-header">
+                        <div class="lesson-number">第 7 章</div>
+                        <div class="lesson-title">递归函数</div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">🔄 什么是递归</div>
+                        <div class="section-content">
+                            递归是函数调用自身的编程技巧：
+                        </div>
+                        <div class="code-block">
+-- 计算阶乘
+定 阶乘 = 函 n：
+  若 等 n 1：
+    返回 1。
+  。
+  返回 乘 n 阶乘 减 n 1。
+。
+
+印 阶乘 5。    -- 120
+</div>
+                    </div>
+
+                    <div class="tip-box">
+                        <div class="tip-title">💡 递归要点</div>
+                        <div class="tip-content">
+                            写递归函数时需要注意：
+                            <ul>
+                                <li><span class="highlight">基线条件</span>：必须有一个终止条件</li>
+                                <li><span class="highlight">递归步骤</span>：函数调用自身，问题规模减小</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">✏️ 动手练习</div>
+                        <div class="section-content">
+                            使用递归计算幂次（x^n）：
+                        </div>
+
+                        <div class="editor-container">
+                            <div class="editor-header">
+                                <div class="editor-title">power.yan</div>
+                                <div class="editor-actions">
+                                    <button class="btn btn-secondary" onclick="resetEditor()">重置</button>
+                                    <button class="btn btn-primary" onclick="runCode()">▶ 运行</button>
+                                </div>
+                            </div>
+                            <textarea id="editor">
+-- 递归计算 x 的 n 次方
+定 幂 = 函 x n：
+  若 等 n 0：
+    返回 1。
+  。
+  返回 乘 x 幂 x 减 n 1。
+。
+
+印 连 "2^10 = " 幂 2 10。    -- 应该输出 1024
+印 连 "3^5 = " 幂 3 5。     -- 应该输出 243
+</textarea>
+                        </div>
+
+                        <div class="output-area" id="output"></div>
+                    </div>
+
+                    <div class="quiz-section">
+                        <div class="quiz-question">❓ 递归函数必须包含什么？</div>
+                        <div class="quiz-options" id="quiz7">
+                            <div class="quiz-option" data-correct="false">循环语句</div>
+                            <div class="quiz-option" data-correct="true">基线条件</div>
+                            <div class="quiz-option" data-correct="false">返回语句</div>
+                            <div class="quiz-option" data-correct="false">参数</div>
+                        </div>
+                        <div class="quiz-feedback" id="quiz7Feedback"></div>
+                    </div>
+                `
+            },
+            {
+                id: 8,
+                title: "项目实战",
+                description: "综合练习：成语接龙游戏",
+                content: `
+                    <div class="lesson-header">
+                        <div class="lesson-number">第 8 章</div>
+                        <div class="lesson-title">项目实战 - 成语接龙</div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">🎮 项目介绍</div>
+                        <div class="section-content">
+                            让我们创建一个完整的成语接龙游戏！游戏规则：
+                            <ul>
+                                <li>玩家输入一个四字成语</li>
+                                <li>AI 根据最后一个字接下一个成语</li>
+                                <li>循环往复，直到无法接龙</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">📦 完整代码</div>
+                        <div class="code-block">
+-- 成语接龙游戏
+
+-- 成语库
+定 成语库 = 列
+  "一心一意" "意气风发" "发愤图强" "强词夺理"
+  "理直气壮" "壮志凌云" "云开见日" "日新月异"
+  "异曲同工" "事半功倍" "倍道而行" "行云流水"
+  "水落石出" "出生入死" "死里逃生" "生龙活虎"
+。
+
+-- 获取最后一个字
+定 取尾字 = 函 成语：
+  定 长度值 = 长度 成语。
+  返回 取 成语 减 长度值 1。
+。
+
+-- 获取第一个字
+定 取首字 = 函 成语：
+  返回 取 成语 0。
+。
+
+-- 查找可接龙的成语
+定 找接龙 = 函 当前：
+  定 尾 = 取尾字 当前。
+  定 可选 = 列。
+  遍历 y 于 成语库：
+    若 等 取首字 y 尾：
+      添 可选 y。
+    。
+  。
+  返回 可选。
+。
+
+-- 游戏开始
+印 "=== 成语接龙游戏 ==="。
+印 "规则：输入四字成语，AI会接下一个"。
+印 ""。
+
+-- 演示游戏流程
+定 当前 = "一心一意"。
+印 连 "AI：" 当前 连 "（" 取尾字 当前 "）"。
+
+定 玩家输入 = "意气风发"。
+印 连 "你：" 玩家输入。
+
+定 AI可选 = 找接龙 玩家输入。
+印 连 "AI：" 取 AI可选 0 连 "（" 取尾字 取 AI可选 0 "）"。
+</div>
+                    </div>
+
+                    <div class="lesson-section">
+                        <div class="section-title">🎉 恭喜完成！</div>
+                        <div class="section-content">
+                            你已经完成了言语言的入门教程！现在你可以：
+                            <ul>
+                                <li>尝试修改上面的代码，添加更多成语</li>
+                                <li>创建自己的言语言程序</li>
+                                <li>探索 Playground 中的其他示例</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="quiz-section">
+                        <div class="quiz-question">🎉 恭喜完成全部教程！你最喜欢哪个章节？</div>
+                        <div class="quiz-options" id="quiz8">
+                            <div class="quiz-option" data-correct="true">基础语法</div>
+                            <div class="quiz-option" data-correct="true">函数定义</div>
+                            <div class="quiz-option" data-correct="true">列表操作</div>
+                            <div class="quiz-option" data-correct="true">项目实战</div>
+                        </div>
+                        <div class="quiz-feedback" id="quiz8Feedback" style="display: block; background: rgba(78, 205, 196, 0.1); color: #4ecdc4;">
+                            ✅ 恭喜！你已完成言语言入门教程！现在可以开始编写自己的言语言程序了！
+                        </div>
+                    </div>
+                `
+            }
+        ];
+
+        let currentLesson = 0;
+        let correctAnswers = 0;
+
+        function renderNavigation() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.innerHTML = '';
+            
+            lessons.forEach((lesson, index) => {
+                const item = document.createElement('div');
+                item.className = `nav-item ${index === currentLesson ? 'active' : ''}`;
+                item.innerHTML = `
+                    <div class="nav-title">第 ${lesson.id} 章: ${lesson.title}</div>
+                    <div class="nav-desc">${lesson.description}</div>
+                `;
+                item.addEventListener('click', () => loadLesson(index));
+                sidebar.appendChild(item);
+            });
+        }
+
+        function loadLesson(index) {
+            currentLesson = index;
+            const content = document.getElementById('lessonContent');
+            content.innerHTML = lessons[index].content;
+            
+            renderNavigation();
+            updateProgress();
+            initQuiz();
+        }
+
+        function updateProgress() {
+            const progress = ((currentLesson + 1) / lessons.length) * 100;
+            document.getElementById('progressFill').style.width = `${progress}%`;
+            document.getElementById('progressText').textContent = `${correctAnswers}/${lessons.length}`;
+        }
+
+        function initQuiz() {
+            const quizOptions = document.querySelectorAll('.quiz-option');
+            quizOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    checkAnswer(this);
+                });
+            });
+        }
+
+        function checkAnswer(option) {
+            const isCorrect = option.dataset.correct === 'true';
+            const quizId = option.parentElement.id;
+            const feedback = document.getElementById(`${quizId}Feedback`);
+            
+            document.querySelectorAll('.quiz-option').forEach(opt => {
+                opt.classList.remove('selected');
+                if (opt.dataset.correct === 'true') {
+                    opt.classList.add('correct');
+                } else if (opt.classList.contains('selected') && !isCorrect) {
+                    opt.classList.add('wrong');
+                }
+            });
+            
+            option.classList.add('selected');
+            
+            if (isCorrect) {
+                feedback.textContent = '✅ 回答正确！';
+                feedback.className = 'quiz-feedback correct';
+                if (!option.dataset.answered) {
+                    correctAnswers++;
+                    option.dataset.answered = 'true';
+                    updateProgress();
+                }
+            } else {
+                feedback.textContent = '❌ 回答错误，再想想！';
+                feedback.className = 'quiz-feedback wrong';
+            }
+            feedback.style.display = 'block';
+        }
+
+        function resetEditor() {
+            const editor = document.getElementById('editor');
+            const lesson = lessons[currentLesson];
+            const match = lesson.content.match(/<textarea id="editor">([\s\S]*?)<\/textarea>/);
+            if (match) {
+                editor.value = match[1].trim();
+            }
+        }
+
+        async function runCode() {
+            const editor = document.getElementById('editor');
+            const output = document.getElementById('output');
+            
+            try {
+                const response = await fetch('/api/execute', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ code: editor.value })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    output.innerHTML = result.output.map(line => 
+                        `<div class="output-success">▶ ${line}</div>`
+                    ).join('');
+                } else {
+                    output.innerHTML = `<div class="output-error">❌ ${result.error || result.output.join('\n')}</div>`;
+                }
+            } catch (error) {
+                output.innerHTML = `<div class="output-error">❌ 网络错误: ${error.message}</div>`;
+            }
+        }
+
+        function nextLesson() {
+            if (currentLesson < lessons.length - 1) {
+                loadLesson(currentLesson + 1);
+            }
+        }
+
+        function prevLesson() {
+            if (currentLesson > 0) {
+                loadLesson(currentLesson - 1);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadLesson(0);
+        });
+
+        window.nextLesson = nextLesson;
+        window.prevLesson = prevLesson;
+        window.resetEditor = resetEditor;
+        window.runCode = runCode;
+    </script>
+</body>
+</html>

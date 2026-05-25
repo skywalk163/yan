@@ -38,8 +38,13 @@ def execute_code_in_process(code: str) -> dict:
             encoding='utf-8',
         )
         
-        output = result.stdout.strip().split('\n') if result.stdout.strip() else []
-        error = result.stderr.strip() if result.stderr.strip() else None
+        # 修复：安全处理 stdout 可能为 None 的情况
+        stdout_str = result.stdout if result.stdout else ""
+        output = stdout_str.strip().split('\n') if stdout_str.strip() else []
+        
+        # 修复：安全处理 stderr 可能为 None 的情况
+        stderr_str = result.stderr if result.stderr else ""
+        error = stderr_str.strip() if stderr_str.strip() else None
         
         if result.returncode != 0:
             output = [f"[ERROR] {line}" for line in output] if output else []
@@ -94,6 +99,9 @@ class PlaygroundHandler(SimpleHTTPRequestHandler):
         
         if path == '/' or path == '/index.html':
             self.serve_file('/index.html')
+        elif path == '/tutorial' or path == '/tutorial.html':
+            # 服务交互式教程页面
+            self.serve_file('/tutorial.html')
         elif path.startswith('/api/examples'):
             self.send_examples()
         else:

@@ -40,7 +40,9 @@ class PythonCodeGen:
         elif isinstance(node, MathExpr):
             return f'({node.expr})'
         elif isinstance(node, PythonCode):
-            return node.code
+            return node.code.strip()
+        elif isinstance(node, Continue):
+            return 'continue'
         elif isinstance(node, ListLiteral):
             return self._gen_list(node)
         elif isinstance(node, Word):
@@ -425,7 +427,10 @@ class PythonCodeGen:
         """生成代码块"""
         lines = []
         for stmt in node.statements:
-            lines.append(self.generate(stmt))
+            code = self.generate(stmt)
+            # 处理多行代码
+            code_lines = code.split('\n')
+            lines.extend(code_lines)
         return '\n'.join(lines)
 
     def _gen_if(self, node: If) -> str:
@@ -506,16 +511,19 @@ class PythonCodeGen:
         # 生成循环体
         if isinstance(node.body, Block):
             lines = []
-            for i, stmt in enumerate(node.body.statements):
+            for stmt in node.body.statements:
                 code = self.generate(stmt)
-                # 最后一个语句作为返回值（如果需要的话）
-                if i == len(node.body.statements) - 1:
-                    lines.append(f'    {code}')
-                else:
-                    lines.append(f'    {code}')
+                # 处理多行代码，每行都需要缩进
+                code_lines = code.split('\n')
+                for line in code_lines:
+                    lines.append(f'    {line}')
             body_code = '\n'.join(lines)
         else:
-            body_code = f'    {self.generate(node.body)}'
+            code = self.generate(node.body)
+            # 处理多行代码，每行都需要缩进
+            code_lines = code.split('\n')
+            indented_lines = [f'    {line}' for line in code_lines]
+            body_code = '\n'.join(indented_lines)
         
         return f'for {var} in {iterable}:\n{body_code}'
 
@@ -528,10 +536,17 @@ class PythonCodeGen:
             lines = []
             for stmt in node.body.statements:
                 code = self.generate(stmt)
-                lines.append(f'    {code}')
+                # 处理多行代码，每行都需要缩进
+                code_lines = code.split('\n')
+                for line in code_lines:
+                    lines.append(f'    {line}')
             body_code = '\n'.join(lines)
         else:
-            body_code = f'    {self.generate(node.body)}'
+            code = self.generate(node.body)
+            # 处理多行代码，每行都需要缩进
+            code_lines = code.split('\n')
+            indented_lines = [f'    {line}' for line in code_lines]
+            body_code = '\n'.join(indented_lines)
         
         return f'while {cond}:\n{body_code}'
     
