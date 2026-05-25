@@ -239,21 +239,59 @@ class PlaygroundHandler(SimpleHTTPRequestHandler):
         print(f"[{self.log_date_time_string()}] {format % args}")
 
 
-def run_server(port=5000, host='0.0.0.0'):
+def find_available_port(start_port=5000, max_attempts=100, host='0.0.0.0'):
+    """查找可用端口，如果端口被占用自动尝试下一个"""
+    import socket
+    
+    for port in range(start_port, start_port + max_attempts):
+        try:
+            # 测试端口是否可用
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind((host, port))
+            sock.close()
+            return port
+        except OSError:
+            # 端口被占用，尝试下一个
+            continue
+    
+    raise RuntimeError(f"无法找到可用端口（已尝试 {max_attempts} 个端口）")
+
+
+def run_server(port=5000, host='0.0.0.0', auto_port=True):
     """运行服务器"""
     os.chdir(os.path.dirname(__file__))
     
+    # 如果启用自动端口选择
+    if auto_port:
+        actual_port = find_available_port(port, host=host)
+        if actual_port != port:
+            print(f"⚠ 端口 {port} 被占用，自动使用端口 {actual_port}")
+            port = actual_port
+    else:
+        # 直接使用指定端口
+        import socket
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind((host, port))
+            sock.close()
+        except OSError:
+            print(f"✗ 端口 {port} 已被占用")
+            port = find_available_port(port, host=host)
+            print(f"✓ 自动切换到端口 {port}")
+    
     server = HTTPServer((host, port), PlaygroundHandler)
-    print("=" * 60)
-    print("言语言 Playground 服务器")
-    print("=" * 60)
-    print(f"地址: http://localhost:{port}")
-    print(f"网络访问: http://0.0.0.0:{port}")
-    print("✓ 使用独立进程执行代码，避免内存泄漏")
-    print("✓ 30秒超时保护")
-    print("按 Ctrl+C 停止服务器")
-    print("=" * 60)
-    print()
+    print("=" * 60, flush=True)
+    print("言语言 Playground 服务器", flush=True)
+    print("=" * 60, flush=True)
+    print(f"地址: http://localhost:{port}", flush=True)
+    print(f"网络访问: http://0.0.0.0:{port}", flush=True)
+    print("✓ 使用独立进程执行代码，避免内存泄漏", flush=True)
+    print("✓ 30秒超时保护", flush=True)
+    print("按 Ctrl+C 停止服务器", flush=True)
+    print("=" * 60, flush=True)
+    print(flush=True)
     
     try:
         server.serve_forever()
@@ -266,8 +304,9 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description='言语言 Playground 服务器')
-    parser.add_argument('--port', '-p', type=int, default=5000, help='端口号（默认: 5000）')
+    parser.add_argument('--port', '-p', type=int, default=5000, help='起始端口号（默认: 5000）')
     parser.add_argument('--host', '-H', default='localhost', help='主机地址（默认: localhost）')
+    parser.add_argument('--no-auto-port', action='store_true', help='禁用自动端口选择')
     
     args = parser.parse_args()
-    run_server(port=args.port, host=args.host)
+    run_server(port=args.port, host=args.host, auto_port=not args.no_auto_port)
