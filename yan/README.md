@@ -19,6 +19,23 @@
 
 ## 快速开始
 
+### 🚀 一键启动 Playground（推荐）
+
+```bash
+# Windows
+start_playground.bat
+
+# Linux/Mac
+./start_playground.sh
+
+# 或者使用 Python
+python start_playground.py
+```
+
+启动后会自动打开浏览器访问 Playground。
+
+### 手动运行
+
 ```bash
 # 进入 yan 目录
 cd yan

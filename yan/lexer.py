@@ -45,6 +45,9 @@ class TokenType(Enum):
     PYTHON = auto()    # {{...}} Python 代码块
     LPAREN = auto()    # ( 左括号
     RPAREN = auto()    # ) 右括号
+    INDENT = auto()    # 缩进增加（用于块开始）
+    DEDENT = auto()    # 缩进减少（用于块结束）
+    NEWLINE = auto()   # 换行符
     EOF = auto()       # 结束
 
 
@@ -211,52 +214,435 @@ class Lexer:
             return ch2 == '_' or ch2.isalnum()
         return False
 
-    def _create_error(self, message: str, line: int, col: int):
-        """创建增强的词法错误"""
+    @staticmethod
+    def _is_chinese(ch: str) -> bool:
+        """检查字符是否是中文"""
+        return '\u4e00' <= ch <= '\u9fff'
+
+    def _create_error(self, message: str, line: int, col: int) -> EnhancedLexerError:
+        """创建增强版词法分析错误"""
         location = SourceLocation(line, col)
         suggestion = ErrorSuggester.suggest(message)
         return EnhancedLexerError(message, location, self._source, suggestion)
 
     def tokenize(self, source: str) -> List[Token]:
-        """将源码转为 Token 流"""
+        """将源码转为 Token 流（支持缩进语法和续行）"""
         self._source = source  # 保存源代码用于错误显示
-        tokens = []
-        i = 0
-        line, col = 1, 1
-
+        
         # 第一阶段：轻量扫描收集所有用户定义的标识符
-        # 这些标识符在后续 tokenize 过程中不会被关键字拆分
         user_defined_names = self._scan_user_defs(source)
-
-        while i < len(source):
-            ch = source[i]
-
-            # 跳过空白符
+        
+        # 第二阶段：预处理续行，然后逐行处理缩进
+        # 续行规则：
+        # - 如果下一行缩进 == 当前行缩进，且当前行不以句号结尾，则视为续行
+        
+        lines = source.splitlines()
+        processed_lines = []
+        
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            
+            # 跳过空白行（但保留用于缩进判断）
+            stripped = line.strip()
+            if not stripped or stripped.startswith('--') or stripped.startswith('注'):
+                processed_lines.append(line)
+                i += 1
+                continue
+            
+            # 检查是否需要续行
+            current_indent = self._count_indent(line)
+            has_dot = line.rstrip().endswith('。') or line.rstrip().endswith('．')
+            
+            # 查看下一行
+            if i + 1 < len(lines):
+                next_line = lines[i + 1]
+                next_stripped = next_line.strip()
+                
+                # 如果下一行不是空行或注释
+                if next_stripped and not next_stripped.startswith('--') and not next_stripped.startswith('注'):
+                    next_indent = self._count_indent(next_line)
+                    
+                    # 如果下一行缩进 == 当前行缩进，且当前行不以句号结尾，则续行
+                    if next_indent == current_indent and not has_dot:
+                        # 将下一行内容拼接到当前行（中间加空格）
+                        line = line.rstrip() + ' ' + next_stripped
+                        i += 1  # 跳过下一行
+            
+            processed_lines.append(line)
+            i += 1
+        
+        # 第三阶段：处理缩进和 token 化
+        tokens = []
+        indent_stack = [0]  # 当前缩进栈
+        current_indent = 0
+        
+        for line_num, line in enumerate(processed_lines, 1):
+            # 计算当前行的缩进
+            line_indent = 0
+            col = 1
+            i = 0
+            while i < len(line) and line[i] in ' \t':
+                if line[i] == '\t':
+                    line_indent += 4
+                else:
+                    line_indent += 1
+                i += 1
+                col += 1
+            
+            # 处理缩进变化
+            if line_indent > current_indent:
+                # 缩进增加
+                tokens.append(Token(TokenType.INDENT, str(line_indent), line_num, 1))
+                indent_stack.append(line_indent)
+                current_indent = line_indent
+            elif line_indent < current_indent:
+                # 缩进减少，生成 DEDENT
+                while current_indent > line_indent:
+                    indent_stack.pop()
+                    current_indent = indent_stack[-1] if indent_stack else 0
+                    tokens.append(Token(TokenType.DEDENT, str(current_indent), line_num, 1))
+            
+            # 处理行内容（跳过前面的空白）
+            self._tokenize_line(line[i:], line_num, col, tokens, user_defined_names)
+        
+        # 文件结束：生成剩余的 DEDENT
+        while len(indent_stack) > 1:
+            indent_stack.pop()
+            current_indent = indent_stack[-1]
+            # 使用最后一个有效 token 的位置信息
+            last_tok = None
+            for tok in reversed(tokens):
+                if tok.type != TokenType.EOF:
+                    last_tok = tok
+                    break
+            if last_tok:
+                tokens.append(Token(TokenType.DEDENT, str(current_indent), last_tok.line, last_tok.col))
+            else:
+                tokens.append(Token(TokenType.DEDENT, str(current_indent), 1, 1))
+        
+        # 添加 EOF token
+        last_line, last_col = 1, 1
+        if tokens:
+            last_tok = tokens[-1]
+            last_line, last_col = last_tok.line, last_tok.col
+        tokens.append(Token(TokenType.EOF, None, last_line, last_col))
+        
+        return tokens
+    
+    def _count_indent(self, line: str) -> int:
+        """计算行的缩进级别"""
+        indent = 0
+        for ch in line:
+            if ch == '\t':
+                indent += 4
+            elif ch == ' ':
+                indent += 1
+            else:
+                break
+        return indent
+    
+    def _tokenize_line(self, line: str, line_num: int, start_col: int, tokens: List[Token], user_defined_names: Set[str]) -> None:
+        """处理单行的 token 化"""
+        i = 0
+        col = start_col
+        n = len(line)
+        
+        while i < n:
+            ch = line[i]
+            
+            # 跳过行内空白
             if ch in ' \t\r':
                 col += 1
                 i += 1
                 continue
-
+            
+            # 注释：-- 开头到行尾
+            if i + 1 < n and line[i:i+2] == '--':
+                return
+            
+            # 注释：注 开头到行尾
+            if ch == '注':
+                return
+            
+            # 字符串
+            if ch == '"':
+                # 双引号字符串
+                i += 1
+                col += 1
+                start_col_in = col
+                chars = []
+                while i < n and line[i] != '"':
+                    if line[i] == '\\' and i + 1 < n:
+                        if line[i+1] == 't':
+                            chars.append('\t')
+                        elif line[i+1] == 'n':
+                            chars.append('\n')
+                        elif line[i+1] == 'r':
+                            chars.append('\r')
+                        elif line[i+1] == '\\':
+                            chars.append('\\')
+                        elif line[i+1] == '"':
+                            chars.append('"')
+                        else:
+                            chars.append(line[i+1])
+                        i += 2
+                        col += 2
+                    else:
+                        chars.append(line[i])
+                        i += 1
+                        col += 1
+                if i >= n:
+                    raise self._create_error("字符串未闭合", line_num, start_col)
+                tokens.append(Token(TokenType.STR, ''.join(chars), line_num, start_col_in))
+                i += 1
+                col += 1
+                continue
+            
+            # 单引号字符串或引用符
+            if ch == "'":
+                j = i + 1
+                found_closing = False
+                while j < n:
+                    if line[j] == "'":
+                        found_closing = True
+                        break
+                    j += 1
+                if found_closing:
+                    # 单引号字符串
+                    i += 1
+                    content = line[i:j]
+                    tokens.append(Token(TokenType.STR, content, line_num, col))
+                    i = j + 1
+                    col = col + (j - i + 2)
+                    continue
+                else:
+                    # 引用符
+                    tokens.append(Token(TokenType.QUOTE, "'", line_num, col))
+                    i += 1
+                    col += 1
+                    continue
+            
+            # 数字
+            if ch.isdigit() or (ch == '-' and i+1 < n and line[i+1].isdigit()):
+                start = i
+                if ch == '-':
+                    i += 1
+                    col += 1
+                while i < n and line[i].isdigit():
+                    i += 1
+                    col += 1
+                if i < n and line[i] == '.':
+                    i += 1
+                    col += 1
+                    while i < n and line[i].isdigit():
+                        i += 1
+                        col += 1
+                num_str = line[start:i]
+                # 转换为数字
+                if '.' in num_str:
+                    num_value = float(num_str)
+                else:
+                    num_value = int(num_str)
+                tokens.append(Token(TokenType.NUM, num_value, line_num, start_col + start - 1))
+                continue
+            
+            # 数学表达式
+            if i + 1 < n and line[i:i+2] == '$(':
+                j = i + 2
+                depth = 1
+                while j < n and depth > 0:
+                    if line[j] == '(':
+                        depth += 1
+                    elif line[j] == ')':
+                        depth -= 1
+                    j += 1
+                if depth > 0:
+                    raise self._create_error("数学表达式括号未闭合", line_num, col)
+                content = line[i+2:j-1]
+                tokens.append(Token(TokenType.MATH, content, line_num, col))
+                i = j
+                col += (j - i)
+                continue
+            
+            # Python 嵌入代码
+            if i + 1 < n and line[i:i+2] == '{{':
+                j = i + 2
+                depth = 1
+                while j < n and depth > 0:
+                    if j + 1 < n and line[j:j+2] == '{{':
+                        depth += 1
+                        j += 2
+                    elif j + 1 < n and line[j:j+2] == '}}':
+                        depth -= 1
+                        j += 2
+                    else:
+                        j += 1
+                content = line[i+2:j-2]
+                tokens.append(Token(TokenType.PYTHON, content, line_num, col))
+                i = j
+                col += (j - i)
+                continue
+            
+            # 符号
+            if ch == '。' or ch == '．':
+                tokens.append(Token(TokenType.DOT, '。', line_num, col))
+                i += 1
+                col += 1
+                continue
+            if ch == '，':
+                tokens.append(Token(TokenType.COMMA, '，', line_num, col))
+                i += 1
+                col += 1
+                continue
+            if ch == ',':
+                tokens.append(Token(TokenType.COMMA, '，', line_num, col))
+                i += 1
+                col += 1
+                continue
+            if ch == '；':
+                tokens.append(Token(TokenType.SEMI, '；', line_num, col))
+                i += 1
+                col += 1
+                continue
+            if ch == '：':
+                tokens.append(Token(TokenType.COLON, '：', line_num, col))
+                i += 1
+                col += 1
+                continue
+            if ch == '=':
+                tokens.append(Token(TokenType.EQUALS, '=', line_num, col))
+                i += 1
+                col += 1
+                continue
+            if ch == '(':
+                tokens.append(Token(TokenType.LPAREN, '(', line_num, col))
+                i += 1
+                col += 1
+                continue
+            if ch == ')':
+                tokens.append(Token(TokenType.RPAREN, ')', line_num, col))
+                i += 1
+                col += 1
+                continue
+            
+            # 省略号
+            if i + 2 < n and line[i:i+3] == '...':
+                tokens.append(Token(TokenType.ELLIPSIS, '...', line_num, col))
+                i += 3
+                col += 3
+                continue
+            
+            # 英文点号
+            if ch == '.':
+                tokens.append(Token(TokenType.DOT_EN, '.', line_num, col))
+                i += 1
+                col += 1
+                continue
+            
+            # 标识符和关键字
+            if self._is_chinese(ch) or ch.isalpha() or ch in '_':
+                start = i
+                i += 1
+                col += 1
+                
+                # 如果是汉字开头
+                if self._is_chinese(ch):
+                    # 先检查多字动词（双字动词优先）
+                    multi_char_keywords = {'定义', '否则', '如果', '那么', '遍历', '返回', '等于', '正弦', '余弦', '正切', '反正弦', '反余弦', '反正切', '指数', '对数', '对数10', '开方', '取整', '进位', '四舍五入', '随机', '随机整数', '圆周率', '自然常数', '长度', '连接', '分割', '替换', '截取', '小写', '大写', '查找', '包含', '去空', '开头是', '结尾是', '读文件', '写文件', '追加文件', '存在', '是文件', '是目录', '列目录', '建目录', '删文件', '删目录', '当前目录', '文件名', '目录名', '扩展名', '最大', '最小', '求和', '排序', '范围', '模块', '导入', '导出'}
+                    
+                    # 检查当前位置开始是否匹配多字动词
+                    matched_multi = None
+                    for keyword in multi_char_keywords:
+                        if line[i-1:i-1+len(keyword)] == keyword:
+                            matched_multi = keyword
+                            break
+                    
+                    if matched_multi:
+                        # 输出多字动词
+                        tokens.append(Token(TokenType.WORD, matched_multi, line_num, col - 1))
+                        i += len(matched_multi) - 1  # 已经前进了1步
+                        col += len(matched_multi) - 1
+                        continue
+                    
+                    # 再检查单字关键字
+                    single_char_keywords = {'定', '函', '若', '则', '当', '真', '假', '空', '无', '印', '读', '写', '行', '列', '典', '序', '加', '减', '乘', '除', '模', '幂', '大', '小', '等', '且', '或', '非', '首', '余', '入', '长', '添', '连', '含', '引', '出', '皆', '只', '归', '潜', '排'}
+                    
+                    if ch in single_char_keywords:
+                        # 如果是单字关键字，先输出关键字
+                        tokens.append(Token(TokenType.WORD, ch, line_num, col - 1))
+                        # 继续处理后面的字符
+                        continue
+                    
+                    # 如果不是关键字，收集所有连续汉字
+                    while i < n and self._is_chinese(line[i]):
+                        i += 1
+                        col += 1
+                # 如果是字母或下划线开头，只收集 ASCII 字母、数字和下划线
+                else:
+                    while i < n and (line[i].isascii() and (line[i].isalnum() or line[i] in '_')):
+                        i += 1
+                        col += 1
+                
+                word = line[start:i]
+                tokens.append(Token(TokenType.WORD, word, line_num, start_col + start - 1))
+                continue
+            
+            # 未知字符
+            raise self._create_error(f"未知字符: {ch}", line_num, col)
+    
+    def _tokenize_raw(self, source: str, user_defined_names: Set[str]) -> List[Token]:
+        """生成基础 tokens（包含换行符和原始缩进信息）"""
+        tokens = []
+        i = 0
+        line, col = 1, 1
+        indent_stack = [0]  # 保存当前缩进级别栈
+        
+        while i < len(source):
+            ch = source[i]
+            
+            # 处理换行和缩进
             if ch == '\n':
+                # 记录换行前的内容结束位置
+                tokens.append(Token(TokenType.NEWLINE, '\n', line, col))
                 line += 1
                 col = 1
                 i += 1
+                
+                # 读取下一行的缩进
+                indent = 0
+                while i < len(source) and source[i] in ' \t':
+                    if source[i] == '\t':
+                        indent += 4  # 制表符视为4个空格
+                    else:
+                        indent += 1
+                    col += 1
+                    i += 1
+                
+                # 将缩进信息存储在特殊 token 中
+                if indent > 0:
+                    tokens.append(Token(TokenType.INDENT, str(indent), line, 1))
                 continue
-
+            
+            # 跳过空白符（行内的空格和制表符）
+            if ch in ' \t\r':
+                col += 1
+                i += 1
+                continue
+            
             # 注释：-- 开头到行尾
             if source[i:i+2] == '--':
                 while i < len(source) and source[i] != '\n':
                     i += 1
                 continue
-
+            
             # 注释：注 开头到行尾
             if ch == '注':
                 while i < len(source) and source[i] != '\n':
                     i += 1
                 continue
-
+            
             # 单引号字符串：'...'（用于转义序列）
-            # 检测逻辑：找到开始的 ' 后，向前看是否有结束的 '
             if ch == "'":
                 j = i + 1
                 found_closing = False
@@ -308,54 +694,54 @@ class Lexer:
                     col += j - i + 1
                     i = j + 1
                     continue
-
+            
             # 引用符号：' (Lisp-style quote)
             if ch == "'":
                 tokens.append(Token(TokenType.QUOTE, "'", line, col))
                 i += 1; col += 1
                 continue
-
+            
             # 结构符
             if ch == '。' or ch == '．':
                 tokens.append(Token(TokenType.DOT, '。', line, col))
                 i += 1; col += 1
                 continue
-
+            
             if ch == '，':
                 tokens.append(Token(TokenType.COMMA, '，', line, col))
                 i += 1; col += 1
                 continue
-
-            # 支持英文逗号（作为中文逗号的别名）
+            
+            # 支持英文逗号
             if ch == ',':
                 tokens.append(Token(TokenType.COMMA, '，', line, col))
                 i += 1; col += 1
                 continue
-
+            
             if ch == '；':
                 tokens.append(Token(TokenType.SEMI, '；', line, col))
                 i += 1; col += 1
                 continue
-
+            
             # 省略号：可变参数
             if ch == '.' and i + 2 < len(source) and source[i:i+3] == '...':
                 tokens.append(Token(TokenType.ELLIPSIS, '...', line, col))
                 i += 3; col += 3
                 continue
-
-            # 英文点号：用于模块成员访问（如 JSON.解析）
+            
+            # 英文点号：用于模块成员访问
             if ch == '.':
                 tokens.append(Token(TokenType.DOT_EN, '.', line, col))
                 i += 1; col += 1
                 continue
-
-            # 英文左括号：用于分组表达式
+            
+            # 英文左括号
             if ch == '(':
                 tokens.append(Token(TokenType.LPAREN, '(', line, col))
                 i += 1; col += 1
                 continue
-
-            # 英文右括号：用于分组表达式
+            
+            # 英文右括号
             if ch == ')':
                 tokens.append(Token(TokenType.RPAREN, ')', line, col))
                 i += 1; col += 1
@@ -749,6 +1135,59 @@ class Lexer:
 
         tokens.append(Token(TokenType.EOF, None, line, col))
         return tokens
+    
+    def _process_indent(self, raw_tokens: List[Token]) -> List[Token]:
+        """
+        处理缩进，将原始缩进信息转换为 INDENT/DEDENT tokens
+        
+        规则：
+        1. 缩进增加 → 生成 INDENT
+        2. 缩进减少 → 生成相应数量的 DEDENT
+        3. 缩进不变 → 不生成任何 token
+        """
+        result = []
+        indent_stack = [0]  # 保存当前缩进级别栈，初始为0
+        current_indent = 0
+        
+        for tok in raw_tokens:
+            if tok.type == TokenType.INDENT:
+                # 解析缩进级别
+                new_indent = int(tok.value)
+                
+                if new_indent > current_indent:
+                    # 缩进增加，生成 INDENT token
+                    result.append(Token(TokenType.INDENT, str(new_indent), tok.line, tok.col))
+                    indent_stack.append(new_indent)
+                    current_indent = new_indent
+                elif new_indent < current_indent:
+                    # 缩进减少，生成 DEDENT tokens
+                    while current_indent > new_indent:
+                        indent_stack.pop()
+                        current_indent = indent_stack[-1] if indent_stack else 0
+                        result.append(Token(TokenType.DEDENT, str(current_indent), tok.line, tok.col))
+                # 缩进不变，不生成 token
+                
+                # 不将原始 INDENT token 添加到结果中
+                continue
+            
+            elif tok.type == TokenType.NEWLINE:
+                # 保留换行符，但在块结构中会被忽略
+                # 我们将换行符转换为 DOT 来保持向后兼容
+                # 或者直接忽略换行符，让解析器处理
+                continue
+            
+            # 其他 tokens 直接添加
+            result.append(tok)
+        
+        # 文件结束时，生成所有剩余的 DEDENT
+        while len(indent_stack) > 1:
+            indent_stack.pop()
+            current_indent = indent_stack[-1]
+            # 使用最后一个 token 的位置信息
+            last_tok = result[-1] if result else Token(TokenType.EOF, None, 1, 1)
+            result.append(Token(TokenType.DEDENT, str(current_indent), last_tok.line, last_tok.col))
+        
+        return result
 
 
 if __name__ == "__main__":

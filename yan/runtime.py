@@ -12,10 +12,27 @@ from typing import Any, Callable, List, Optional
 
 # ============ 算术运算 ============
 
-def _add(a, b): return a + b
-def _sub(a, b): return a - b
-def _mul(a, b): return a * b
-def _div(a, b): return a / b
+def _add(*args): 
+    if not args:
+        return 0
+    return reduce(lambda a, b: a + b, args)
+
+def _sub(*args): 
+    if not args:
+        return 0
+    if len(args) == 1:
+        return -args[0]
+    return reduce(lambda a, b: a - b, args)
+
+def _mul(*args): 
+    if not args:
+        return 1
+    return reduce(lambda a, b: a * b, args)
+
+def _div(*args): 
+    if not args:
+        return 1
+    return reduce(lambda a, b: a / b, args)
 def _mod(a, b): return a % b
 def _pow(a, b): return a ** b
 def _abs(a): return abs(a)
@@ -147,8 +164,8 @@ def _eval(expr_str):
 # ============ 范围生成 ============
 
 def _range(n):
-    """生成从1到n的列表"""
-    return list(range(1, n + 1))
+    """生成从0到n-1的列表"""
+    return list(range(n))
 
 
 # ============ 列表操作 ============

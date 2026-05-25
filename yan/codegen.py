@@ -360,7 +360,16 @@ class PythonCodeGen:
                     if line.strip():
                         lines.append(f'    {line}')
             else:
-                lines.append(f'    {code}')
+                if i == len(node.body.statements) - 1:
+                    # 最后一个语句，检查是否已经是 return 语句
+                    if code.startswith('return '):
+                        # 如果已经是 return，不再添加 return
+                        lines.append(f'    {code}')
+                    else:
+                        # 否则添加 return
+                        lines.append(f'    return {code}')
+                else:
+                    lines.append(f'    {code}')
         
         body_code = '\n'.join(lines)
         return f'def {name}({params}):\n{body_code}'
@@ -392,18 +401,6 @@ class PythonCodeGen:
         
         # 如果函数体是 Block，需要特殊处理
         if isinstance(node.body, Block):
-            # 单语句 Block：直接内联表达式（避免使用 return，lambda 不支持 return）
-            if len(node.body.statements) == 1:
-                code = self.generate(node.body.statements[0])
-                if '\n' not in code:
-                    return f'(lambda {params}: {code})'
-                # 多行代码：提取最后一行作为三元表达式
-                code_lines = code.split('\n')
-                last_expr = code_lines[-1].strip()
-                if ' if ' in last_expr and ' else ' in last_expr:
-                    return f'(lambda {params}: {last_expr})'
-            
-            # 多语句 Block：只能生成 def 风格的函数
             lines = []
             for i, stmt in enumerate(node.body.statements):
                 code = self.generate(stmt)
@@ -418,7 +415,8 @@ class PythonCodeGen:
                     else:
                         lines.append(f'    {code}')
             body_code = '\n'.join(lines)
-            return f'(lambda {params}:\n{body_code}\n)'
+            # Lambda 不支持多行代码，使用 def 代替
+            return f'__temp_func_{id(node)}\n# 不支持的 Lambda 块，使用 def\n# 实际代码将生成到 _gen_define'
         
         body = self.generate(node.body)
         return f'(lambda {params}: {body})'
@@ -497,6 +495,20 @@ class PythonCodeGen:
             return '\n'.join(lines)
         
         # 简单的三元表达式
+        then_code = self.generate(node.then_branch)
+        
+        # 如果 then_code 是 return 语句，不能作为三元表达式
+        # 需要转换为 if 语句
+        if then_code.startswith('return '):
+            lines = []
+            lines.append(f'if {cond}:')
+            lines.append(f'    {then_code}')
+            if node.else_branch:
+                else_code = self.generate(node.else_branch)
+                lines.append('else:')
+                lines.append(f'    {else_code}')
+            return '\n'.join(lines)
+        
         if node.else_branch:
             else_code = self.generate(node.else_branch)
             return f'({then_code} if {cond} else {else_code})'

@@ -66,6 +66,12 @@ class BlockStack:
     def is_empty(self) -> bool:
         """检查栈是否为空"""
         return len(self._stack) == 0
+    
+    def current_indent(self) -> int:
+        """获取当前缩进级别"""
+        if self.is_empty():
+            return 0
+        return self._stack[-1]['indent']
 
 
 class Parser:
@@ -79,7 +85,7 @@ class Parser:
                    '包含', '开头是', '结尾是'}
 
     # 二元中缀动词：只接受2个参数
-    BINARY_INFIX = {'加', '减', '乘', '除', '模', '幂', '大', '大等于', '小', '小等于', '等', '不等于', '不等', '且', '或'}
+    BINARY_INFIX = {'大', '大等于', '小', '小等于', '等', '不等于', '不等', '且', '或'}
     BUILTIN_VERBS = {
         '加', '减', '乘', '除', '模', '幂', '绝对', '负',
         '大', '大于', '大等于', '小', '小于', '小等于', '等', '不等于', '不等',
@@ -177,6 +183,11 @@ class Parser:
         statements = []
 
         while not self._is_at_end():
+            # 跳过 DEDENT tokens（它们是块结束的标记）
+            while self._current().type == TokenType.DEDENT:
+                self._advance()
+            if self._is_at_end():
+                break
             stmt = self._parse_statement()
             if stmt:
                 statements.append(stmt)
@@ -343,6 +354,15 @@ class Parser:
         return args
 
     def _parse_statement(self, consume_dot: bool = True) -> Optional[Node]:
+        # 跳过 INDENT tokens（它们是块结构的标记，不是语句的一部分）
+        while self._current().type == TokenType.INDENT:
+            self._advance()
+        
+        # 如果遇到 DEDENT，返回 None（由调用者决定是否结束块）
+        # 注意：不要消耗 DEDENT，让调用者处理
+        if self._current().type == TokenType.DEDENT:
+            return None
+        
         if self._match(TokenType.DOT, TokenType.SEMI):
                 return None
 
@@ -406,9 +426,16 @@ class Parser:
                 self._current().value not in {'定', '函'}):
             # 如果下一个 token 是动词或条件关键字，当前可能是函数体的开始
             next_tok = self._peek(1)
-            if next_tok.type == TokenType.DOT or next_tok.type == TokenType.COLON:
-                # 当前 token 是最后一个参数
-                params.append(self._advance().value)
+            if next_tok.type == TokenType.DOT or next_tok.type == TokenType.COLON or next_tok.type == TokenType.INDENT:
+                # 当前 token 是最后一个参数，但可能被拆分了
+                current_word = self._advance().value
+                # 检查下一个 token 是否是被拆分的标识符的一部分
+                if next_tok.type == TokenType.WORD:
+                    # 尝试组合
+                    params.append(current_word + next_tok.value)
+                    self._advance()
+                else:
+                    params.append(current_word)
                 break
             if next_tok.type == TokenType.WORD and next_tok.value in {'若', '则', '否则'}:
                 # 下一个是条件关键字，停止收集参数
@@ -425,36 +452,56 @@ class Parser:
             else:
                 params.append(self._advance().value)
 
-        # 检查是否有块（冒号或句号后换行）
+        # 检查是否有块（冒号、句号后换行或缩进）
         if self._current().type == TokenType.COLON:
             self._advance()  # '：'
+            body = self._parse_block()
+        elif self._current().type == TokenType.INDENT:
             body = self._parse_block()
         else:
             body = self._parse_expression()
         return Lambda(params, body)
 
     def _parse_block(self) -> Node:
-        """解析代码块"""
+        """解析代码块（支持缩进语法）"""
         statements = []
-        block_start_indent = self._get_current_indent()
+        
+        # 获取块开始时的缩进
+        initial_indent = 0
+        if self._current().type == TokenType.INDENT:
+            initial_indent = int(self._current().value)
+            self._advance()  # 消耗 INDENT token
         
         # 压入块栈
-        self.block_stack.push('BLOCK', block_start_indent)
+        self.block_stack.push('BLOCK', initial_indent)
         
         while not self._is_at_end():
-            # 检测块结束标记
+            # 检测块结束标记（双句号，向后兼容）
             if self._current().type == TokenType.DOT:
-                peek = self.tokens[self.pos + 1] if self.pos + 1 < len(self.tokens) else None
+                peek = self._peek(1)
                 if peek and peek.type == TokenType.DOT:
-                    # 显式双句号：结束块
                     self._advance()
                     self._advance()
                     break
                 # 单个句号：跳过，继续解析下一个语句
                 self._advance()
-                continue  # 改为 continue，继续解析下一个语句
+                continue
             
-            # 块结束条件
+            # 检测 DEDENT（块结束的条件）
+            # 关键：只有当 DEDENT 小于块的初始缩进时才结束块
+            # DEDENT 等于初始缩进意味着嵌套块结束了，我们仍在当前块内
+            if self._current().type == TokenType.DEDENT:
+                current_dedent = int(self._current().value)
+                # 如果 DEDENT 的级别严格小于块开始时的缩进，说明块结束
+                if current_dedent < initial_indent:
+                    # 不消耗 DEDENT，让上层处理
+                    break
+                # DEDENT 等于初始缩进 = 嵌套块结束，继续解析
+                elif current_dedent == initial_indent:
+                    self._advance()  # 消耗这个 DEDENT
+                    continue
+            
+            # 块结束条件（其他情况）
             if self._is_block_end():
                 break
             
@@ -464,13 +511,12 @@ class Parser:
             
             # 语句后处理 DOT
             if self._current().type == TokenType.DOT:
-                peek = self.tokens[self.pos + 1] if self.pos + 1 < len(self.tokens) else None
+                peek = self._peek(1)
                 if peek and peek.type == TokenType.DOT:
                     self._advance()
                     self._advance()
                     break
                 self._advance()
-                # 不在这里 break，继续解析下一个语句
         
         self.block_stack.pop()
         
@@ -482,9 +528,22 @@ class Parser:
             return Block(statements)
     
     def _get_current_indent(self) -> int:
-        """获取当前缩进级别（简化实现）"""
-        # 简化实现：返回 0
-        # 完整实现需要从 lexer 获取缩进信息
+        """获取当前缩进级别"""
+        return self.block_stack.current_indent()
+    
+    def _get_peek_indent(self) -> int:
+        """查看下一个缩进级别（通过查看 INDENT/DEDENT token）"""
+        pos = self.pos
+        while pos < len(self.tokens):
+            tok = self.tokens[pos]
+            if tok.type == TokenType.INDENT:
+                return int(tok.value)
+            elif tok.type == TokenType.DEDENT:
+                return int(tok.value)
+            elif tok.type not in {TokenType.DOT, TokenType.SEMI}:
+                # 非结构符，说明当前行没有缩进变化
+                return self._get_current_indent()
+            pos += 1
         return 0
     
     def _should_end_block(self, block_start_indent: int) -> bool:
@@ -657,16 +716,16 @@ class Parser:
             while not self._is_at_end():
                 tok = self._current()
 
+                # 遇到缩进变化，停止收集参数
+                if tok.type in {TokenType.INDENT, TokenType.DEDENT}:
+                    break
+
                 if tok.type in {TokenType.DOT, TokenType.SEMI, TokenType.COMMA,
                                 TokenType.EQUALS, TokenType.COLON, TokenType.RPAREN}:
                     break
 
                 # 遇到条件关键字，停止
                 if tok.type == TokenType.WORD and tok.value in {'若', '则', '否则'}:
-                    break
-
-                # 副词：停止
-                if tok.type == TokenType.WORD and tok.value in self.ADVERBS:
                     break
 
                 # 高阶函数（归、皆、只）：作为管道操作处理
@@ -835,6 +894,10 @@ class Parser:
 
         # 普通原子
         node = self._parse_atom()
+        
+        # 如果 _parse_atom 返回 None（遇到 INDENT/DEDENT），返回 None 让上层处理
+        if node is None:
+            return None
 
         # 用户定义的函数名（可能被包含在 token 中）
         # 例如："汉诺塔盘子数减" 包含用户定义的 "汉诺塔"
@@ -856,6 +919,10 @@ class Parser:
         return node
     def _parse_atom(self) -> Node:
         """解析原子"""
+        # 缩进 tokens 不是原子，返回 None 让上层处理
+        if self._current().type in {TokenType.INDENT, TokenType.DEDENT}:
+            return None
+        
         # 引用：'expr
         if self._current().type == TokenType.QUOTE:
             self._advance()  # 跳过 '
@@ -936,22 +1003,23 @@ class Parser:
         支持两种语法：
         1. 若 条件 则：分支。否则：分支。（传统语法）
         2. 若 条件：分支。否则：分支。（省略则，更简洁）
+        3. 若 条件 换行缩进 分支（新缩进语法）
         """
         line = self._current().line
         col = self._current().col
         self._advance()  # 消耗 '若'
 
         # 解析条件：使用 _parse_expr_until 可以处理函数调用和中缀表达式
-        # 停止词包括 '则' 和 ':'（块开始标记）
-        cond = self._parse_expr_until({'则', '：'})
+        # 停止词包括 '则'、'：'（块开始标记）和 INDENT（缩进开始）
+        cond = self._parse_expr_until({'则', '：', 'INDENT'})
 
         # 可选的 '则' 关键字
         if self._check_word('则'):
             self._advance()  # 消耗 '则'
 
-        # 检查是否有 '：'（块开始标记）
-        has_block = self._current().type == TokenType.COLON
-        if has_block:
+        # 检查是否有 '：'（块开始标记）或 INDENT（缩进开始）
+        has_block = self._current().type == TokenType.COLON or self._current().type == TokenType.INDENT
+        if self._current().type == TokenType.COLON:
             self._advance()  # 消耗 '：'
 
         # 解析 then 分支
@@ -964,6 +1032,11 @@ class Parser:
             then_branch = self._parse_expr_until({'否则'})
 
         else_branch = None
+        # 处理 then 分支后的结束标记
+        # 如果遇到 DEDENT，跳过它（块结束了）
+        if self._current().type == TokenType.DEDENT:
+            self._advance()  # 跳过 DEDENT
+        
         # 跳过可能的句号（仅在后面跟着 否则 时才消耗，否则留给外层块处理）
         if self._current().type == TokenType.DOT:
             peek = self.tokens[self.pos + 1] if self.pos + 1 < len(self.tokens) else None
@@ -971,9 +1044,11 @@ class Parser:
                 self._advance()
         if self._check_word('否则'):
             self._advance()
-            # 检查是否有 '：'
+            # 检查是否有 '：' 或 INDENT
+            has_else_block = self._current().type == TokenType.COLON or self._current().type == TokenType.INDENT
             if self._current().type == TokenType.COLON:
                 self._advance()  # 消耗 '：'
+            if has_else_block:
                 # always_block=True 确保即使只有一个语句也返回 Block
                 else_branch = self._parse_block_until(set(), always_block=True)
             else:
@@ -990,11 +1065,28 @@ class Parser:
         """
         statements = []
         
+        # 获取当前的缩进级别（如果当前是 INDENT token）
+        block_start_indent = 0
+        if self._current().type == TokenType.INDENT:
+            block_start_indent = int(self._current().value)
+            self._advance()  # 消耗 INDENT token
+        
         # 压入块栈
-        self.block_stack.push('BLOCK_UNTIL', 0)
+        self.block_stack.push('BLOCK_UNTIL', block_start_indent)
         initial_depth = self.block_stack.depth()
         
         while not self._is_at_end():
+            # 如果遇到 DEDENT，检查是否应该结束当前块
+            if self._current().type == TokenType.DEDENT:
+                current_dedent = int(self._current().value)
+                # 如果 DEDENT 的级别严格小于块开始时的缩进，说明块结束
+                if current_dedent < block_start_indent:
+                    break
+                # 如果 DEDENT 的级别等于块开始时的缩进，说明嵌套块结束了，继续解析
+                elif current_dedent == block_start_indent:
+                    self._advance()  # 消耗这个 DEDENT
+                    continue
+            
             if self._current().type == TokenType.DOT:
                 peek = self.tokens[self.pos + 1] if self.pos + 1 < len(self.tokens) else None
                 if peek and peek.type == TokenType.DOT:
@@ -1006,6 +1098,14 @@ class Parser:
                 # 如果 stop_words 为空，单个句号结束当前块
                 if not stop_words:
                     self._advance()
+                    # 检查下一个 token 是否是 DEDENT
+                    if self._current().type == TokenType.DEDENT:
+                        current_dedent = int(self._current().value)
+                        if current_dedent < block_start_indent:
+                            break
+                        elif current_dedent == block_start_indent:
+                            self._advance()
+                            continue
                     break
                 # 否则跳过句号，继续解析下一个语句
                 self._advance()
@@ -1029,7 +1129,12 @@ class Parser:
         else:
             return Block(statements)
     def _parse_foreach(self) -> ForEach:
-        """解析遍历循环：遍历 变量 于 列表：循环体。"""
+        """解析遍历循环：遍历 变量 于 列表：循环体。
+        
+        支持两种语法：
+        1. 遍历 变量 于 列表：循环体。（传统语法）
+        2. 遍历 变量 于 列表 换行缩进 循环体（新缩进语法）
+        """
         self._advance()  # 消耗 '遍历'
         
         # 解析变量名
@@ -1042,40 +1147,69 @@ class Parser:
             raise ParserError("期望 '于'", self._current().line, self._current().col)
         self._advance()  # 消耗 '于'
         
-        # 解析可迭代对象
-        iterable = self._parse_term()
+        # 解析可迭代对象（支持可能被拆分的标识符，如"列表"可能被拆成"列"+"表"）
+        iterable = self._parse_iterable()
         
-        # 期望 '：'（块开始）
-        if self._current().type != TokenType.COLON:
-            raise ParserError("期望 '：' 开始循环体", self._current().line, self._current().col)
-        self._advance()  # 消耗 '：'
+        # 检查是否有 '：'（块开始）或 INDENT（缩进开始）
+        has_block = self._current().type == TokenType.COLON or self._current().type == TokenType.INDENT
+        if self._current().type == TokenType.COLON:
+            self._advance()  # 消耗 '：'
         
         # 解析循环体
         body = self._parse_block()
         
         return ForEach(var, iterable, body)
+    
+    def _parse_iterable(self) -> Node:
+        """解析可迭代对象，处理可能被拆分的标识符"""
+        # 如果当前 token 是动词，解析为函数调用
+        if self._current().type == TokenType.WORD and self._is_verb(self._current().value):
+            return self._parse_term()
+        
+        # 收集连续的 WORD tokens 作为可能的标识符
+        word_parts = []
+        while self._current().type == TokenType.WORD:
+            # 检查是否是块结束标记
+            next_tok = self._peek(1)
+            if next_tok.type in {TokenType.COLON, TokenType.INDENT, TokenType.DEDENT, TokenType.DOT, TokenType.EOF}:
+                break
+            if next_tok.type == TokenType.WORD and next_tok.value in {'若', '则', '否则', '定', '函'}:
+                break
+            word_parts.append(self._advance().value)
+        
+        if not word_parts:
+            # 如果没有收集到任何词，尝试解析普通表达式
+            return self._parse_term()
+        
+        # 将收集的词组合成一个标识符
+        if len(word_parts) == 1:
+            return Word(word_parts[0])
+        else:
+            # 组合成一个标识符节点
+            return Word(''.join(word_parts))
 
     def _parse_while(self) -> While:
         """解析当循环：当 条件 则：循环体 或 当 条件：循环体。
         
         支持的语法：
-        1. 当 条件：循环体。
-        2. 当 条件 则：循环体。
+        1. 当 条件：循环体。（传统语法）
+        2. 当 条件 则：循环体。（传统语法）
         3. 当 变量 中缀动词 值：循环体。（如 当 小 j 边界：）
+        4. 当 条件 换行缩进 循环体（新缩进语法）
         """
         self._advance()  # 消耗 '当'
 
         # 解析条件表达式（支持中缀表达式）
-        cond = self._parse_expr_until({'则', '：'})
+        cond = self._parse_expr_until({'则', '：', 'INDENT'})
 
         # 可选的 '则' 关键字
         if self._check_word('则'):
             self._advance()  # 消耗 '则'
 
-        # 期望 '：'（块开始）
-        if self._current().type != TokenType.COLON:
-            raise ParserError("期望 '：' 开始循环体", self._current().line, self._current().col)
-        self._advance()  # 消耗 '：'
+        # 检查是否有 '：'（块开始）或 INDENT（缩进开始）
+        has_block = self._current().type == TokenType.COLON or self._current().type == TokenType.INDENT
+        if self._current().type == TokenType.COLON:
+            self._advance()  # 消耗 '：'
 
         # 解析循环体
         body = self._parse_block()
@@ -1085,12 +1219,15 @@ class Parser:
     def _parse_expr_until(self, stop_words: Set[str]) -> Node:
         """解析表达式，直到遇到指定的停止词
         
-        stop_words 可以包含字符串（WORD 值）和特殊标记如 '：'（冒号）
+        stop_words 可以包含字符串（WORD 值）和特殊标记如 '：'（冒号）和 'INDENT'（缩进）
         """
         # 收集所有 term 直到遇到停止词
         terms = []
         while not self._is_at_end():
             if self._current().type == TokenType.DOT:
+                break
+            # 检查 INDENT 类型的停止词
+            if self._current().type == TokenType.INDENT and 'INDENT' in stop_words:
                 break
             # 检查 WORD 类型的停止词
             if self._current().type == TokenType.WORD and self._current().value in stop_words:
