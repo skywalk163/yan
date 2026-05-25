@@ -145,6 +145,7 @@ yan/
 - [进阶教程（第8章）](docs/tutorial/08-project.md) — 项目实战
 - [进阶教程（第9章）](docs/tutorial/09-best-practices.md) — 最佳实践
 - [进阶教程（第10章）](docs/tutorial/10-deployment.md) — 部署与发布
+- **[🎮 交互式入门教程](docs/tutorial/interactive.html)** — 在线学习平台
 
 ### 参考
 - [语法手册](docs/SYNTAX.md) — 语言语法规范
