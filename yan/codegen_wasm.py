@@ -167,15 +167,18 @@ class WASMCodeGen:
         if not self.string_constants:
             return b''
         
-        result = b'\x01\x01\x00'
+        segments = []
         
         for data, offset in self.string_constants.items():
-            result += b'\x00'
-            result += self._encode_varuint(offset)
-            result += self._encode_varuint(len(data))
-            result += data.encode('utf-8')
+            # 添加 null 终止符
+            data_bytes = data.encode('utf-8') + b'\x00'
+            # init_expr: i32.const offset + end
+            init_expr = b'\x41' + self._encode_varuint(offset) + b'\x0b'
+            # Active segment: flags=2 (explicit memory index 0), init_expr, data
+            segment = b'\x02\x00' + init_expr + self._encode_varuint(len(data_bytes)) + data_bytes
+            segments.append(segment)
         
-        return result
+        return self._encode_varuint(len(segments)) + b''.join(segments)
     
     def _gen_export_section(self) -> bytes:
         """生成导出段"""
