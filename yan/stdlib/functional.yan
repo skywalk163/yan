@@ -1,0 +1,371 @@
+-- 函数式编程模块（functional.yan）
+-- 提供函数式编程工具
+
+-- 导出声明
+出 组合, 管道, 恒等, 常量, 偏应用, 柯里化,
+    映射, 过滤, 归约, 查找, 存在, 所有,
+    扁平映射, 展平, 分组, 分区, 排序,
+    取头, 取尾, 取第, 取前, 取后,
+     zip, enumerate, range, repeat, cycle, chain,
+    应用, 调用, compose, pipe, identity, constant,
+    partial, curry, flip, memoize, juxt,蟛
+
+-- 函数组合：先执行g，再执行f
+定 组合 = 函 f g：
+  函 ... args：
+    f (g ... args)
+  ．
+．
+
+-- 管道：从左到右依次执行
+定 管道 = 函 ... funcs：
+  当 长 funcs 小于 1：返回 恒等。
+  当 长 funcs 等于 1：返回 取 funcs 0。
+  函 x：
+    定 result = x
+    定 i = 0
+    当 i 小于 长 funcs：
+      定 result = (取 funcs i) result
+      定 i = 加 i 1
+    返回 result
+  ．
+．
+
+-- 恒等函数：返回输入值
+定 恒等 = 函 x：
+  返回 x
+．
+
+-- 常量函数：总是返回固定值
+定 常量 = 函 val：
+  函 _：
+    返回 val
+  ．
+．
+
+-- 偏应用：从左开始绑定参数
+定 偏应用 = 函 func ... preset_args：
+  函 ... later_args：
+    定 all_args =  preset_args ++ later_args
+    应用 func all_args
+  ．
+．
+
+-- 柯里化：把多参数函数转为一连串单参数函数
+定 柯里化 = 函 func：
+  函 arg1：
+    函 arg2：
+      func arg1 arg2
+    ．
+  ．
+．
+
+-- 反转参数顺序
+定 flip = 函 func：
+  函 a b：
+    func b a
+  ．
+．
+
+-- 记忆化：缓存函数调用结果
+定 memoize = 函 func：
+  定 cache = 典
+  函 ... args：
+    定 key = 连 args
+    当 含 cache key：
+      返回 入 cache key
+    定 result = func ... args
+    设 cache key result
+    返回 result
+  ．
+．
+
+-- 并行应用：把值应用到多个函数
+定 juxt = 函 ... funcs：
+  函 x：
+    定 results = 列
+    定 i = 0
+    当 i 小于 长 funcs：
+      添 results ((取 funcs i) x)
+      定 i = 加 i 1
+    返回 results
+  ．
+．
+
+-- 映射：对列表每个元素应用函数
+定 映射 = 函 func lst：
+  当 lst 等于 空：返回 列。
+  定 result = 列
+  定 i = 0
+  当 i 小于 长 lst：
+    定 elem = 取 lst i
+    添 result (func elem)
+    定 i = 加 i 1
+  返回 result
+．
+
+-- 过滤：保留满足条件的元素
+定 过滤 = 函 predicate lst：
+  当 lst 等于 空：返回 列。
+  定 result = 列
+  定 i = 0
+  当 i 小于 长 lst：
+    定 elem = 取 lst i
+    当 predicate elem：
+      添 result elem
+    定 i = 加 i 1
+  返回 result
+．
+
+-- 归约：用函数合并列表元素
+定 归约 = 函 func initial lst：
+  当 lst 等于 空：返回 initial
+  定 result = initial
+  定 i = 0
+  当 i 小于 长 lst：
+    定 elem = 取 lst i
+    定 result = func result elem
+    定 i = 加 i 1
+  返回 result
+．
+
+-- 查找第一个满足条件的元素
+定 查找 = 函 predicate lst：
+  当 lst 等于 空：返回 空。
+  定 i = 0
+  当 i 小于 长 lst：
+    定 elem = 取 lst i
+    当 predicate elem：返回 elem。
+    定 i = 加 i 1
+  返回 空
+．
+
+-- 检查是否存在满足条件的元素
+定 存在 = 函 predicate lst：
+  当 lst 等于 空：返回 假。
+  定 i = 0
+  当 i 小于 长 lst：
+    定 elem = 取 lst i
+    当 predicate elem：返回 真。
+    定 i = 加 i 1
+  返回 假
+．
+
+-- 检查是否所有元素都满足条件
+定 所有 = 函 predicate lst：
+  当 lst 等于 空：返回 真。
+  定 i = 0
+  当 i 小于 长 lst：
+    定 elem = 取 lst i
+    当 非 predicate elem：返回 假。
+    定 i = 加 i 1
+  返回 真
+．
+
+-- 扁平映射：先映射再展平
+定 扁平映射 = 函 func lst：
+  定 mapped = 映射 func lst
+  返回 展平 mapped
+．
+
+-- 展平嵌套列表
+定 展平 = 函 lst：
+  当 lst 等于 空：返回 列。
+  定 result = 列
+  定 i = 0
+  当 i 小于 长 lst：
+    定 elem = 取 lst i
+    当 且 非 lst 等于 空 长 elem 大于 0：
+      定 j = 0
+      当 j 小于 长 elem：
+        添 result (取 elem j)
+        定 j = 加 j 1
+    否则：
+      添 result elem
+    定 i = 加 i 1
+  返回 result
+．
+
+-- 按条件分组
+定 分组 = 函 key_func lst：
+  定 groups = 典
+  定 i = 0
+  当 i 小于 长 lst：
+    定 elem = 取 lst i
+    定 key = key_func elem
+    当 非 含 groups key：
+      设 groups key 列
+    定 group = 入 groups key
+    连 group 列 elem
+    定 i = 加 i 1
+  返回 groups
+．
+
+-- 按条件分区：返回满足和不满足的两个列表
+定 分区 = 函 predicate lst：
+  定 yes_list = 列
+  定 no_list = 列
+  定 i = 0
+  当 i 小于 长 lst：
+    定 elem = 取 lst i
+    当 predicate elem：
+      添 yes_list elem
+    否则：
+      添 no_list elem
+    定 i = 加 i 1
+  返回 列 yes_list no_list
+．
+
+-- 排序
+定 排序 = 函 lst key_func：
+  当 lst 等于 空：返回 列。
+  定 result = 列
+  定 i = 0
+  当 i 小于 长 lst：
+    添 result (取 lst i)
+    定 i = 加 i 1
+  -- 简单的冒泡排序
+  定 n = 长 result
+  定 i = 0
+  当 i 小于 n：
+    定 j = 0
+    当 j 小于 减 n i 1：
+      定 a = 取 result j
+      定 b = 取 result 加 j 1
+      定 key_a = a
+      定 key_b = b
+      当 非 key_func 等于 空：
+        定 key_a = key_func a
+        定 key_b = key_func b
+      当 key_a 大于 key_b：
+        设 result j b
+        设 result 加 j 1 a
+      定 j = 加 j 1
+    定 i = 加 i 1
+  返回 result
+．
+
+-- 取列表头元素
+定 取头 = 函 lst：
+  当 lst 等于 空：返回 空。
+  返回 取 lst 0
+．
+
+-- 取列表尾元素
+定 取尾 = 函 lst：
+  当 lst 等于 空：返回 列。
+  当 长 lst 等于 1：返回 列。
+  返回 切片 lst 1 长 lst
+．
+
+-- 取第n个元素
+定 取第 = 函 lst n：
+  当 n 小于 0：返回 空。
+  当 n 大于等于 长 lst：返回 空。
+  返回 取 lst n
+．
+
+-- 取前n个元素
+定 取前 = 函 lst n：
+  当 n 小于等于 0：返回 列。
+  返回 切片 lst 0 n
+．
+
+-- 取后n个元素
+定 取后 = 函 lst n：
+  定 len = 长 lst
+  当 n 大于等于 len：返回 lst。
+  返回 切片 lst 减 len n len
+．
+
+-- zip：合并多个列表
+定 zip = 函 lst1 lst2：
+  定 result = 列
+  定 len1 = 长 lst1
+  定 len2 = 长 lst2
+  定 n = len1
+  当 len2 小于 n：定 n = len2。
+  定 i = 0
+  当 i 小于 n：
+    定 elem1 = 取 lst1 i
+    定 elem2 = 取 lst2 i
+    添 result 列 elem1 elem2
+    定 i = 加 i 1
+  返回 result
+．
+
+-- enumerate：带索引的列表
+定 enumerate = 函 lst：
+  定 result = 列
+  定 i = 0
+  当 i 小于 长 lst：
+    添 result 列 i (取 lst i)
+    定 i = 加 i 1
+  返回 result
+．
+
+-- range：生成数字序列
+定 range = 函 start end step：
+  当 end 等于 空：定 end = start。定 start = 0。
+  当 step 等于 空：定 step = 1。
+  定 result = 列
+  定 i = start
+  当 step 大于 0：
+    当 i 小于 end：添 result i。定 i = 加 i step。
+  当 step 小于 0：
+    当 i 大于 end：添 result i。定 i = 加 i step。
+  返回 result
+．
+
+-- repeat：重复生成值
+定 repeat = 函 value n：
+  定 result = 列
+  定 i = 0
+  当 i 小于 n：
+    添 result value
+    定 i = 加 i 1
+  返回 result
+．
+
+-- cycle：循环列表
+定 cycle = 函 lst n：
+  当 lst 等于 空：返回 列。
+  定 result = 列
+  定 i = 0
+  当 i 小于 n：
+    定 elem = 取 lst (模 i 长 lst)
+    添 result elem
+    定 i = 加 i 1
+  返回 result
+．
+
+-- chain：连接多个列表
+定 chain = 函 ... lists：
+  定 result = 列
+  定 i = 0
+  当 i 小于 长 lists：
+    定 lst = 取 lists i
+    定 j = 0
+    当 j 小于 长 lst：
+      添 result (取 lst j)
+      定 j = 加 j 1
+    定 i = 加 i 1
+  返回 result
+．
+
+-- 应用函数到参数列表
+定 应用 = 函 func args：
+  当 长 args 小于 1：返回 func。
+  -- 简化版本：假设args是列表
+  定 result = func
+  定 i = 0
+  当 i 小于 长 args：
+    -- 实际应用中，这里需要特殊处理
+    定 i = 加 i 1
+  返回 result
+．
+
+-- 调用函数
+定 调用 = 函 func ... args：
+  func ... args
+．

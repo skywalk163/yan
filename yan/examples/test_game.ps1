@@ -1,0 +1,1 @@
+"一心一意`n退出" | python examples/idiom_game.yan 2>&1

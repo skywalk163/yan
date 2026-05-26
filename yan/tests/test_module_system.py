@@ -88,7 +88,7 @@ class ModuleSystemBasicTests:
             不为空(module)
             等(module.name, "utils")
             包含(module.source, "出 加")
-            包含(module.exports, "加")
+            包含(module.exports, "相加")
 
 
 @suite("导入节点测试")
@@ -112,14 +112,14 @@ class ImportNodeTests:
     @test("选择性导入节点")
     def test_selective_import(self):
         """测试选择性导入节点"""
-        imp = ImportNode(path="math", selective=["加", "乘"])
+        imp = ImportNode(path="math", selective=["相加", "相乘"])
         等(imp.path, "math")
-        等(imp.selective, ["加", "乘"])
+        等(imp.selective, ["相加", "相乘"])
 
     @test("导入节点字符串表示")
     def test_import_str(self):
         """测试导入节点字符串表示"""
-        imp = ImportNode(path="math", alias="m", selective=["加", "乘"])
+        imp = ImportNode(path="math", alias="m", selective=["相加", "相乘"])
         为真(包含(str(imp), "math"))
         为真(包含(str(imp), "m"))
 
@@ -130,16 +130,16 @@ class ExportNodeTests:
     @test("基本导出节点")
     def test_basic_export(self):
         """测试基本导出节点"""
-        exp = ExportNode(names=["加", "减"])
-        等(exp.names, ["加", "减"])
+        exp = ExportNode(names=["相加", "相减"])
+        等(exp.names, ["相加", "相减"])
         等(长度(exp.definitions), 0)
 
     @test("导出节点字符串表示")
     def test_export_str(self):
         """测试导出节点字符串表示"""
-        exp = ExportNode(names=["加", "减"])
-        为真(包含(str(exp), "加"))
-        为真(包含(str(exp), "减"))
+        exp = ExportNode(names=["相加", "相减"])
+        为真(包含(str(exp), "相加"))
+        为真(包含(str(exp), "相减"))
 
 
 @suite("循环依赖检测测试")
@@ -255,7 +255,7 @@ class CodeGenerationTests:
         等(code2, "import math as m")
         
         # 测试选择性导入
-        imp3 = ImportNode(path="math", selective=["加", "乘"])
+        imp3 = ImportNode(path="math", selective=["相加", "相乘"])
         code3 = codegen._gen_import_node(imp3)
         等(code3, "from math import 加, 乘")
 
@@ -266,10 +266,10 @@ class CodeGenerationTests:
         
         codegen = PythonCodeGen()
         
-        exp = ExportNode(names=["加", "减", "乘"])
+        exp = ExportNode(names=["相加", "相减", "相乘"])
         code = codegen._gen_export_node(exp)
         为真(包含(code, "__all__"))
-        为真(包含(code, "加"))
+        为真(包含(code, "相加"))
 
 
 if __name__ == "__main__":

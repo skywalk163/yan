@@ -78,60 +78,95 @@ class Lexer:
     HAN_START = 0x4E00
     HAN_END = 0x9FFF
 
+    # 预定义的多字关键字集合（类级缓存）
+    _MULTI_CHAR_KEYWORDS = frozenset({
+        '定义', '函数', '如果', '那么', '当时', '否则', '不等于',
+        '等于', '遍历', '于', '导入', '模块', '导出', '从', '引', '出',
+        '结构', '类型', '字段', '正弦', '余弦', '正切', '反正弦', '反余弦', '反正切',
+        '指数', '对数', '对数10', '开方', '取整', '进位', '四舍五入',
+        '随机', '随机整数', '圆周率', '自然常数', '长度', '添加', '连接', '分割', '替换', '截取',
+        '小写', '大写', '查找', '包含', '去空', '开头是', '结尾是',
+        '读文件', '写文件', '追加文件', '存在', '是文件', '是目录',
+        '列目录', '建目录', '删文件', '删目录', '当前目录',
+        '文件名', '目录名', '扩展名', '当前时间', '日期', '时间', '日期时间',
+        '格式化时间', '睡眠', '是数', '是串', '是表', '是函', '是真', '是空',
+        '大于', '大等于', '小于', '小等于', '最大', '最小', '求和', '计数',
+        '键', '值', '项', '删键', '求值', '套', '测', '范围',
+        '列表', '字典', '序列', '对组', '输出', '读取', '写入', '映射', '过滤', '归约',
+        '阶乘', '平方',
+        # 双字关键字（原单字关键字转换）
+        '相加', '相减', '相乘', '相除', '取余', '幂方', '绝对值', '负数',
+        '并且', '或者', '非也',
+        '首个', '其余', '加入', '为空',
+        '潜在', '换行', '空值',
+        '反转', '排序',
+        '当满足', '打印',
+    })
+
+    # 预定义的单字关键字集合（类级缓存）
+    _SINGLE_CHAR_KEYWORDS = frozenset({
+        '真', '假', '读行', '返回',
+    })
+
     def __init__(self, keywords: Optional[Set[str]] = None, user_words: Optional[Set[str]] = None):
         self._source = None  # 保存源代码用于错误显示
-        self.keywords = keywords or {
-            # 多字动词
-            '定义', '阶乘', '平方', '否则', '如果', '那么', '不等',
-            # 赋值
-            '等于',
-            # 循环
-            '遍历', '当', '于',
-            # 模块系统（新增）
-            '导入', '模块', '导出', '从', '引', '出',
-            # 结构体系统（新增）
-            '结构', '类型', '字段',
-            # 数学库
-            '正弦', '余弦', '正切', '反正弦', '反余弦', '反正切',
-            '指数', '对数', '对数10', '开方', '取整', '进位', '四舍五入',
-            '随机', '随机整数', '圆周率', '自然常数',
-            # 字符串库
-            '长度', '连接', '分割', '替换', '截取', '小写', '大写',
-            '查找', '包含', '去空', '开头是', '结尾是',
-            # 文件库
-            '读文件', '写文件', '追加文件', '存在', '是文件', '是目录',
-            '列目录', '建目录', '删文件', '删目录', '当前目录',
-            '文件名', '目录名', '扩展名',
-            # 时间库
-            '当前时间', '日期', '时间', '日期时间', '格式化时间', '睡眠',
-            # 类型检查
-            '是数', '是串', '是表', '是函', '是真', '是空', '类型',
-            # 单字动词
-            '加', '减', '乘', '除', '模', '幂', '绝对', '负',
-            '大', '大于', '大等于', '小', '小于', '小等于', '等', '等于', '不等于', '不等',
-            '且', '或', '非',
-            '列', '典', '序', '对',
-            '首', '余', '入', '长', '添', '连', '含', '空', '范围',
-            '皆', '只', '归', '潜',
-            '印', '读', '写', '读行',
-            '若', '则', '定', '函', '返回', '行', '无',
-            '真', '假',
-            # 新增列表操作
-            '反', '排', '最大', '最小', '求和', '计数',
-            # 新增字典操作
-            '键', '值', '项', '删键',
-            # 表达式求值
-            '求值',
-            # 测试框架
-            '套', '测',
-        }
+        
+        # 合并用户关键字和预定义关键字
+        self.keywords = set(self._MULTI_CHAR_KEYWORDS) | set(self._SINGLE_CHAR_KEYWORDS)
+        if keywords:
+            self.keywords.update(keywords)
+        
+        # 预计算关键字长度相关数据
+        self.keywords_by_length = {}
+        self.max_keyword_len = 0
+        for kw in self.keywords:
+            l = len(kw)
+            if l not in self.keywords_by_length:
+                self.keywords_by_length[l] = set()
+            self.keywords_by_length[l].add(kw)
+            if l > self.max_keyword_len:
+                self.max_keyword_len = l
+        
         self.user_words = user_words or set()  # 用户定义的词（不拆分）
-        self.max_keyword_len = max(len(k) for k in self.keywords) if self.keywords else 1
-
+        
         # 百家姓变量识别
         self.surnames = BAIJIAXING
         self.conflicting_surnames = CONFLICTING_SURNAMES
         self.max_surname_len = max(len(k) for k in self.surnames) if self.surnames else 2
+        
+        # 已知多字符词：这些词即使以关键字开头，也应该作为整体输出
+        # （由于关键字已双字化，此集合已大大简化）
+        self.known_multi_char_words = frozenset({
+            '数据', '结果', '变量', '方法', '类', '对象',
+            '字符串', '数字', '布尔', '数组', '集合', '元组',
+            '文件', '目录', '路径', '模块', '包', '库',
+            '网络', '请求', '响应', '连接', '端口', '协议',
+            '错误', '异常', '警告', '信息', '调试',
+            '配置', '设置', '选项', '参数', '返回值',
+        })
+        
+        # 预编译常用字符判断函数
+        self._is_han = self._create_han_check()
+        self._is_ident_char_func = self._create_ident_char_check()
+
+    def _create_han_check(self):
+        """创建优化的汉字检查函数"""
+        HAN_START, HAN_END = self.HAN_START, self.HAN_END
+        def check(ch):
+            if not ch:
+                return False
+            cp = ord(ch)
+            return HAN_START <= cp <= HAN_END
+        return check
+
+    def _create_ident_char_check(self):
+        """创建优化的标识符字符检查函数"""
+        is_han = self._is_han
+        def check(ch):
+            if not ch:
+                return False
+            return is_han(ch) or ch.isalnum() or ch == '_'
+        return check
 
     def _scan_user_defs(self, source: str) -> Set[str]:
         """轻量扫描：收集所有用户定义的函数名/变量名
@@ -151,8 +186,8 @@ class Lexer:
                     i += 1
                 continue
             
-            # 查找 '定'
-            if source[i] == '定':
+            # 查找 '定义'
+            if source[i:i+2] == '定义':
                 j = i + 1
                 # 跳过空白
                 while j < len(source) and source[j] in ' \t':
@@ -235,16 +270,24 @@ class Lexer:
         # 第二阶段：预处理续行，然后逐行处理缩进
         # 续行规则：
         # - 如果下一行缩进 == 当前行缩进，且当前行不以句号结尾，则视为续行
+        # - 但是，如果当前行以块开始关键字开头或结尾，则不续行
         
         lines = source.splitlines()
         processed_lines = []
+        
+        # 语句开始关键字（这些关键字开头的行不应与下一行续行）
+        statement_start_keywords = {'定义', '如果', '那么', '否则', '遍历', '当时', '函数', '返回', '结构', '套', '测', '打印', '读', '写', '引', '导', '出'}
+        # 块开始关键字（这些关键字结尾的行不应与下一行续行）
+        block_start_keywords = {'函数', '如果', '遍历', '当时', '结构', '套', '测'}
         
         i = 0
         while i < len(lines):
             line = lines[i]
             
-            # 跳过空白行（但保留用于缩进判断）
+            # 检查行内容
             stripped = line.strip()
+            
+            # 如果是空行或注释，直接保留（不进行续行处理）
             if not stripped or stripped.startswith('--') or stripped.startswith('注'):
                 processed_lines.append(line)
                 i += 1
@@ -254,7 +297,22 @@ class Lexer:
             current_indent = self._count_indent(line)
             has_dot = line.rstrip().endswith('。') or line.rstrip().endswith('．')
             
+            # 检查是否以块开始关键字结尾
+            ends_with_block_start = False
+            for kw in block_start_keywords:
+                if stripped.endswith(kw):
+                    ends_with_block_start = True
+                    break
+            
+            # 检查是否以语句开始关键字开头
+            starts_with_statement = False
+            for kw in statement_start_keywords:
+                if stripped.startswith(kw):
+                    starts_with_statement = True
+                    break
+            
             # 查看下一行
+            should_merge = False
             if i + 1 < len(lines):
                 next_line = lines[i + 1]
                 next_stripped = next_line.strip()
@@ -263,9 +321,16 @@ class Lexer:
                 if next_stripped and not next_stripped.startswith('--') and not next_stripped.startswith('注'):
                     next_indent = self._count_indent(next_line)
                     
-                    # 如果下一行缩进 == 当前行缩进，且当前行不以句号结尾，则续行
-                    if next_indent == current_indent and not has_dot:
-                        # 将下一行内容拼接到当前行（中间加空格）
+                    # 如果满足以下条件，则续行：
+                    # 1. 下一行缩进 == 当前行缩进
+                    # 2. 当前行不以句号结尾
+                    # 3. 当前行不以块开始关键字结尾
+                    # 4. 当前行不以语句开始关键字开头
+                    if (next_indent == current_indent and 
+                        not has_dot and 
+                        not ends_with_block_start and 
+                        not starts_with_statement):
+                        should_merge = True
                         line = line.rstrip() + ' ' + next_stripped
                         i += 1  # 跳过下一行
             
@@ -540,56 +605,156 @@ class Lexer:
                 col += 1
                 continue
             
-            # 标识符和关键字
+            # 标识符和关键字（优化版本）
             if self._is_chinese(ch) or ch.isalpha() or ch in '_':
                 start = i
-                i += 1
-                col += 1
                 
-                # 如果是汉字开头
+                # 如果是汉字开头，优先收集完整的汉字标识符
                 if self._is_chinese(ch):
-                    # 先检查多字动词（双字动词优先）
-                    multi_char_keywords = {'定义', '否则', '如果', '那么', '遍历', '返回', '等于', '正弦', '余弦', '正切', '反正弦', '反余弦', '反正切', '指数', '对数', '对数10', '开方', '取整', '进位', '四舍五入', '随机', '随机整数', '圆周率', '自然常数', '长度', '连接', '分割', '替换', '截取', '小写', '大写', '查找', '包含', '去空', '开头是', '结尾是', '读文件', '写文件', '追加文件', '存在', '是文件', '是目录', '列目录', '建目录', '删文件', '删目录', '当前目录', '文件名', '目录名', '扩展名', '最大', '最小', '求和', '排序', '范围', '模块', '导入', '导出'}
+                    # 先收集所有连续汉字（不包含数字）
+                    han_end = i + 1
+                    while han_end < n and self._is_chinese(line[han_end]):
+                        han_end += 1
                     
-                    # 检查当前位置开始是否匹配多字动词
-                    matched_multi = None
-                    for keyword in multi_char_keywords:
-                        if line[i-1:i-1+len(keyword)] == keyword:
-                            matched_multi = keyword
-                            break
+                    # 继续收集后面的数字（支持 "变量0" 这样的标识符）
+                    end = han_end
+                    while end < n and line[end].isdigit():
+                        end += 1
                     
-                    if matched_multi:
-                        # 输出多字动词
-                        tokens.append(Token(TokenType.WORD, matched_multi, line_num, col - 1))
-                        i += len(matched_multi) - 1  # 已经前进了1步
-                        col += len(matched_multi) - 1
+                    # 获取汉字部分和完整标识符
+                    han_part = line[i:han_end]
+                    full_identifier = line[i:end]
+                    
+                    # 首先尝试最长匹配关键字（贪心算法）
+                    matched_length = self._match_keyword(line, i, n)
+                    if matched_length > 0:
+                        keyword = line[i:i+matched_length]
+                        # 检查剩余部分是否应该合并
+                        remaining = line[i+matched_length:end]
+                        # 只有当剩余部分是单个非关键字汉字时才考虑合并
+                        # 但如果剩余部分是数字，不合并（如 "列表1" -> "列表" + "1"）
+                        # 如果剩余部分是多个字符，不合并（如 "函数数" -> "函数" + "数"）
+                        if len(remaining) == 1 and remaining not in self.keywords and self._is_chinese(remaining):
+                            # 剩余部分是单个非关键字汉字，作为整体标识符输出（如 "排序后" -> "排序后"）
+                            tokens.append(Token(TokenType.WORD, full_identifier, line_num, col))
+                            i = end
+                            col += len(full_identifier)
+                            continue
+                        # 正常输出关键字
+                        tokens.append(Token(TokenType.WORD, keyword, line_num, col))
+                        i += matched_length
+                        col += matched_length
                         continue
-                    
-                    # 再检查单字关键字
-                    single_char_keywords = {'定', '函', '若', '则', '当', '真', '假', '空', '无', '印', '读', '写', '行', '列', '典', '序', '加', '减', '乘', '除', '模', '幂', '大', '小', '等', '且', '或', '非', '首', '余', '入', '长', '添', '连', '含', '引', '出', '皆', '只', '归', '潜', '排'}
-                    
-                    if ch in single_char_keywords:
-                        # 如果是单字关键字，先输出关键字
-                        tokens.append(Token(TokenType.WORD, ch, line_num, col - 1))
-                        # 继续处理后面的字符
-                        continue
-                    
-                    # 如果不是关键字，收集所有连续汉字
-                    while i < n and self._is_chinese(line[i]):
-                        i += 1
-                        col += 1
-                # 如果是字母或下划线开头，只收集 ASCII 字母、数字和下划线
-                else:
-                    while i < n and (line[i].isascii() and (line[i].isalnum() or line[i] in '_')):
-                        i += 1
-                        col += 1
+                    elif end > i + 1:
+                        # 完整标识符不是关键字（如 "列表"），但有多个汉字
+                        # 优先检查是否是用户定义的名称（避免拆分用户变量名）
+                        if full_identifier in user_defined_names:
+                            tokens.append(Token(TokenType.WORD, full_identifier, line_num, col))
+                            i = end
+                            col += len(full_identifier)
+                            continue
+                        
+                        # 检查第一个汉字是否是关键字
+                        first_char = line[i]
+                        if first_char in self.keywords:
+                            # 检查是否是已知多字符词
+                            if full_identifier in self.known_multi_char_words:
+                                # 已知多字符词，输出完整标识符
+                                tokens.append(Token(TokenType.WORD, full_identifier, line_num, col))
+                                i = end
+                                col += len(full_identifier)
+                                continue
+                            # 第一个汉字是关键字符，输出第一个字符
+                            # 继续处理剩余部分
+                            tokens.append(Token(TokenType.WORD, first_char, line_num, col))
+                            i = i + 1
+                            col += 1
+                            # 继续循环，让后面的字符重新处理
+                            continue
+                        elif end > i + 2 and line[i:i+2] in self.keywords:
+                            # 前两个字符是关键字符（如 "否则"），但只有在不是用户定义名称时才拆分
+                            # 检查剩余部分是否能组成有效标识符（避免错误拆分）
+                            remaining = line[i+2:end]
+                            if remaining == '' or remaining in self.keywords or remaining[0] in self.keywords:
+                                # 剩余部分是关键字或空，安全拆分
+                                tokens.append(Token(TokenType.WORD, line[i:i+2], line_num, col))
+                                i = i + 2
+                                col += 2
+                                continue
+                            else:
+                                # 剩余部分不是关键字，作为整体标识符输出
+                                tokens.append(Token(TokenType.WORD, full_identifier, line_num, col))
+                                i = end
+                                col += len(full_identifier)
+                                continue
+                        else:
+                            # 第一个汉字也不是关键字，输出完整标识符
+                            tokens.append(Token(TokenType.WORD, full_identifier, line_num, col))
+                            i = end
+                            col += len(full_identifier)
+                            continue
+                    else:
+                        # 只有一个汉字，检查是否是关键字
+                        matched_length = self._match_keyword(line, i, n)
+                        if matched_length > 0:
+                            keyword = line[i:i+matched_length]
+                            tokens.append(Token(TokenType.WORD, keyword, line_num, col))
+                            i += matched_length
+                            col += matched_length
+                            continue
+                        else:
+                            # 不是关键字，输出单个汉字作为标识符
+                            tokens.append(Token(TokenType.WORD, ch, line_num, col))
+                            i += 1
+                            col += 1
+                            continue
                 
-                word = line[start:i]
-                tokens.append(Token(TokenType.WORD, word, line_num, start_col + start - 1))
+                # 如果是字母或下划线开头，只收集 ASCII 字母、数字和下划线
+                end = i + 1
+                while end < n and (line[end].isascii() and (line[end].isalnum() or line[end] == '_')):
+                    end += 1
+                word = line[i:end]
+                tokens.append(Token(TokenType.WORD, word, line_num, col))
+                i = end
+                col += len(word)
                 continue
             
             # 未知字符
             raise self._create_error(f"未知字符: {ch}", line_num, col)
+    
+    def _match_keyword(self, line: str, pos: int, length: int) -> int:
+        """快速匹配关键字，返回匹配长度，未匹配返回0
+        
+        使用预计算的按长度分组的关键字集合进行高效查找
+        """
+        max_possible = min(self.max_keyword_len, length - pos)
+        
+        # 从最长可能的长度开始尝试匹配
+        for l in range(max_possible, 0, -1):
+            if l in self.keywords_by_length:
+                candidate = line[pos:pos+l]
+                if candidate in self.keywords_by_length[l]:
+                    return l
+        return 0
+
+    def _collect_chinese_identifier(self, line: str, start: int, length: int) -> str:
+        """收集连续的汉字标识符
+        
+        收集所有连续的汉字（可能包含数字后缀），然后检查是否匹配关键字
+        如果完整标识符匹配关键字，优先返回完整标识符
+        否则返回完整标识符作为一个整体（用户自定义变量名）
+        """
+        # 先收集所有连续汉字
+        end = start
+        while end < length and self._is_chinese(line[end]):
+            end += 1
+        
+        # 继续收集后面的数字（支持 "变量0" 这样的标识符）
+        while end < length and line[end].isdigit():
+            end += 1
+        
+        # 返回完整的标识符
+        return line[start:end]
     
     def _tokenize_raw(self, source: str, user_defined_names: Set[str]) -> List[Token]:
         """生成基础 tokens（包含换行符和原始缩进信息）"""
@@ -896,8 +1061,8 @@ class Lexer:
 
                 # 尝试最长匹配关键字（只对汉字关键字）
                 if self._is_han(ch):
-                    # 优先级1：检查是否是"定"后面的变量名
-                    if tokens and tokens[-1].type == TokenType.WORD and tokens[-1].value == '定':
+                    # 优先级1：检查是否是"定义"后面的变量名
+                    if tokens and tokens[-1].type == TokenType.WORD and tokens[-1].value == '定义':
                         j = i
                         while j < len(source) and (self._is_han(source[j]) or source[j].isdigit() or (source[j].isascii() and source[j].isalpha())):
                             j += 1
@@ -915,8 +1080,8 @@ class Lexer:
                             continue
 
                     # 优先级1.5：处理"函"后面的参数
-                    # 每个参数跟在函后面，按关键字边界分割
-                    if tokens and tokens[-1].type == TokenType.WORD and tokens[-1].value == '函':
+                    # 每个参数跟在函数后面，按关键字边界分割
+                    if tokens and tokens[-1].type == TokenType.WORD and tokens[-1].value == '函数':
                         j = i
                         # 只收集非关键字的连续汉字作为单个参数
                         while j < len(source) and self._is_han(source[j]):
@@ -996,10 +1161,10 @@ class Lexer:
                                     # 如果是动词，停止收集；如果不是动词，继续收集
                                     keyword = source[j:j+found_keyword_len]
                                     # 单字动词列表（不包括比较操作符，因为它们可能出现在变量名中）
-                                    verbs = {'加', '减', '乘', '除', '模', '幂',
-                                             '且', '或', '非', '首', '余', '入', '长', '添', '连',
-                                             '含', '空', '皆', '只', '归', '潜', '印', '读', '写',
-                                             '若', '则', '定', '函', '行', '真', '假'}
+                                    verbs = {'相加', '相减', '相乘', '相除', '取余', '幂方',
+                                             '并且', '或者', '非也', '首个', '其余', '加入', '长', '添', '连',
+                                             '含', '为空', '皆', '只', '归', '潜在', '打印', '读', '写',
+                                             '如果', '那么', '定义', '函数', '换行', '真', '假'}
                                     if keyword in verbs:
                                         # 是动词，停止收集
                                         break
@@ -1080,11 +1245,11 @@ class Lexer:
                             if full_so_far in user_defined_names:
                                 j += 1
                                 continue
-                            # "则"、"若"、"定"、"函"、"真"、"假"等结构关键字
+                            # "那么"、"如果"、"定义"、"函数"、"真"、"假"等结构关键字
                             # 仅在后面恰好只跟一个汉字时才作为标识符的一部分
-                            # 如"规则表"（则+表=1字）是合法标识符
-                            # 如"带则扩展"（则+扩展=2字）、"符号则"（则后非汉字）都应按关键字处理
-                            if candidate in {'则', '若', '定', '函', '真', '假'}:
+                            # 如"规那么表"（那么+表=1字）是合法标识符
+                            # 如"带那么扩展"（那么+扩展=2字）、"符号那么"（那么后非汉字）都应按关键字处理
+                            if candidate in {'真', '假'}:
                                 if (j + 2 < len(source) and 
                                     self._is_han(source[j+1]) and 
                                     not self._is_han(source[j+2])):
@@ -1094,6 +1259,18 @@ class Lexer:
                                     self._is_han(source[j+1])):
                                     j += 1
                                     continue  # 关键字后恰跟一个汉字（行尾），作为标识符一部分
+                            # 检查双字关键字
+                            two_char = source[j:j+2] if j+2 <= len(source) else ''
+                            if two_char in {'那么', '如果', '定义', '函数'}:
+                                if (j + 3 < len(source) and 
+                                    self._is_han(source[j+2]) and 
+                                    not self._is_han(source[j+3])):
+                                    j += 2
+                                    continue  # 双字关键字后恰跟一个汉字，作为标识符一部分
+                                if (j + 2 == len(source) - 1 and 
+                                    self._is_han(source[j+2])):
+                                    j += 2
+                                    continue  # 双字关键字后恰跟一个汉字（行尾），作为标识符一部分
                             # 检查是否为多字关键字且整个是用户定义的标识符
                             for length in range(min(self.max_keyword_len, len(source) - j), 1, -1):
                                 kw_candidate = source[j:j+length]

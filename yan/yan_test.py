@@ -7,8 +7,9 @@ import inspect
 import os
 import sys
 import json
+import time
 from datetime import datetime
-from typing import List, Dict, Any, Optional, Callable, Tuple
+from typing import List, Dict, Any, Optional, Callable, Tuple, Set, Union
 
 # 测试装饰器
 def suite(name):
@@ -17,48 +18,249 @@ def suite(name):
         return cls
     return decorator
 
-def test(name):
+def test(name, tags: Optional[List[str]] = None, priority: int = 1):
+    """
+    测试方法装饰器
+    
+    Args:
+        name: 测试名称
+        tags: 标签列表，用于过滤测试
+        priority: 优先级，1 为最高优先级
+    """
     def decorator(func):
         func._test_name = name
+        func._test_tags = tags or []
+        func._test_priority = priority
+        return func
+    return decorator
+
+def skip(reason: str = ""):
+    """
+    跳过测试装饰器
+    
+    Args:
+        reason: 跳过原因
+    """
+    def decorator(func):
+        func._test_skip = reason
+        return func
+    return decorator
+
+def skip_if(condition: bool, reason: str = ""):
+    """
+    条件跳过测试装饰器
+    
+    Args:
+        condition: 如果为 True 则跳过
+        reason: 跳过原因
+    """
+    def decorator(func):
+        if condition:
+            func._test_skip = reason
+        return func
+    return decorator
+
+def skip_unless(condition: bool, reason: str = ""):
+    """
+    除非条件满足否则跳过测试装饰器
+    
+    Args:
+        condition: 如果为 False 则跳过
+        reason: 跳过原因
+    """
+    def decorator(func):
+        if not condition:
+            func._test_skip = reason
         return func
     return decorator
 
 # 断言函数
-def 等(a, b):
-    assert a == b, f"断言失败: {a} != {b}"
+def 等(a, b, message: str = None):
+    if a != b:
+        msg = message or f"断言失败: {a} != {b}"
+        assert a == b, msg
 
-def 为真(value):
-    assert bool(value), f"断言失败: {value} 不为真"
+def 不等(a, b, message: str = None):
+    if a == b:
+        msg = message or f"断言失败: {a} == {b}"
+        assert a != b, msg
 
-def 为假(value):
-    assert not bool(value), f"断言失败: {value} 不为假"
+def 为真(value, message: str = None):
+    if not bool(value):
+        msg = message or f"断言失败: {value} 不为真"
+        assert bool(value), msg
 
-def 引发异常(func, *args, **kwargs):
+def 为假(value, message: str = None):
+    if bool(value):
+        msg = message or f"断言失败: {value} 不为假"
+        assert not bool(value), msg
+
+def 引发异常(func, *args, message: str = None, **kwargs):
     try:
         func(*args, **kwargs)
-        assert False, "期望异常但未抛出"
+        msg = message or "期望异常但未抛出"
+        assert False, msg
     except Exception:
         pass
 
+def 引发特定异常(func, exception_type, *args, message: str = None, **kwargs):
+    """引发特定类型的异常"""
+    try:
+        func(*args, **kwargs)
+        msg = message or f"期望 {exception_type.__name__} 异常但未抛出"
+        assert False, msg
+    except exception_type:
+        pass
+    except Exception as e:
+        msg = message or f"期望 {exception_type.__name__} 但得到 {type(e).__name__}"
+        assert False, msg
+
+def 不引发异常(func, *args, message: str = None, **kwargs):
+    """断言函数不引发异常"""
+    try:
+        func(*args, **kwargs)
+    except Exception as e:
+        msg = message or f"不应抛出异常，但抛出了 {type(e).__name__}: {e}"
+        assert False, msg
+
+
+# Mock 对象
+class Mock:
+    """简单的 Mock 对象"""
+    
+    def __init__(self):
+        self._calls = []
+        self._return_values = {}
+        self._side_effect = None
+    
+    def __call__(self, *args, **kwargs):
+        self._calls.append({'args': args, 'kwargs': kwargs})
+        
+        # 检查是否有副作用函数
+        if self._side_effect is not None:
+            if callable(self._side_effect):
+                return self._side_effect(*args, **kwargs)
+            elif isinstance(self._side_effect, list):
+                if self._side_effect:
+                    return self._side_effect.pop(0)
+                return None
+        
+        # 返回默认值
+        return self._return_values.get(len(self._calls), None)
+    
+    def set_return_value(self, value):
+        """设置返回值"""
+        self._return_values = {i: value for i in range(100)}
+    
+    def set_return_values(self, values: List):
+        """设置多个返回值"""
+        for i, value in enumerate(values):
+            self._return_values[i + 1] = value
+    
+    def set_side_effect(self, effect):
+        """设置副作用"""
+        self._side_effect = effect
+    
+    @property
+    def call_count(self):
+        """调用次数"""
+        return len(self._calls)
+    
+    @property
+    def calls(self):
+        """所有调用记录"""
+        return self._calls
+    
+    def assert_called(self):
+        """断言至少被调用一次"""
+        assert self.call_count > 0, "Mock 未被调用"
+    
+    def assert_called_once(self):
+        """断言只被调用一次"""
+        assert self.call_count == 1, f"Mock 被调用 {self.call_count} 次，期望 1 次"
+    
+    def assert_called_with(self, *args, **kwargs):
+        """断言最后一次调用使用了指定参数"""
+        if not self._calls:
+            assert False, "Mock 未被调用"
+        
+        last_call = self._calls[-1]
+        assert last_call['args'] == args, f"参数不匹配: {last_call['args']} != {args}"
+        assert last_call['kwargs'] == kwargs, f"关键字参数不匹配: {last_call['kwargs']} != {kwargs}"
+    
+    def reset_mock(self):
+        """重置调用记录"""
+        self._calls = []
+
+
+class Stub:
+    """Stub 对象 - 用于替换依赖"""
+    
+    def __init__(self, **attrs):
+        for key, value in attrs.items():
+            setattr(self, key, value)
+
 # 测试发现机制
-def discover_tests(pattern: str = "test_*.py", directory: str = ".") -> List[str]:
+def discover_tests(
+    pattern: str = "test_*.py", 
+    directory: str = ".",
+    include_tags: Optional[List[str]] = None,
+    exclude_tags: Optional[List[str]] = None,
+    min_priority: int = 1
+) -> List[str]:
     """
     自动发现测试文件
     
     Args:
         pattern: 测试文件匹配模式，默认为 "test_*.py"
         directory: 搜索目录，默认为当前目录
+        include_tags: 只包含指定标签的测试
+        exclude_tags: 排除指定标签的测试
+        min_priority: 最小优先级（数字越小优先级越高）
     
     Returns:
         测试文件路径列表
     """
     test_files = []
     for root, dirs, files in os.walk(directory):
+        # 跳过隐藏目录和 __pycache__
+        dirs[:] = [d for d in dirs if not d.startswith('.') and d != '__pycache__']
+        
         for filename in files:
             if filename.startswith("test_") and filename.endswith(".py"):
                 filepath = os.path.join(root, filename)
                 test_files.append(os.path.abspath(filepath))
+    
     return sorted(test_files)
+
+
+def filter_tests_by_tags(
+    tests: List[Dict[str, Any]],
+    include_tags: Optional[List[str]] = None,
+    exclude_tags: Optional[List[str]] = None
+) -> List[Dict[str, Any]]:
+    """
+    根据标签过滤测试
+    
+    Args:
+        tests: 测试列表
+        include_tags: 只包含指定标签
+        exclude_tags: 排除指定标签
+    
+    Returns:
+        过滤后的测试列表
+    """
+    filtered = tests
+    
+    if include_tags:
+        include_set = set(include_tags)
+        filtered = [t for t in filtered if include_set.intersection(t.get('tags', []))]
+    
+    if exclude_tags:
+        exclude_set = set(exclude_tags)
+        filtered = [t for t in filtered if not exclude_set.intersection(t.get('tags', []))]
+    
+    return filtered
 
 def import_test_module(filepath: str) -> Any:
     """
@@ -90,12 +292,29 @@ def import_test_module(filepath: str) -> Any:
     return module
 
 # 测试运行器
-def run():
-    """运行所有测试"""
+def run(
+    include_tags: Optional[List[str]] = None,
+    exclude_tags: Optional[List[str]] = None,
+    min_priority: int = 1
+):
+    """
+    运行所有测试
+    
+    Args:
+        include_tags: 只运行包含指定标签的测试
+        exclude_tags: 排除指定标签的测试
+        min_priority: 最小优先级（数字越小优先级越高）
+    
+    Returns:
+        测试报告
+    """
     report = {
         'passed': 0,
         'failed': 0,
-        'tests': []
+        'skipped': 0,
+        'tests': [],
+        'total_time': 0.0,
+        'slow_tests': []
     }
     
     caller_globals = inspect.stack()[1][0].f_globals
@@ -108,33 +327,92 @@ def run():
             for method_name, method in inspect.getmembers(instance):
                 if inspect.ismethod(method) and hasattr(method, '_test_name'):
                     test_name = method._test_name
+                    test_tags = getattr(method, '_test_tags', [])
+                    test_priority = getattr(method, '_test_priority', 1)
+                    test_skip = getattr(method, '_test_skip', None)
+                    
+                    # 检查优先级
+                    if test_priority > min_priority:
+                        continue
+                    
+                    # 检查标签过滤
+                    if include_tags and not set(include_tags).intersection(test_tags):
+                        continue
+                    if exclude_tags and set(exclude_tags).intersection(test_tags):
+                        continue
+                    
+                    # 检查跳过标记
+                    if test_skip:
+                        report['skipped'] += 1
+                        report['tests'].append({
+                            'suite': suite_name,
+                            'name': test_name,
+                            'status': 'skipped',
+                            'reason': test_skip,
+                            'tags': test_tags,
+                            'priority': test_priority,
+                            'time': 0.0
+                        })
+                        print(f"~ {suite_name} - {test_name} (跳过: {test_skip})")
+                        continue
+                    
+                    # 运行测试并记录时间
+                    start_time = time.time()
                     try:
                         method()
+                        elapsed_time = time.time() - start_time
+                        
                         report['passed'] += 1
+                        report['total_time'] += elapsed_time
                         report['tests'].append({
                             'suite': suite_name,
                             'name': test_name,
-                            'status': 'passed'
+                            'status': 'passed',
+                            'tags': test_tags,
+                            'priority': test_priority,
+                            'time': elapsed_time
                         })
-                        print(f"✓ {suite_name} - {test_name}")
+                        
+                        status = "✓"
+                        if elapsed_time > 1.0:
+                            report['slow_tests'].append({
+                                'suite': suite_name,
+                                'name': test_name,
+                                'time': elapsed_time
+                            })
+                            status = "✓*"
+                        
+                        print(f"{status} {suite_name} - {test_name} ({elapsed_time:.2f}s)")
+                    
                     except AssertionError as e:
+                        elapsed_time = time.time() - start_time
                         report['failed'] += 1
+                        report['total_time'] += elapsed_time
                         report['tests'].append({
                             'suite': suite_name,
                             'name': test_name,
                             'status': 'failed',
-                            'error': str(e)
+                            'error': str(e),
+                            'tags': test_tags,
+                            'priority': test_priority,
+                            'time': elapsed_time
                         })
-                        print(f"✗ {suite_name} - {test_name}: {e}")
+                        print(f"✗ {suite_name} - {test_name}: {e} ({elapsed_time:.2f}s)")
+                    
                     except Exception as e:
+                        elapsed_time = time.time() - start_time
                         report['failed'] += 1
+                        report['total_time'] += elapsed_time
                         report['tests'].append({
                             'suite': suite_name,
                             'name': test_name,
                             'status': 'failed',
-                            'error': str(e)
+                            'error': str(e),
+                            'tags': test_tags,
+                            'priority': test_priority,
+                            'time': elapsed_time
                         })
-                        print(f"✗ {suite_name} - {test_name}: {e}")
+                        print(f"✗ {suite_name} - {test_name}: {e} ({elapsed_time:.2f}s)")
     
     return report
 

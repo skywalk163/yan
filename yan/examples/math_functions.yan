@@ -3,13 +3,13 @@
 印"π = " 圆周率。
 印"e = " 自然常数。
 
-定 x = 4。
+定义 x = 4。
 印"sqrt(x) = " 开方x。
 
-定 y = 16。
+定义 y = 16。
 印"sqrt(y) = " 开方y。
 
-定 angle = 0。
+定义 angle = 0。
 印"sin(angle) = " 正弦 angle。
 印"cos(angle) = " 余弦 angle。
 

@@ -2,7 +2,7 @@
 言语言 Python 代码生成器
 """
 
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple, Any, Optional
 from nodes import *
 from runtime import ALL_BUILTINS as BUILTINS
 
@@ -12,6 +12,14 @@ try:
 except ImportError:
     ImportNode = None
     ExportNode = None
+
+# 导入优化器模块
+try:
+    from optimizer import ASTOptimizer, OptimizerConfig
+except ImportError:
+    # 如果优化器模块不可用，使用内置的简化版本
+    ASTOptimizer = None
+    OptimizerConfig = None
 
 
 class CodeGenError(Exception):
@@ -333,6 +341,9 @@ class PythonCodeGen:
 
         # Lambda with Block body: generate def function instead of lambda
         if isinstance(node.value, Lambda):
+            # 检查是否是尾递归函数，需要特殊处理
+            if hasattr(node.value, 'is_tail_recursive') and node.value.is_tail_recursive:
+                return self._gen_tail_recursive_function(name, node.value)
             # 检查是否需要生成 def 函数
             if isinstance(node.value.body, Block):
                 return self._gen_def_function(name, node.value)
@@ -344,6 +355,51 @@ class PythonCodeGen:
 
         value = self.generate(node.value)
         return f'{name} = {value}'
+
+    def _gen_tail_recursive_function(self, name: str, node: Lambda) -> str:
+        """生成尾递归优化的函数（转换为循环）"""
+        params_list = node.params
+        params_str = ', '.join(params_list) if params_list else '_'
+        
+        # 生成循环体
+        loop_body = self._convert_tail_recursion_to_loop(node.body, name, params_list)
+        
+        return f'''def {name}({params_str}):
+    while True:
+{loop_body}'''
+
+    def _convert_tail_recursion_to_loop(self, node: Node, func_name: str, params: list) -> str:
+        """将尾递归转换为循环体"""
+        if isinstance(node, Call) and node.verb.name == func_name:
+            # 尾递归调用，转换为参数更新和 continue
+            updates = []
+            for i in range(min(len(node.args), len(params))):
+                arg_code = self.generate(node.args[i])
+                updates.append(f'{params[i]} = {arg_code}')
+            indented_updates = '\n'.join(f'        {u}' for u in updates)
+            return f'{indented_updates}\n        continue'
+        elif isinstance(node, If):
+            # 条件语句
+            cond = self.generate(node.cond)
+            then_body = self._convert_tail_recursion_to_loop(node.then_branch, func_name, params)
+            else_body = ''
+            if node.else_branch:
+                else_code = self._convert_tail_recursion_to_loop(node.else_branch, func_name, params)
+                else_body = f'\n        else:\n{else_code}'
+            return f'        if {cond}:\n{then_body}{else_body}'
+        elif isinstance(node, Block):
+            lines = []
+            for i, stmt in enumerate(node.statements):
+                if i == len(node.statements) - 1:
+                    lines.append(self._convert_tail_recursion_to_loop(stmt, func_name, params))
+                else:
+                    code = self.generate(stmt)
+                    indented_lines = [f'        {l}' for l in code.split('\n') if l.strip()]
+                    lines.extend(indented_lines)
+            return '\n'.join(lines)
+        else:
+            # 基例，返回值
+            return f'        return {self.generate(node)}'
 
     def _gen_def_function(self, name: str, node: Lambda) -> str:
         """Generate a def function for Lambda with Block body"""
@@ -642,3 +698,47 @@ class PythonCodeGen:
         args = ', '.join(f'{name}={self.generate(value)}' 
                         for name, value in node.field_values.items())
         return f'{node.struct_name}({args})'
+
+
+# 扩展 PythonCodeGen 以支持优化
+class OptimizedPythonCodeGen(PythonCodeGen):
+    """带优化的 Python 代码生成器"""
+
+    def __init__(self, config: Optional[OptimizerConfig] = None):
+        super().__init__()
+        if ASTOptimizer is not None:
+            self.optimizer = ASTOptimizer(config)
+            self._optimizations_enabled = True
+        else:
+            # 如果优化器模块不可用，设置空优化器
+            self.optimizer = None
+            self._optimizations_enabled = False
+
+    def generate(self, node: Node) -> str:
+        """生成优化后的 Python 代码"""
+        if self._optimizations_enabled and self.optimizer:
+            optimized_node = self.optimizer.optimize(node)
+            return super().generate(optimized_node)
+        else:
+            return super().generate(node)
+
+    def get_optimization_stats(self) -> dict:
+        """获取优化统计信息"""
+        if self._optimizations_enabled and self.optimizer:
+            return {
+                'optimizations_count': self.optimizer.optimized_count,
+                'config': {
+                    'constant_folding': self.optimizer.config.constant_folding,
+                    'dead_code_elimination': self.optimizer.config.dead_code_elimination,
+                    'expression_simplification': self.optimizer.config.expression_simplification,
+                    'tail_recursion_optimization': self.optimizer.config.tail_recursion_optimization,
+                    'level': self.optimizer.config.optimization_level
+                }
+            }
+        else:
+            return {
+                'optimizations_count': 0,
+                'config': {
+                    'error': 'Optimizer module not available'
+                }
+            }

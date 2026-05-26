@@ -79,12 +79,12 @@ def test_lexer_strings():
 def test_lexer_keywords():
     """测试关键字词法分析"""
     lexer = Lexer()
-    tokens = lexer.tokenize('定 函 若 则 否则')
+    tokens = lexer.tokenize('定义 函数 数 若 则 否则')
     
     assert tokens[0].type.name == 'WORD'
-    assert tokens[0].value == '定'
+    assert tokens[0].value == '定义'
     assert tokens[1].type.name == 'WORD'
-    assert tokens[1].value == '函'
+    assert tokens[1].value == '函数'
 
 def test_lexer_operators():
     """测试运算符词法分析"""
@@ -101,7 +101,7 @@ def test_lexer_operators():
 def test_parser_define():
     """测试变量定义"""
     lexer = Lexer()
-    tokens = lexer.tokenize('定x=1。')
+    tokens = lexer.tokenize('定义x=1。')
     parser = Parser()
     ast = parser.parse(tokens)
     
@@ -112,7 +112,7 @@ def test_parser_define():
 def test_parser_function():
     """测试函数定义"""
     lexer = Lexer()
-    tokens = lexer.tokenize('定阶乘=函n 若n等1则1否则n乘阶乘n减1。')
+    tokens = lexer.tokenize('定义阶乘=函数n 如果n等于1那么1否则n乘阶乘n减1。')
     parser = Parser()
     ast = parser.parse(tokens)
     
@@ -123,7 +123,7 @@ def test_parser_function():
 def test_parser_if():
     """测试条件语句"""
     lexer = Lexer()
-    tokens = lexer.tokenize('若真则1否则0。')
+    tokens = lexer.tokenize('如果真那么1否则0。')
     parser = Parser()
     ast = parser.parse(tokens)
     
@@ -133,7 +133,7 @@ def test_parser_if():
 def test_parser_list():
     """测试列表"""
     lexer = Lexer()
-    tokens = lexer.tokenize('定x=列1 2 3。')
+    tokens = lexer.tokenize('定义x=列表表1 2 3。')
     parser = Parser()
     ast = parser.parse(tokens)
     
@@ -145,7 +145,7 @@ def test_parser_list():
 def test_codegen_arithmetic():
     """测试算术运算代码生成"""
     lexer = Lexer()
-    tokens = lexer.tokenize('定x=加1 2。')
+    tokens = lexer.tokenize('定义x=相加1 2。')
     parser = Parser()
     ast = parser.parse(tokens)
     gen = PythonCodeGen()
@@ -156,7 +156,7 @@ def test_codegen_arithmetic():
 def test_codegen_function():
     """测试函数代码生成"""
     lexer = Lexer()
-    tokens = lexer.tokenize('定平方=函x 乘x x。')
+    tokens = lexer.tokenize('定义平方=函数x 相乘x x。')
     parser = Parser()
     ast = parser.parse(tokens)
     gen = PythonCodeGen()
@@ -167,7 +167,7 @@ def test_codegen_function():
 def test_codegen_list():
     """测试列表代码生成"""
     lexer = Lexer()
-    tokens = lexer.tokenize('列1 2 3')
+    tokens = lexer.tokenize('列表1 2 3')
     parser = Parser()
     ast = parser.parse(tokens)
     gen = PythonCodeGen()
@@ -180,10 +180,10 @@ def test_codegen_list():
 def test_integration_fibonacci():
     """集成测试：斐波那契数列"""
     code = '''
-定斐波=函n
-  若n小2则n否则加斐波减n 1斐波减n 2。
+定义斐波=函数n
+  如果n小于2那么n否则相加斐波相减n 1斐波相减n 2。
 
-印斐波10。
+输出斐波10。
 '''
     
     lexer = Lexer()
@@ -200,10 +200,10 @@ def test_integration_fibonacci():
 def test_integration_higher_order():
     """集成测试：高阶函数"""
     code = '''
-定数据=列1 2 3 4 5。
-定平方=函x 乘x x。
-定结果=皆平方数据。
-印结果。
+定义数据=列表1 2 3 4 5。
+定义平方=函数x 相乘x x。
+定义结果=映射平方数据。
+输出结果。
 '''
     
     lexer = Lexer()
@@ -219,15 +219,15 @@ def test_integration_higher_order():
 def test_integration_new_builtins():
     """集成测试：新增内置函数"""
     code = '''
-定数据=列3 1 4 1 5。
-定排序后=排数据。
-定最大值=最大数据。
-定最小值=最小数据。
-定总和=求和数据。
-印排序后。
-印最大值。
-印最小值。
-印总和。
+定义数据=列表3 1 4 1 5。
+定义排序后=排序数据。
+定义最大值=最大数据。
+定义最小值=最小数据。
+定义总和=求和数据。
+输出排序后。
+输出最大值。
+输出最小值。
+输出总和。
 '''
     
     lexer = Lexer()
@@ -298,9 +298,9 @@ def test_error_suggester_arity():
     """测试参数数量建议"""
     suggester = ErrorSuggestionGenerator()
     
-    suggestion = suggester.suggest_arity_fix("加", 2, 1)
+    suggestion = suggester.suggest_arity_fix("相加", 2, 1)
     
-    assert "加" in suggestion
+    assert "相加" in suggestion
     assert "2" in suggestion
     assert "1" in suggestion
 

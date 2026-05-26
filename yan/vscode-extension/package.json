@@ -2,16 +2,22 @@
   "name": "yan-language",
   "displayName": "言语言 (Yan Language)",
   "description": "言语言支持 - 文言风格的函数式编程语言",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "yan-language",
   "engines": {
     "vscode": "^1.80.0"
   },
   "categories": [
-    "Programming Languages"
+    "Programming Languages",
+    "Debuggers",
+    "Formatters"
   ],
   "activationEvents": [
-    "onLanguage:yan"
+    "onLanguage:yan",
+    "onCommand:yan.compile",
+    "onCommand:yan.run",
+    "onCommand:yan.format",
+    "onDebug"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -24,7 +30,8 @@
           "言语言"
         ],
         "extensions": [
-          ".yan"
+          ".yan",
+          ".ymd"
         ],
         "configuration": "./language-configuration.json"
       }
@@ -36,6 +43,75 @@
         "path": "./syntaxes/yan.tmLanguage.json"
       }
     ],
+    "breakpoints": [
+      {
+        "language": "yan"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "yan",
+        "label": "言语言调试器",
+        "languages": [
+          "yan"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "program"
+            ],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "要运行的言语言文件",
+                "default": "${file}"
+              },
+              "args": {
+                "type": "array",
+                "description": "程序启动参数",
+                "default": []
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "description": "启动时立即停止",
+                "default": false
+              },
+              "console": {
+                "type": "string",
+                "description": "使用的控制台类型",
+                "enum": [
+                  "internalConsole",
+                  "integratedTerminal",
+                  "externalTerminal"
+                ],
+                "default": "integratedTerminal"
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "yan",
+            "name": "调试言语言文件",
+            "request": "launch",
+            "program": "${file}",
+            "stopOnEntry": false
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "言语言：调试当前文件",
+            "description": "调试当前打开的言语言文件",
+            "body": {
+              "type": "yan",
+              "name": "调试当前文件",
+              "request": "launch",
+              "program": "${file}"
+            }
+          }
+        ]
+      }
+    ],
     "commands": [
       {
         "command": "yan.compile",
@@ -44,6 +120,14 @@
       {
         "command": "yan.run",
         "title": "言语言：运行当前文件"
+      },
+      {
+        "command": "yan.format",
+        "title": "言语言：格式化当前文件"
+      },
+      {
+        "command": "yan.toggleOutline",
+        "title": "言语言：切换大纲视图"
       }
     ],
     "menus": {
@@ -57,8 +141,38 @@
           "when": "resourceLangId == yan",
           "command": "yan.run",
           "group": "yan@2"
+        },
+        {
+          "when": "resourceLangId == yan",
+          "command": "yan.format",
+          "group": "yan@3"
         }
       ]
+    },
+    "configuration": {
+      "title": "言语言",
+      "properties": {
+        "yan.pythonPath": {
+          "type": "string",
+          "description": "Python解释器路径",
+          "default": "python"
+        },
+        "yan.compilerPath": {
+          "type": "string",
+          "description": "言语言编译器路径",
+          "default": ""
+        },
+        "yan.format.indentSize": {
+          "type": "number",
+          "description": "缩进大小",
+          "default": 2
+        },
+        "yan.format.maxLineLength": {
+          "type": "number",
+          "description": "最大行长度",
+          "default": 80
+        }
+      }
     }
   },
   "scripts": {

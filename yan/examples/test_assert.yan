@@ -7,9 +7,9 @@ print("断言示例")
 
 print("\n测试包含：")
 if 2 in 数据:
-    print("✓ 数据包含 2")
+    print("✓ 数据包包含 2")
 else:
-    print("✗ 数据不包含 2")
+    print("✗ 数据不包包含 2")
 
 print("\n测试长度：")
 print(f"数据长度： {len(数据)}")

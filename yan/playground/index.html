@@ -447,9 +447,21 @@
                 <div class="example-title">斐波那契</div>
                 <div class="example-desc">计算斐波那契数列</div>
             </div>
+            <div class="example-item" onclick="loadExample('fibonacci_indent')">
+                <div class="example-title">斐波那契（缩进语法）</div>
+                <div class="example-desc">使用缩进语法计算斐波那契数列</div>
+            </div>
             <div class="example-item" onclick="loadExample('hanoi')">
                 <div class="example-title">汉诺塔</div>
                 <div class="example-desc">经典汉诺塔问题</div>
+            </div>
+            <div class="example-item" onclick="loadExample('hanoi_indent')">
+                <div class="example-title">汉诺塔（缩进语法）</div>
+                <div class="example-desc">使用缩进语法的经典汉诺塔问题</div>
+            </div>
+            <div class="example-item" onclick="loadExample('bubble_indent')">
+                <div class="example-title">冒泡排序（缩进语法）</div>
+                <div class="example-desc">使用缩进语法的经典排序算法</div>
             </div>
             <div class="example-item" onclick="loadExample('json')">
                 <div class="example-title">JSON处理</div>
@@ -1117,7 +1129,55 @@ print("JSON解码:", decoded)
 印 "查找 11:" 二分查找 有序数组 11。
 印 "查找 16:" 二分查找 有序数组 16。
 印 "查找 1:" 二分查找 有序数组 1。
-印 "查找 40:" 二分查找 有序数组 40。`
+印 "查找 40:" 二分查找 有序数组 40。`,
+            
+            fibonacci_indent: `-- 斐波那契数列（缩进语法）
+定 斐波那契 = 函 n
+  若 小 n 2
+    返回 1
+  返回 加 斐波那契 减 n 1 斐波那契 减 n 2
+
+-- 打印前10个斐波那契数
+遍历 i 于 范围 1 11
+  定 结果 = 斐波那契 i
+  印 连 "斐波那契(" i ") = " 结果。`,
+            
+            hanoi_indent: `-- 汉诺塔问题（缩进语法）
+定 汉诺塔 = 函 n 源 目标 辅助
+  若 大 n 0
+    汉诺塔 减 n 1 源 辅助 目标
+    印 连 "移动盘子 " n " 从 " 源 " 到 " 目标
+    汉诺塔 减 n 1 辅助 目标 源
+
+-- 测试：3个盘子
+汉诺塔 3 "A" "C" "B"。`,
+            
+            bubble_indent: `-- 测试缩进语法的冒泡排序
+定 冒泡排序 = 函 arr
+  定 n = 长 arr
+  遍历 i 于 范围 n
+    定 已交换 = 假
+    定 边界 = 减 (减 n i) 1
+    定 j = 0
+    当 小 j 边界
+      定 当前 = 取 arr j
+      定 下一个 = 取 arr 加 j 1
+      若 大 当前 下一个
+        设 arr j 下一个
+        设 arr 加 j 1 当前
+        定 已交换 = 真
+      定 j = 加 j 1
+    若 非 已交换
+      返回 arr
+  返回 arr
+
+-- 测试调用
+定 列表 = 列 5 3 8 4 2
+印 "排序前："
+印 列表
+定 结果 = 冒泡排序 列表
+印 "排序后："
+印 结果。`
         };
 
         const editor = document.getElementById('editor');

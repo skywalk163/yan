@@ -1,16 +1,16 @@
 -- 列表操作示例
 
-定 arr = 列 1 2 3 4 5。
+定义 arr = 列表 1 2 3 4 5。
 
-印 "原始列表: " arr。
-印 "长度: " 长 arr。
-印 "第一个元素: " 首 arr。
-印 "剩余元素: " 余 arr。
+输出 "原始列表: " arr。
+输出 "长度: " 长度 arr。
+输出 "第一个元素: " 首 arr。
+输出 "剩余元素: " 余 arr。
 
-定 new_arr = 添 arr 6。
-印 "添加元素后: " new_arr。
+定义 new_arr = 添加 arr 6。
+输出 "添加元素后: " new_arr。
 
 -- 使用高阶函数来映射
-定 square = 函 x 乘 x 2。
-定 doubled = 皆 square arr。
-印 "加倍后的列表: " doubled。
+定义 square = 函数 x 乘 x 2。
+定义 doubled = 映射 square arr。
+输出 "加倍后的列表: " doubled。

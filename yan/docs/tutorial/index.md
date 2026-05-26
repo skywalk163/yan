@@ -24,16 +24,18 @@
 
 | 序号 | 项目 | 说明 |
 |------|------|------|
-| 1 | calculator.yan | 简单计算器 |
-| 2 | todo.yan | 待办事项管理器 |
-| 3 | fibonacci.yan | 斐波那契数列 |
-| 4 | hanoi.yan | 汉诺塔问题 |
-| 5 | wordcount.yan | 词频统计 |
-| 6 | temperature.yan | 温度转换器 |
-| 7 | json_process.yan | JSON数据处理 |
-| 8 | guess_number.yan | 猜数字游戏 |
-| 9 | countdown.yan | 倒计时器 |
-| 10 | web_request.yan | 网络请求示例 |
+| 1 | getting_started.yan | 入门示例：待办事项管理器 |
+| 2 | optimizer_demo.yan | 优化器效果演示 |
+| 3 | calculator.yan | 简单计算器 |
+| 4 | todo.yan | 待办事项管理器 |
+| 5 | fibonacci.yan | 斐波那契数列 |
+| 6 | hanoi.yan | 汉诺塔问题 |
+| 7 | wordcount.yan | 词频统计 |
+| 8 | temperature.yan | 温度转换器 |
+| 9 | json_process.yan | JSON数据处理 |
+| 10 | guess_number.yan | 猜数字游戏 |
+| 11 | countdown.yan | 倒计时器 |
+| 12 | web_request.yan | 网络请求示例 |
 
 ## 运行示例
 

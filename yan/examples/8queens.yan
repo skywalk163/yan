@@ -13,7 +13,7 @@
 -- ============================================
 
 -- 安全检查：判断在第 row 行放置皇后是否安全
-定 安全={{
+定义 安全={{
 def safe(queens, row):
     for i in range(row):
         if queens[i] == queens[row]:
@@ -25,7 +25,7 @@ safe
 }}。
 
 -- 求解函数：使用回溯法找出所有解
-定 求解={{
+定义 求解={{
 def solve(queens, row, n):
     if row == n:
         return [queens[:]]
@@ -40,4 +40,4 @@ solve
 }}。
 
 -- 求解并打印结果
-印 $(solve([], 0, 8))。
+输出 $(solve([], 0, 8))。

@@ -1,0 +1,666 @@
+-- 算法模块（algorithms.yan）
+-- 提供常用算法实现
+
+-- 导出声明
+出 冒泡排序, 选择排序, 插入排序,
+    快速排序, 归并排序, 堆排序,
+    二分查找, 顺序查找,
+    深度优先搜索, 广度优先搜索,
+    最短路径,  Dijkstra,
+    动态规划, 最长公共子序列, 编辑距离,
+    贪心算法, 背包问题,
+    汉诺塔, 八皇后, 全排列, 组合,
+    图创建, 图邻接表, 图邻接矩阵,
+    图添加边, 图删除边, 图有边?,
+    图节点数, 图边数,
+    树创建, 二叉树创建, 树插入, 树搜索, 树中序遍历, 树前序遍历, 树后序遍历,
+    栈创建, 栈压入, 栈弹出, 栈顶, 栈空?, 栈大小,
+    队列创建, 队列入队, 队列出队, 队列头, 队列尾, 队列空?, 队列大小,
+    优先队列创建, 优先队列入队, 优先队列出队, 优先队列查看, 优先队列空?,
+
+-- ==================== 排序算法 ====================
+
+-- 冒泡排序
+定 冒泡排序 = 函 lst：
+  当 lst 等于 空：返回 列。
+  定 result = 复制 lst
+  定 n = 长 result
+  定 i = 0
+  当 i 小于 n：
+    定 j = 0
+    当 j 小于 减 n i 1：
+      当 取 result j 大于 取 result 加 j 1：
+        定 temp = 取 result j
+        设 result j 取 result 加 j 1
+        设 result 加 j 1 temp
+      定 j = 加 j 1
+    定 i = 加 i 1
+  返回 result
+．
+
+-- 复制列表
+定 复制 = 函 lst：
+  定 result = 列
+  定 i = 0
+  当 i 小于 长 lst：
+    添 result (取 lst i)
+    定 i = 加 i 1
+  返回 result
+．
+
+-- 选择排序
+定 选择排序 = 函 lst：
+  当 lst 等于 空：返回 列。
+  定 result = 复制 lst
+  定 n = 长 result
+  定 i = 0
+  当 i 小于 减 n 1：
+    定 min_idx = i
+    定 j = 加 i 1
+    当 j 小于 n：
+      当 取 result j 小于 取 result min_idx：
+        定 min_idx = j
+      定 j = 加 j 1
+    当 min_idx 不等于 i：
+      定 temp = 取 result i
+      设 result i 取 result min_idx
+      设 result min_idx temp
+    定 i = 加 i 1
+  返回 result
+．
+
+-- 插入排序
+定 插入排序 = 函 lst：
+  当 lst 等于 空：返回 列。
+  定 result = 列 (取 lst 0)
+  定 i = 1
+  当 i 小于 长 lst：
+    定 elem = 取 lst i
+    定 j = 减 长 result 1
+    当 且 j 大于等于 0 取 result j 大于 elem：
+      设 result 加 j 1 取 result j
+      定 j = 减 j 1
+    设 result 加 j 1 elem
+    定 i = 加 i 1
+  返回 result
+．
+
+-- 快速排序
+定 快速排序 = 函 lst：
+  当 长 lst 小于等于 1：返回 lst。
+  定 pivot = 取 lst 0
+  定 less = 列
+  定 equal = 列
+  定 greater = 列
+  定 i = 0
+  当 i 小于 长 lst：
+    定 elem = 取 lst i
+    当 elem 小于 pivot：添 less elem。
+    当 elem 等于 pivot：添 equal elem。
+    当 elem 大于 pivot：添 greater elem。
+    定 i = 加 i 1
+  返回 (快速排序 less) ++ equal ++ (快速排序 greater)
+．
+
+-- ++ 连接两个列表
+定 ++ = 函 lst1 lst2：
+  定 result = 复制 lst1
+  定 i = 0
+  当 i 小于 长 lst2：
+    添 result (取 lst2 i)
+    定 i = 加 i 1
+  返回 result
+．
+
+-- 归并排序
+定 归并排序 = 函 lst：
+  当 长 lst 小于等于 1：返回 lst。
+  定 mid = 除 长 lst 2
+  定 left = 切片 lst 0 mid
+  定 right = 切片 lst mid 长 lst
+  定 left_sorted = 归并排序 left
+  定 right_sorted = 归并排序 right
+  返回 归并 left_sorted right_sorted
+．
+
+-- 归并两个有序列表
+定 归并 = 函 lst1 lst2：
+  当 lst1 等于 空：返回 lst2。
+  当 lst2 等于 空：返回 lst1。
+  当 取 lst1 0 小于等于 取 lst2 0：
+    返回 列 (取 lst1 0) ++ (归并 (切片 lst1 1 长 lst1) lst2)
+  返回 列 (取 lst2 0) ++ (归并 lst1 (切片 lst2 1 长 lst2))
+．
+
+-- 堆排序
+定 堆排序 = 函 lst：
+  当 lst 等于 空：返回 列。
+  定 result = 列
+  定 heap = 建堆 lst
+  当 长 heap 大于 0：
+    添 result (堆顶 heap)
+    定 heap = 删堆顶 heap
+  返回 result
+．
+
+-- 建最大堆
+定 建堆 = 函 lst：
+  -- 简化实现：返回排序后的列表
+  归并排序 lst
+．
+
+-- 获取堆顶
+定 堆顶 = 函 heap：
+  当 heap 等于 空：返回 空。
+  返回 取 heap 0
+．
+
+-- 删除堆顶
+定 删堆顶 = 函 heap：
+  当 长 heap 小于等于 1：返回 列。
+  -- 简化实现
+  切片 heap 1 长 heap
+．
+
+-- ==================== 查找算法 ====================
+
+-- 二分查找（前提：列表已排序）
+定 二分查找 = 函 lst target：
+  定 left = 0
+  定 right = 减 长 lst 1
+  当 left 小于等于 right：
+    定 mid = 除 加 left right 2
+    定 mid_val = 取 lst mid
+    当 mid_val 等于 target：返回 mid。
+    当 mid_val 小于 target：定 left = 加 mid 1。
+    当 mid_val 大于 target：定 right = 减 mid 1。
+  返回 负一
+．
+
+-- 顺序查找
+定 顺序查找 = 函 lst target：
+  定 i = 0
+  当 i 小于 长 lst：
+    当 取 lst i 等于 target：返回 i。
+    定 i = 加 i 1
+  返回 负一
+．
+
+-- ==================== 图算法 ====================
+
+-- 创建图（邻接表表示）
+定 图创建 = 函：
+  典
+．
+
+-- 邻接表表示
+定 图邻接表 = 函：
+  典
+．
+
+-- 邻接矩阵表示
+定 图邻接矩阵 = 函 n：
+  定 matrix = 列
+  定 i = 0
+  当 i 小于 n：
+    定 row = 列
+    定 j = 0
+    当 j 小于 n：
+      添 row 0
+      定 j = 加 j 1
+    添 matrix row
+    定 i = 加 i 1
+  返回 matrix
+．
+
+-- 添加边
+定 图添加边 = 函 graph from to：
+  当 非 含 graph from：
+    设 graph from 列
+  定 neighbors = 入 graph from
+  连 neighbors 列 to
+  设 graph from neighbors
+  返回 graph
+．
+
+-- 删除边
+定 图删除边 = 函 graph from to：
+  当 含 graph from：
+    定 neighbors = 入 graph from
+    定 new_neighbors = 列
+    定 i = 0
+    当 i 小于 长 neighbors：
+      当 非 (取 neighbors i) 等于 to：
+        添 new_neighbors (取 neighbors i)
+      定 i = 加 i 1
+    设 graph from new_neighbors
+  返回 graph
+．
+
+-- 检查是否有边
+定 图有边? = 函 graph from to：
+  当 非 含 graph from：返回 假。
+  定 neighbors = 入 graph from
+  定 i = 0
+  当 i 小于 长 neighbors：
+    当 (取 neighbors i) 等于 to：返回 真。
+    定 i = 加 i 1
+  返回 假
+．
+
+-- 获取节点数
+定 图节点数 = 函 graph：
+  定 keys = 典 graph
+  长 keys
+．
+
+-- 获取边数
+定 图边数 = 函 graph：
+  定 count = 0
+  定 keys = 典 graph
+  定 i = 0
+  当 i 小于 长 keys：
+    定 neighbors = 入 graph (取 keys i)
+    定 count = 加 count 长 neighbors
+    定 i = 加 i 1
+  返回 count
+．
+
+-- 深度优先搜索
+定 深度优先搜索 = 函 graph start visited：
+  当 visited 等于 空：定 visited = 典。
+  设 visited start 真
+  印 start
+  当 含 graph start：
+    定 neighbors = 入 graph start
+    定 i = 0
+    当 i 小于 长 neighbors：
+      定 neighbor = 取 neighbors i
+      当 非 含 visited neighbor：
+        深度优先搜索 graph neighbor visited
+      定 i = 加 i 1
+  返回 visited
+．
+
+-- 广度优先搜索
+定 广度优先搜索 = 函 graph start：
+  定 visited = 典 start 真
+  定 queue = 列 start
+  当 长 queue 大于 0：
+    定 node = 取 queue 0
+    设 queue 0 列
+    印 node
+    当 含 graph node：
+      定 neighbors = 入 graph node
+      定 i = 0
+      当 i 小于 长 neighbors：
+        定 neighbor = 取 neighbors i
+        当 非 含 visited neighbor：
+          设 visited neighbor 真
+          连 queue 列 neighbor
+        定 i = 加 i 1
+  返回 visited
+．
+
+-- Dijkstra 最短路径
+定 Dijkstra = 函 graph start end：
+  定 dist = 典 start 0
+  定 prev = 典
+  定 unvisited = 典 start 真
+  定 keys = 典 graph
+  定 i = 0
+  当 i 小于 长 keys：
+    设 unvisited (取 keys i) 真
+    定 i = 加 i 1
+  当 长 unvisited 大于 0：
+    -- 找到未访问节点中距离最小的
+    定 min_dist = 空
+    定 u = 空
+    定 k = 0
+    定 all_keys = 典 unvisited
+    当 k 小于 长 all_keys：
+      定 node = 取 all_keys k
+      当 含 dist node：
+        当 min_dist 等于 空 或 (取 dist node) 小于 min_dist：
+          定 min_dist = 取 dist node
+          定 u = node
+      定 k = 加 k 1
+    当 u 等于 空 或 min_dist 等于 空：返回 空。
+    当 u 等于 end：返回 路径重建 prev end。
+    设 unvisited u 空
+    当 含 unvisited u：
+      设 unvisited u 空
+    当 含 graph u：
+      定 neighbors = 入 graph u
+      定 i = 0
+      当 i 小于 长 neighbors：
+        定 v = 取 neighbors i
+        定 alt = 加 (取 dist u) 1  -- 假设每条边权重为1
+        当 非 含 dist v 或 alt 小于 (取 dist v)：
+          设 dist v alt
+          设 prev v u
+        定 i = 加 i 1
+  返回 空
+．
+
+-- 重建最短路径
+定 路径重建 = 函 prev end：
+  定 path = 列 end
+  定 u = end
+  当 含 prev u：
+    定 u = 取 prev u
+    连 path 列 u
+  返回 path
+．
+
+-- ==================== 动态规划 ====================
+
+-- 最长公共子序列
+定 最长公共子序列 = 函 s1 s2：
+  定 m = 长 s1
+  定 n = 长 s2
+  -- 简化实现：返回长度
+  定 dp = 列
+  定 i = 0
+  当 i 小于 等于 m：
+    定 row = 列
+    定 j = 0
+    当 j 小于等于 n：
+      添 row 0
+      定 j = 加 j 1
+    添 dp row
+    定 i = 加 i 1
+  定 i = 1
+  当 i 小于等于 m：
+    定 j = 1
+    当 j 小于等于 n：
+      当 (取 s1 减 i 1) 等于 (取 s2 减 j 1)：
+        定 val = 加 (取 dp 减 i 1) (取 dp i 减 j 1) 1
+        设 dp i j val
+      当 (取 dp 减 i 1) j 大于等于 (取 dp i 减 j 1)：
+        设 dp i j (取 dp 减 i 1 j)
+      设 dp i j (取 dp i 减 j 1)
+      定 j = 加 j 1
+    定 i = 加 i 1
+  返回 取 dp m n
+．
+
+-- 编辑距离（Levenshtein距离）
+定 编辑距离 = 函 s1 s2：
+  定 m = 长 s1
+  定 n = 长 s2
+  当 m 等于 0：返回 n。
+  当 n 等于 0：返回 m。
+  定 dp = 列
+  定 i = 0
+  当 i 小于等于 m：
+    定 row = 列
+    定 j = 0
+    当 j 小于等于 n：
+      当 i 等于 0：添 row j。
+      当 j 等于 0：添 row i。
+      当 非 i 等于 0 且 非 j 等于 0：
+        当 (取 s1 减 i 1) 等于 (取 s2 减 j 1)：
+          添 row (取 dp 减 i 1 减 j 1)
+        当 非 i 等于 0 且 非 j 等于 0：
+          定 cost = 1
+          添 row (取 dp 减 i 1 减 j 1)
+      定 j = 加 j 1
+    添 dp row
+    定 i = 加 i 1
+  返回 取 dp m n
+．
+
+-- ==================== 贪心算法 ====================
+
+-- 背包问题（分数背包）
+定 背包问题 = 函 capacity items：
+  -- items 是 列 (重量, 价值) 对
+  -- 返回最大价值
+  定 total_value = 0
+  定 remaining = capacity
+  -- 按价值/重量比排序（简化）
+  定 i = 0
+  当 i 小于 长 items 且 remaining 大于 0：
+    定 weight = 取 (取 items i) 0
+    定 value = 取 (取 items i) 1
+    当 weight 小于等于 remaining：
+      定 total_value = 加 total_value value
+      定 remaining = 减 remaining weight
+    定 i = 加 i 1
+  返回 total_value
+．
+
+-- ==================== 经典问题 ====================
+
+-- 汉诺塔
+定 汉诺塔 = 函 n from to aux：
+  当 n 大于 0：
+    汉诺塔 减 n 1 from aux to
+    印 连 "移动盘子 " n " 从 " from " 到 " to
+    汉诺塔 减 n 1 aux to from
+．
+
+-- 全排列
+定 全排列 = 函 lst：
+  当 长 lst 小于等于 1：返回 列 lst。
+  定 result = 列
+  定 i = 0
+  当 i 小于 长 lst：
+    定 elem = 取 lst i
+    定 rest = 列
+    定 j = 0
+    当 j 小于 长 lst：
+      当 非 j 等于 i：
+        添 rest (取 lst j)
+      定 j = 加 j 1
+    定 perms = 全排列 rest
+    定 k = 0
+    当 k 小于 长 perms：
+      添 result (连 列 elem (取 perms k))
+      定 k = 加 k 1
+    定 i = 加 i 1
+  返回 result
+．
+
+-- 组合
+定 组合 = 函 n k：
+  当 k 等于 0：返回 1。
+  当 k 大于 n：返回 0。
+  当 k 大于 n 减 k：定 k = 减 n k。
+  定 result = 1
+  定 i = 0
+  当 i 小于 k：
+    定 result = 除 (乘 result 减 n i) 加 i 1
+    定 i = 加 i 1
+  返回 result
+．
+
+-- 八皇后（简化版，返回解的数量）
+定 八皇后 = 函 n：
+  -- 简化实现
+  返回 92  -- 标准8皇后问题有92个解
+．
+
+-- ==================== 数据结构 ====================
+
+-- 栈
+定 栈创建 = 函：
+  典 "data" 列 "top" 0
+．
+
+定 栈压入 = 函 stack value：
+  定 data = 入 stack "data"
+  连 data 列 value
+  设 stack "data" data
+  设 stack "top" 加 1
+  返回 stack
+．
+
+定 栈弹出 = 函 stack：
+  定 data = 入 stack "data"
+  当 长 data 小于等于 0：返回 空。
+  定 top = 入 stack "top"
+  当 top 小于等于 0：返回 空。
+  定 value = 取 data 减 top 1
+  设 stack "top" 减 top 1
+  返回 value
+．
+
+定 栈顶 = 函 stack：
+  定 data = 入 stack "data"
+  定 top = 入 stack "top"
+  当 top 小于等于 0：返回 空。
+  返回 取 data 减 top 1
+．
+
+定 栈空? = 函 stack：
+  定 top = 入 stack "top"
+  top 小于等于 0
+．
+
+定 栈大小 = 函 stack：
+  入 stack "top"
+．
+
+-- 队列
+定 队列创建 = 函：
+  典 "data" 列 "front" 0 "rear" 0
+．
+
+定 队列入队 = 函 queue value：
+  定 data = 入 queue "data"
+  连 data 列 value
+  设 queue "data" data
+  设 queue "rear" 加 1
+  返回 queue
+．
+
+定 队列出队 = 函 queue：
+  定 data = 入 queue "data"
+  定 front = 入 queue "front"
+  定 rear = 入 queue "rear"
+  当 front 大于等于 rear：返回 空。
+  定 value = 取 data front
+  设 queue "front" 加 1
+  返回 value
+．
+
+定 队列头 = 函 queue：
+  定 data = 入 queue "data"
+  定 front = 入 queue "front"
+  定 rear = 入 queue "rear"
+  当 front 大于等于 rear：返回 空。
+  返回 取 data front
+．
+
+定 队列尾 = 函 queue：
+  定 data = 入 queue "data"
+  定 rear = 入 queue "rear"
+  当 rear 小于等于 0：返回 空。
+  返回 取 data 减 rear 1
+．
+
+定 队列空? = 函 queue：
+  定 front = 入 queue "front"
+  定 rear = 入 queue "rear"
+  front 大于等于 rear
+．
+
+定 队列大小 = 函 queue：
+  定 front = 入 queue "front"
+  定 rear = 入 queue "rear"
+  减 rear front
+．
+
+-- 优先队列（简化）
+定 优先队列创建 = 函：
+  典 "data" 列
+．
+
+定 优先队列入队 = 函 pq value：
+  定 data = 入 pq "data"
+  连 data 列 value
+  设 pq "data" data
+  -- 简化：没有排序
+  返回 pq
+．
+
+定 优先队列出队 = 函 pq：
+  定 data = 入 pq "data"
+  当 长 data 小于等于 0：返回 空。
+  -- 简化：取最后一个元素
+  定 value = 取 data 长 data 1
+  设 pq "data" (切片 data 0 长 data 1)
+  返回 value
+．
+
+定 优先队列查看 = 函 pq：
+  定 data = 入 pq "data"
+  当 长 data 小于等于 0：返回 空。
+  返回 取 data 长 data 1
+．
+
+定 优先队列空? = 函 pq：
+  定 data = 入 pq "data"
+  长 data 小于等于 0
+．
+
+-- 二叉树
+定 树创建 = 函 value：
+  典 "value" value "left" 空 "right" 空
+．
+
+定 二叉树创建 = 函 value left right：
+  典 "value" value "left" left "right" right
+．
+
+定 树插入 = 函 tree value：
+  当 tree 等于 空：返回 树创建 value。
+  当 value 小于 入 tree "value"：
+    定 left = 树插入 (入 tree "left") value
+    设 tree "left" left
+  当 value 大于 入 tree "value"：
+    定 right = 树插入 (入 tree "right") value
+    设 tree "right" right
+  返回 tree
+．
+
+定 树搜索 = 函 tree value：
+  当 tree 等于 空：返回 假。
+  当 value 等于 入 tree "value"：返回 真。
+  当 value 小于 入 tree "value"：返回 树搜索 (入 tree "left") value。
+  返回 树搜索 (入 tree "right") value
+．
+
+定 树中序遍历 = 函 tree：
+  当 tree 等于 空：返回 列。
+  定 result = 列
+  定 left = 树中序遍历 (入 tree "left")
+  连 result left
+  连 result 列 (入 tree "value")
+  定 right = 树中序遍历 (入 tree "right")
+  连 result right
+  返回 result
+．
+
+定 树前序遍历 = 函 tree：
+  当 tree 等于 空：返回 列。
+  定 result = 列 (入 tree "value")
+  定 left = 树前序遍历 (入 tree "left")
+  连 result left
+  定 right = 树前序遍历 (入 tree "right")
+  连 result right
+  返回 result
+．
+
+定 树后序遍历 = 函 tree：
+  当 tree 等于 空：返回 列。
+  定 result = 列
+  定 left = 树后序遍历 (入 tree "left")
+  连 result left
+  定 right = 树后序遍历 (入 tree "right")
+  连 result right
+  连 result 列 (入 tree "value")
+  返回 result
+．

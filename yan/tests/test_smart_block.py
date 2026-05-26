@@ -103,7 +103,7 @@ class TestShouldEndBlock:
         from lexer import Lexer
         from parser import Parser
 
-        code = "定x=1。"
+        code = "定义x=1。"
         lexer = Lexer()
         tokens = lexer.tokenize(code)
         parser = Parser()
@@ -117,7 +117,7 @@ class TestShouldEndBlock:
         from lexer import Lexer
         from parser import Parser
 
-        code = "定x=1。定y=2。"
+        code = "定义x=1。定义y=2。"
         lexer = Lexer()
         tokens = lexer.tokenize(code)
         parser = Parser()
@@ -131,7 +131,7 @@ class TestShouldEndBlock:
         from lexer import Lexer
         from parser import Parser
 
-        code = "若真则1。若假则0。"
+        code = "如果真那么1。如果假那么0。"
         lexer = Lexer()
         tokens = lexer.tokenize(code)
         parser = Parser()
@@ -145,7 +145,7 @@ class TestShouldEndBlock:
         from lexer import Lexer
         from parser import Parser
 
-        code = "定x=1。定y=2。"
+        code = "定义x=1。定义y=2。"
         lexer = Lexer()
         tokens = lexer.tokenize(code)
         parser = Parser()
@@ -163,7 +163,7 @@ class TestParseBlock:
         from lexer import Lexer
         from parser import Parser
 
-        code = "定x=1。"
+        code = "定义x=1。"
         lexer = Lexer()
         tokens = lexer.tokenize(code)
         parser = Parser()
@@ -178,9 +178,9 @@ class TestParseBlock:
         from parser import Parser
 
         code = """
-定距离=函a b：
-  定差=减a b。
-  若差小0则负差否则差。
+定义距离=函数a b：
+  定义差=减a b。
+  如果差小于0那么负差否则差。
 """
         lexer = Lexer()
         tokens = lexer.tokenize(code)
@@ -203,9 +203,9 @@ class TestParseBlock:
         from parser import Parser
 
         code = """
-定x=1。
-定y=2。
-定z=加x y。
+定义x=1。
+定义y=2。
+定义z=加x y。
 """
         lexer = Lexer()
         tokens = lexer.tokenize(code)
@@ -226,7 +226,7 @@ class TestFunctionDefinition:
         from lexer import Lexer
         from parser import Parser
 
-        code = "定阶乘=函n 若n等1则1否则n乘阶乘n减1。"
+        code = "定义阶乘=函数n 如果n等于1那么1否则n乘阶乘n减1。"
         lexer = Lexer()
         tokens = lexer.tokenize(code)
         parser = Parser()
@@ -245,9 +245,9 @@ class TestFunctionDefinition:
         from parser import Parser
 
         code = """
-定距离=函a b：
-  定差=减a b。
-  若差小0则负差否则差。
+定义距离=函数a b：
+  定义差=减a b。
+  如果差小于0那么负差否则差。
 """
         lexer = Lexer()
         tokens = lexer.tokenize(code)
@@ -274,9 +274,9 @@ class TestIfWithBlock:
         from parser import Parser
 
         code = """
-若x大0则：
-  印"正数"。
-  印x。
+如果x大于0那么：
+  输出"正数"。
+  输出x。
 """
         lexer = Lexer()
         tokens = lexer.tokenize(code)
@@ -298,10 +298,10 @@ class TestIfWithBlock:
         from parser import Parser
 
         code = """
-若x大0则：
-  印"正数"。
+如果x大于0那么：
+  输出"正数"。
 否则：
-  印"非正数"。
+  输出"非正数"。
 """
         lexer = Lexer()
         tokens = lexer.tokenize(code)
@@ -324,8 +324,8 @@ class TestLoopWithBlock:
         from parser import Parser
 
         code = """
-遍历x 于 列1 2 3：
-  印x。
+遍历x 于 列表1 2 3：
+  输出x。
 """
         lexer = Lexer()
         tokens = lexer.tokenize(code)
@@ -346,9 +346,9 @@ class TestLoopWithBlock:
         from parser import Parser
 
         code = """
-当x小10：
-  印x。
-  定x=加x 1。
+当时x小于10：
+  输出x。
+  定义x=加x 1。
 """
         lexer = Lexer()
         tokens = lexer.tokenize(code)
@@ -367,10 +367,10 @@ class TestLoopWithBlock:
         from parser import Parser
 
         code = """
-遍历x 于 列1 2 3：
-  遍历y 于 列4 5：
-    印x。
-    印y。
+遍历x 于 列表1 2 3：
+  遍历y 于 列表4 5：
+    输出x。
+    输出y。
 """
         lexer = Lexer()
         tokens = lexer.tokenize(code)
@@ -393,9 +393,9 @@ class TestLoopWithBlock:
         from parser import Parser
 
         code = """
-当x小10且y大5：
-  印x。
-  印y。
+当时x小于10且y大于5：
+  输出x。
+  输出y。
 """
         lexer = Lexer()
         tokens = lexer.tokenize(code)
@@ -422,10 +422,10 @@ class TestTestFramework:
         code = """
 套 "算术运算测试"：
   测 "加法运算"：
-    断言等 加 1 2 3。
+    断言等于 加 1 2 3。
 
   测 "减法运算"：
-    断言等 减 5 3 2。
+    断言等于 减 5 3 2。
 """
         lexer = Lexer()
         tokens = lexer.tokenize(code)
@@ -446,16 +446,16 @@ class TestTestFramework:
         code = """
 套 "数据操作测试"：
   测 "数据创建"：
-    定 数据 = 列 1 2 3。
-    断言等 长 数据 3。
+    定义 数据 = 列表 1 2 3。
+    断言等于 长 数据 3。
 
   测 "首元素"：
-    定 数据 = 列 1 2 3。
-    断言等 首 数据 1。
+    定义 数据 = 列表 1 2 3。
+    断言等于 首 数据 1。
 
   测 "余元素"：
-    定 数据 = 列 1 2 3。
-    断言等 余 数据 列 2 3。
+    定义 数据 = 列表 1 2 3。
+    断言等于 余 数据 列表 2 3。
 """
         lexer = Lexer()
         tokens = lexer.tokenize(code)
@@ -475,11 +475,11 @@ class TestTestFramework:
         code = """
 套 "算术测试"：
   测 "加法"：
-    断言等 加 1 2 3。
+    断言等于 加 1 2 3。
 
 套 "数据测试"：
-  测 "列表"：
-    断言等 长 列 1 2 3 3。
+  测 "列表表"：
+    断言等于 长 列表 1 2 3 3。
 """
         lexer = Lexer()
         tokens = lexer.tokenize(code)

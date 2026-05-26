@@ -34,12 +34,12 @@ def test_suggest_arity_fix():
     generator = ErrorSuggestionGenerator()
     
     suggestion = generator.suggest_arity_fix(
-        func_name="加",
+        func_name="相加",
         expected=2,
         actual=1
     )
     
-    assert "加" in suggestion
+    assert "相加" in suggestion
     assert "2" in suggestion
     assert "1" in suggestion
 

@@ -2,7 +2,7 @@
 -- 本文件作为标准库的统一入口点
 
 -- 导出所有标准库模块
-出 math, collections, string, io, json, net, time。
+出 math, collections, string, io, json, net, time, functional, algorithms。
 
 -- 导入子模块
 引 "math"。
@@ -12,10 +12,12 @@
 引 "json"。
 引 "net"。
 引 "time"。
+引 "functional"。
+引 "algorithms"。
 
 -- 模块版本信息
-定 __version__ = "0.1.0"。
-定 __modules__ = 列 "math" "collections" "string" "io" "json" "net" "time"。
+定 __version__ = "0.2.0"。
+定 __modules__ = 列 "math" "collections" "string" "io" "json" "net" "time" "functional" "algorithms"。
 
 -- 模块说明
-定 __doc__ = "言语言标准库 - 提供常用功能模块"。
+定 __doc__ = "言语言标准库 - 提供常用功能模块包括集合操作、文件IO、数学运算、字符串处理、网络请求、JSON处理、函数式编程和算法实现"。
