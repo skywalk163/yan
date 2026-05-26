@@ -406,8 +406,9 @@ class TestLoopWithBlock:
         while_node = ast.statements[0]
         # 验证是 While 节点
         assert hasattr(while_node, 'cond')
-        # 验证条件是中缀表达式链
-        assert hasattr(while_node.cond, 'verb')
+        # 验证条件是管道表达式（包含多个步骤）
+        assert hasattr(while_node.cond, 'steps')
+        assert len(while_node.cond.steps) >= 2  # 至少包含两个表达式和连接词
         assert hasattr(while_node, 'body')
 
 

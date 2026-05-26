@@ -4,6 +4,8 @@ import * as child_process from 'child_process';
 import { YanCompletionItemProvider } from './completionProvider';
 import { YanDiagnosticsProvider } from './diagnosticProvider';
 import { YanHoverProvider } from './hoverProvider';
+import { YanDefinitionProvider } from './definitionProvider';
+import { YanReferencesProvider } from './referencesProvider';
 
 let diagnosticProvider: YanDiagnosticsProvider;
 let yanLanguagePath: string;
@@ -29,6 +31,20 @@ export function activate(context: vscode.ExtensionContext) {
         new YanHoverProvider()
     );
     context.subscriptions.push(hoverProvider);
+
+    // 注册定义跳转提供者
+    const definitionProvider = vscode.languages.registerDefinitionProvider(
+        'yan',
+        new YanDefinitionProvider()
+    );
+    context.subscriptions.push(definitionProvider);
+
+    // 注册引用查找提供者
+    const referencesProvider = vscode.languages.registerReferenceProvider(
+        'yan',
+        new YanReferencesProvider()
+    );
+    context.subscriptions.push(referencesProvider);
 
     // 注册代码格式化提供者
     const formatProvider = vscode.languages.registerDocumentFormattingEditProvider(

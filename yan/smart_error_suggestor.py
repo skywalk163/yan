@@ -63,9 +63,10 @@ class SmartErrorSuggestor:
         ErrorPattern(
             pattern="期望 '则'",
             suggestions=[
-                "条件语句需要使用\"则\"关键字，例如：如果 条件 则 ...",
-                "检查\"如果\"语句后面是否缺少\"则\"",
-                "正确语法：如果 条件 则 代码块"
+                "条件语句需要使用\"则\"或\"那么\"关键字，例如：如果 条件 则 ...",
+                "检查\"如果\"语句后面是否缺少\"则\"或\"那么\"",
+                "正确语法：如果 条件 则 代码块",
+                "正确语法：如果 条件 那么 代码块"
             ]
         ),
         ErrorPattern(
@@ -335,7 +336,7 @@ class SmartErrorSuggestor:
         message = error.message
         
         if "期望 '则'" in message:
-            return "在 '如果' 语句后添加 '则' 关键字"
+            return "在 '如果' 语句后添加 '则' 或 '那么' 关键字"
         
         if "期望 '于'" in message:
             return "在 '遍历' 关键字后添加 '于' 关键字"

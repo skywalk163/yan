@@ -25,7 +25,7 @@ class TestOptimizerConfig:
         assert config.constant_folding == True
         assert config.dead_code_elimination == True
         assert config.expression_simplification == True
-        assert config.tail_recursion_optimization == True
+        assert config.tail_recursion_optimization == False  # O1 级别不包含尾递归优化
         assert config.optimization_level == OptimizationLevel.O1
         assert config.verbose == False
     
@@ -48,7 +48,7 @@ class TestOptimizationLevels:
     def test_optimization_level_descriptions(self):
         """测试优化级别描述"""
         assert OptimizationLevel.get_description(OptimizationLevel.O0) == "无优化"
-        assert OptimizationLevel.get_description(OptimizationLevel.O1) == "基础优化（常量折叠、死代码消除）"
+        assert OptimizationLevel.get_description(OptimizationLevel.O1) == "基础优化（常量折叠、死代码消除、表达式简化）"
         assert OptimizationLevel.get_description(OptimizationLevel.O2) == "完全优化（所有优化 + 尾递归优化）"
         assert OptimizationLevel.get_description(OptimizationLevel.Os) == "空间优化（优化代码大小）"
     

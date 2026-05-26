@@ -105,7 +105,7 @@ class Lexer:
 
     # 预定义的单字关键字集合（类级缓存）
     _SINGLE_CHAR_KEYWORDS = frozenset({
-        '真', '假', '读行', '返回',
+        '真', '假', '读行', '返回', '印',
     })
 
     def __init__(self, keywords: Optional[Set[str]] = None, user_words: Optional[Set[str]] = None):
@@ -634,8 +634,10 @@ class Lexer:
                         # 只有当剩余部分是单个非关键字汉字时才考虑合并
                         # 但如果剩余部分是数字，不合并（如 "列表1" -> "列表" + "1"）
                         # 如果剩余部分是多个字符，不合并（如 "函数数" -> "函数" + "数"）
-                        if len(remaining) == 1 and remaining not in self.keywords and self._is_chinese(remaining):
-                            # 剩余部分是单个非关键字汉字，作为整体标识符输出（如 "排序后" -> "排序后"）
+                        # 如果关键字是动词（如"定义"、"印"），不合并，保持清晰的动词边界
+                        verbs = {'定义', '印', '输出', '读', '写', '如果', '那么', '否则', '函数', '返回', '遍历', '当满足', '当时'}
+                        if len(remaining) == 1 and remaining not in self.keywords and self._is_chinese(remaining) and keyword not in verbs:
+                            # 剩余部分是单个非关键字汉字，且关键字不是动词，作为整体标识符输出（如 "排序后" -> "排序后"）
                             tokens.append(Token(TokenType.WORD, full_identifier, line_num, col))
                             i = end
                             col += len(full_identifier)
@@ -1163,7 +1165,7 @@ class Lexer:
                                     # 单字动词列表（不包括比较操作符，因为它们可能出现在变量名中）
                                     verbs = {'相加', '相减', '相乘', '相除', '取余', '幂方',
                                              '并且', '或者', '非也', '首个', '其余', '加入', '长', '添', '连',
-                                             '含', '为空', '皆', '只', '归', '潜在', '打印', '读', '写',
+                                             '含', '为空', '皆', '只', '归', '潜在', '打印', '读', '写', '印',
                                              '如果', '那么', '定义', '函数', '换行', '真', '假'}
                                     if keyword in verbs:
                                         # 是动词，停止收集

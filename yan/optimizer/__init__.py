@@ -4,6 +4,11 @@
 """
 
 from .optimizer import ASTOptimizer, OptimizerConfig
-from .strategy import OptimizationStrategy
+from .strategy import OptimizationStrategy, OptimizationLevel
 
-__all__ = ['ASTOptimizer', 'OptimizerConfig', 'OptimizationStrategy']
+__all__ = [
+    'ASTOptimizer', 
+    'OptimizerConfig', 
+    'OptimizationStrategy',
+    'OptimizationLevel'
+]
