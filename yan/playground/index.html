@@ -75,6 +75,47 @@
             background: rgba(255, 255, 255, 0.2);
         }
 
+        /* 模式切换按钮样式 */
+        .mode-switch {
+            display: flex;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 4px;
+            gap: 4px;
+        }
+
+        .mode-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            background: transparent;
+            color: #888;
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            color: #fff;
+        }
+
+        .mode-btn:hover:not(.active) {
+            color: #fff;
+        }
+
+        /* WASM 特定样式 */
+        .wasm-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            border-radius: 10px;
+            font-size: 11px;
+            margin-left: 8px;
+            color: #fff;
+        }
+
         .main-container {
             display: flex;
             height: calc(100vh - 80px);
@@ -376,11 +417,15 @@
     <header class="header">
         <div class="logo">言<span>语言</span> Playground</div>
         <div class="header-actions">
+            <div class="mode-switch">
+                <button class="mode-btn active" onclick="setMode('python')" id="modePython">🐍 Python</button>
+                <button class="mode-btn" onclick="setMode('wasm')" id="modeWasm">⚡ WebAssembly</button>
+            </div>
             <button class="btn btn-secondary" onclick="clearOutput()">清空输出</button>
             <button class="btn btn-secondary" onclick="showShareModal()">分享代码</button>
             <button class="btn btn-secondary" onclick="showSyntaxDoc()">📖 语法文档</button>
             <a href="/tutorial" class="btn btn-secondary" target="_blank">🎓 入门教程</a>
-            <button class="btn btn-primary" onclick="runCode()">▶ 运行代码</button>
+            <button class="btn btn-primary" onclick="runCode()" id="runBtn">▶ 运行代码</button>
         </div>
     </header>
 
@@ -701,6 +746,10 @@
     </div>
 
     <script>
+        let currentMode = 'python';  // 当前执行模式
+        let wasmModule = null;        // 编译后的 WASM 模块
+        let wasmInstance = null;      // WASM 实例
+
         const examples = {
             hello: `-- 你好，世界
 印 "你好，言语言！"。
@@ -1198,6 +1247,24 @@ print("JSON解码:", decoded)
             }
         });
 
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('modePython').classList.toggle('active', mode === 'python');
+            document.getElementById('modeWasm').classList.toggle('active', mode === 'wasm');
+            
+            // 更新按钮文字
+            const runBtn = document.getElementById('runBtn');
+            if (mode === 'wasm') {
+                runBtn.innerHTML = '⚡ 编译运行';
+            } else {
+                runBtn.innerHTML = '▶ 运行代码';
+            }
+            
+            // 清空之前的编译结果
+            wasmModule = null;
+            wasmInstance = null;
+        }
+
         function loadExample(name) {
             editor.value = examples[name] || '';
             charCount.textContent = `${editor.value.length} 字符`;
@@ -1218,31 +1285,10 @@ print("JSON解码:", decoded)
             const startTime = performance.now();
 
             try {
-                const response = await fetch('/api/execute', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ code })
-                });
-
-                const result = await response.json();
-                const endTime = performance.now();
-                const duration = (endTime - startTime).toFixed(2);
-
-                if (result.success) {
-                    let outputHtml = '';
-                    for (const line of result.output) {
-                        if (line.startsWith('[ERROR]')) {
-                            outputHtml += `<div class="output-error">❌ ${line.substring(7)}</div>`;
-                        } else {
-                            outputHtml += `<div class="output-success">▶ ${line}</div>`;
-                        }
-                    }
-                    outputHtml += `<div class="output-info" style="margin-top: 15px;">✨ 执行完成，耗时 ${duration}ms</div>`;
-                    output.innerHTML = outputHtml;
+                if (currentMode === 'wasm') {
+                    await runWasmCode(code, startTime);
                 } else {
-                    output.innerHTML = `<div class="output-error">❌ 执行错误: ${result.error}</div>`;
+                    await runPythonCode(code, startTime);
                 }
             } catch (error) {
                 output.innerHTML = `<div class="output-error">❌ 网络错误: ${error.message}</div>`;
@@ -1251,6 +1297,112 @@ print("JSON解码:", decoded)
             loading.classList.remove('show');
             runStatus.textContent = '完成';
             statusInfo.textContent = '就绪';
+        }
+
+        async function runPythonCode(code, startTime) {
+            const response = await fetch('/api/execute', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ code })
+            });
+
+            const result = await response.json();
+            const endTime = performance.now();
+            const duration = (endTime - startTime).toFixed(2);
+
+            if (result.success) {
+                let outputHtml = '';
+                for (const line of result.output) {
+                    if (line.startsWith('[ERROR]')) {
+                        outputHtml += `<div class="output-error">❌ ${line.substring(7)}</div>`;
+                    } else {
+                        outputHtml += `<div class="output-success">▶ ${line}</div>`;
+                    }
+                }
+                outputHtml += `<div class="output-info" style="margin-top: 15px;">✨ 执行完成，耗时 ${duration}ms</div>`;
+                output.innerHTML = outputHtml;
+            } else {
+                output.innerHTML = `<div class="output-error">❌ 执行错误: ${result.error}</div>`;
+            }
+        }
+
+        async function runWasmCode(code, startTime) {
+            try {
+                // 编译为 WebAssembly
+                const compileResponse = await fetch('/api/compile-wasm', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ code })
+                });
+
+                const compileResult = await compileResponse.json();
+
+                if (!compileResult.success) {
+                    output.innerHTML = `<div class="output-error">❌ 编译错误: ${compileResult.error}</div>`;
+                    return;
+                }
+
+                // 将 base64 转换为字节数组
+                const binaryString = atob(compileResult.wasm);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+
+                // 收集输出
+                const outputLines = [];
+
+                // 定义导入对象
+                const importObject = {
+                    env: {
+                        memory: new WebAssembly.Memory({ initial: 1 }),
+                        print: function(ptr) {
+                            const memory = new Uint8Array(this.memory.buffer);
+                            let str = '';
+                            let i = 0;
+                            while (memory[ptr + i] !== 0 && i < 1000) {
+                                str += String.fromCharCode(memory[ptr + i]);
+                                i++;
+                            }
+                            outputLines.push(str);
+                        },
+                        print_num: function(n) {
+                            outputLines.push(n.toString());
+                        },
+                        print_float: function(f) {
+                            outputLines.push(f.toString());
+                        }
+                    }
+                };
+
+                // 实例化 WebAssembly
+                const wasmResult = await WebAssembly.instantiate(bytes, importObject);
+                wasmModule = wasmResult.module;
+                wasmInstance = wasmResult.instance;
+
+                // 执行 main 函数
+                if (wasmInstance.exports.main) {
+                    wasmInstance.exports.main();
+                }
+
+                const endTime = performance.now();
+                const duration = (endTime - startTime).toFixed(2);
+
+                // 显示输出
+                let outputHtml = '';
+                for (const line of outputLines) {
+                    outputHtml += `<div class="output-success">▶ ${line}</div>`;
+                }
+                outputHtml += `<div class="output-info" style="margin-top: 15px;">✨ WebAssembly 编译并执行完成，耗时 ${duration}ms</div>`;
+                output.innerHTML = outputHtml;
+
+            } catch (error) {
+                output.innerHTML = `<div class="output-error">❌ WebAssembly 错误: ${error.message}</div>`;
+            }
         }
 
         function clearOutput() {

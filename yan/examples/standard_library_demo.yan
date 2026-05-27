@@ -1,0 +1,179 @@
+-- 言语言标准库综合示例
+-- 展示所有标准库模块的用法
+
+注 "标准库综合演示"。
+
+-- 导入所有标准库模块
+引 math。
+引 collections。
+引 string。
+引 io。
+引 json。
+引 net。
+引 time。
+引 functional。
+引 algorithms。
+引 crypto。
+引 database。
+引 csv。
+引 config。
+
+-- ============================================
+-- 1. math 模块演示
+-- ============================================
+印"=== math 模块 ==="。
+定 pi=π。
+印"圆周率:" pi。
+
+定 sqrt_result=开方16。
+印"开方(16):" sqrt_result。
+
+定 fact_result=阶乘5。
+印"阶乘(5):" fact_result。
+
+定 random_num=随机整数1 100。
+印"随机整数(1-100):" random_num。
+
+印空。
+
+-- ============================================
+-- 2. collections 模块演示
+-- ============================================
+印"=== collections 模块 ==="。
+定 nums=列1 2 3 2 1 4 5 3。
+印"原始列表:" nums。
+
+定 unique=去重nums。
+印"去重后:" unique。
+
+定 reversed_list=反转nums。
+印"反转后:" reversed_list。
+
+定 sliced=切片nums 1 4。
+印"切片(1-4):" sliced。
+
+印空。
+
+-- ============================================
+-- 3. string 模块演示
+-- ============================================
+印"=== string 模块 ==="。
+定 s="Hello World"。
+印"原始字符串:" s。
+印"大写:" 大写s。
+印"小写:" 小写s。
+印"长度:" 长度s。
+
+印空。
+
+-- ============================================
+-- 4. functional 模块演示
+-- ============================================
+印"=== functional 模块 ==="。
+定 numbers=列1 2 3 4 5。
+印"原始列表:" numbers。
+
+定 squared=映射 (函x.乘x x) numbers。
+印"平方后:" squared。
+
+定 evens=过滤 (函x.等(模x 2)0) numbers。
+印"偶数:" evens。
+
+定 total=归约加0 numbers。
+印"求和:" total。
+
+印空。
+
+-- ============================================
+-- 5. algorithms 模块演示
+-- ============================================
+印"=== algorithms 模块 ==="。
+定 unsorted=列64 34 25 12 22 11 90。
+印"未排序:" unsorted。
+
+定 sorted_list=快速排序unsorted。
+印"快速排序后:" sorted_list。
+
+定 idx=二分查找sorted_list 25。
+印"25的索引:" idx。
+
+印空。
+
+-- ============================================
+-- 6. crypto 模块演示
+-- ============================================
+印"=== crypto 模块 ==="。
+定 hash_result=SHA256"hello world"。
+印"SHA256('hello world'):" 取前hash_result 16 "..."。
+
+定 uuid=UUID4。
+印"UUID4:" uuid。
+
+定 encoded=Base64编码"yan language"。
+印"Base64编码:" encoded。
+
+印空。
+
+-- ============================================
+-- 7. database 模块演示
+-- ============================================
+印"=== database 模块 ==="。
+定 db=打开数据库":memory:"。
+
+创建表 db "users" 典 "id INTEGER PRIMARY KEY" "name TEXT" "age INTEGER"。
+插入 db "users" 典 "name" "Alice" "age" 30。
+插入 db "users" 典 "name" "Bob" "age" 25。
+
+定 users=查询 db "SELECT * FROM users" 空。
+印"用户列表:" users。
+
+定 count=查询单个值 db "SELECT COUNT(*) FROM users" 空。
+印"用户数量:" count。
+
+关闭数据库db。
+
+印空。
+
+-- ============================================
+-- 8. csv 模块演示
+-- ============================================
+印"=== csv 模块 ==="。
+定 csv_data=列 典 "name" "Alice" "age" 30 典 "name" "Bob" "age" 25。
+写CSV "/tmp/test_output.csv" csv_data 空。
+
+定 loaded=读CSV "/tmp/test_output.csv" 空。
+印"读取CSV:" loaded。
+
+印空。
+
+-- ============================================
+-- 9. config 模块演示
+-- ============================================
+印"=== config 模块 ==="。
+定 cfg=典 "server" 典 "host" "localhost" "port" 8080 "database" 典 "name" "mydb"。
+写JSON配置 "/tmp/test_config.json" cfg。
+
+定 loaded_cfg=读JSON配置 "/tmp/test_config.json"。
+定 port=获取配置 loaded_cfg "server.port" 80。
+印"配置端口:" port。
+
+印空。
+
+-- ============================================
+-- 10. io 和 json 模块演示
+-- ============================================
+印"=== io 和 json 模块 ==="。
+定 data=典 "message" "Hello from Yan!" "timestamp" 当前时间戳。
+定 json_str=生成data。
+写文件"/tmp/test.json" json_str。
+
+定 content=读文件"/tmp/test.json"。
+定 parsed=解析content。
+印"读取JSON:" parsed。
+
+印空。
+
+-- ============================================
+-- 完成
+-- ============================================
+印"=== 所有标准库模块演示完成 ==="。

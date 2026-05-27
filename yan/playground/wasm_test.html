@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAssembly Playground 测试</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", sans-serif;
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #e0e0e0;
+        }
+
+        h1 {
+            color: #4ecdc4;
+            border-bottom: 2px solid #4ecdc4;
+            padding-bottom: 10px;
+        }
+
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+
+        .test-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px 10px 0;
+            transition: all 0.3s;
+        }
+
+        .test-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);
+        }
+
+        .output {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-family: "Consolas", monospace;
+            white-space: pre-wrap;
+        }
+
+        .success {
+            color: #4ecdc4;
+        }
+
+        .error {
+            color: #ff6b6b;
+        }
+
+        .info {
+            color: #f8d56b;
+        }
+    </style>
+</head>
+<body>
+    <h1>⚡ 言语言 WebAssembly Playground 测试</h1>
+
+    <div class="test-section">
+        <h2>测试 1: 编译简单字符串输出</h2>
+        <button class="test-btn" onclick="testSimpleString()">运行测试</button>
+        <div class="output" id="output1"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>测试 2: 编译数字输出</h2>
+        <button class="test-btn" onclick="testNumber()">运行测试</button>
+        <div class="output" id="output2"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>测试 3: 编译变量赋值和输出</h2>
+        <button class="test-btn" onclick="testVariable()">运行测试</button>
+        <div class="output" id="output3"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>测试 4: 编译汉诺塔问题</h2>
+        <button class="test-btn" onclick="testHanoi()">运行测试</button>
+        <div class="output" id="output4"></div>
+    </div>
+
+    <script>
+        async function compileWasm(code) {
+            const response = await fetch('http://localhost:5000/api/compile-wasm', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ code })
+            });
+
+            return await response.json();
+        }
+
+        async function runWasm(wasmBase64, outputElement) {
+            try {
+                // 将 base64 转换为字节数组
+                const binaryString = atob(wasmBase64);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+
+                // 收集输出
+                const outputLines = [];
+
+                // 定义导入对象
+                const importObject = {
+                    env: {
+                        memory: new WebAssembly.Memory({ initial: 1 }),
+                        print: function(ptr) {
+                            const memory = new Uint8Array(this.memory.buffer);
+                            let str = '';
+                            let i = 0;
+                            while (memory[ptr + i] !== 0 && i < 1000) {
+                                str += String.fromCharCode(memory[ptr + i]);
+                                i++;
+                            }
+                            outputLines.push(str);
+                        },
+                        print_num: function(n) {
+                            outputLines.push(n.toString());
+                        },
+                        print_float: function(f) {
+                            outputLines.push(f.toString());
+                        }
+                    }
+                };
+
+                // 实例化 WebAssembly
+                const wasmResult = await WebAssembly.instantiate(bytes, importObject);
+
+                // 执行 main 函数
+                if (wasmResult.instance.exports.main) {
+                    wasmResult.instance.exports.main();
+                }
+
+                return { success: true, output: outputLines };
+
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function testSimpleString() {
+            const output = document.getElementById('output1');
+            output.innerHTML = '<span class="info">正在编译...</span>';
+
+            try {
+                // 编译
+                const compileResult = await compileWasm('印"Hello, WebAssembly!"。');
+
+                if (!compileResult.success) {
+                    output.innerHTML = `<span class="error">编译错误: ${compileResult.error}</span>`;
+                    return;
+                }
+
+                output.innerHTML = '<span class="info">编译成功，正在运行...</span>';
+
+                // 运行
+                const runResult = await runWasm(compileResult.wasm, output);
+
+                if (runResult.success) {
+                    let html = '<span class="success">✅ 执行成功！</span>\n';
+                    html += '<span class="info">输出:</span>\n';
+                    for (const line of runResult.output) {
+                        html += `<span class="success">  ▶ ${line}</span>\n`;
+                    }
+                    output.innerHTML = html;
+                } else {
+                    output.innerHTML = `<span class="error">❌ 运行错误: ${runResult.error}</span>`;
+                }
+
+            } catch (error) {
+                output.innerHTML = `<span class="error">❌ 网络错误: ${error.message}</span>`;
+            }
+        }
+
+        async function testNumber() {
+            const output = document.getElementById('output2');
+            output.innerHTML = '<span class="info">正在编译...</span>';
+
+            try {
+                const compileResult = await compileWasm('印数 42。');
+
+                if (!compileResult.success) {
+                    output.innerHTML = `<span class="error">编译错误: ${compileResult.error}</span>`;
+                    return;
+                }
+
+                const runResult = await runWasm(compileResult.wasm, output);
+
+                if (runResult.success) {
+                    let html = '<span class="success">✅ 执行成功！</span>\n';
+                    for (const line of runResult.output) {
+                        html += `<span class="success">  ▶ ${line}</span>\n`;
+                    }
+                    output.innerHTML = html;
+                } else {
+                    output.innerHTML = `<span class="error">❌ 运行错误: ${runResult.error}</span>`;
+                }
+
+            } catch (error) {
+                output.innerHTML = `<span class="error">❌ 网络错误: ${error.message}</span>`;
+            }
+        }
+
+        async function testVariable() {
+            const output = document.getElementById('output3');
+            output.innerHTML = '<span class="info">正在编译...</span>';
+
+            try {
+                const compileResult = await compileWasm('令 a 为 100。印数 a。');
+
+                if (!compileResult.success) {
+                    output.innerHTML = `<span class="error">编译错误: ${compileResult.error}</span>`;
+                    return;
+                }
+
+                const runResult = await runWasm(compileResult.wasm, output);
+
+                if (runResult.success) {
+                    let html = '<span class="success">✅ 执行成功！</span>\n';
+                    for (const line of runResult.output) {
+                        html += `<span class="success">  ▶ ${line}</span>\n`;
+                    }
+                    output.innerHTML = html;
+                } else {
+                    output.innerHTML = `<span class="error">❌ 运行错误: ${runResult.error}</span>`;
+                }
+
+            } catch (error) {
+                output.innerHTML = `<span class="error">❌ 网络错误: ${error.message}</span>`;
+            }
+        }
+
+        async function testHanoi() {
+            const output = document.getElementById('output4');
+            output.innerHTML = '<span class="info">正在编译汉诺塔问题...</span>';
+
+            const hanoiCode = `定 汉诺塔 = 函 n 源 目标 辅助：
+  若 等 n 1：
+    印 连 "移动盘子从 " 源 " 到 " 目标。
+  。
+  若 大 n 1：
+    汉诺塔 (减 n 1) 源 辅助 目标。
+    印 连 "移动盘子从 " 源 " 到 " 目标。
+    汉诺塔 (减 n 1) 辅助 目标 源。
+  。
+。。
+
+汉诺塔 3 "A" "C" "B"。`;
+
+            try {
+                const compileResult = await compileWasm(hanoiCode);
+
+                if (!compileResult.success) {
+                    output.innerHTML = `<span class="error">编译错误: ${compileResult.error}</span>`;
+                    return;
+                }
+
+                const runResult = await runWasm(compileResult.wasm, output);
+
+                if (runResult.success) {
+                    let html = '<span class="success">✅ 执行成功！</span>\n';
+                    html += '<span class="info">汉诺塔解法:</span>\n';
+                    for (const line of runResult.output) {
+                        html += `<span class="success">  ▶ ${line}</span>\n`;
+                    }
+                    output.innerHTML = html;
+                } else {
+                    output.innerHTML = `<span class="error">❌ 运行错误: ${runResult.error}</span>`;
+                }
+
+            } catch (error) {
+                output.innerHTML = `<span class="error">❌ 网络错误: ${error.message}</span>`;
+            }
+        }
+    </script>
+</body>
+</html>

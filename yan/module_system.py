@@ -113,7 +113,7 @@ class ModuleSystem:
         self.cache_order: List[str] = []  # LRU顺序
         self.max_cache_size = max_cache_size  # 最大缓存大小
         self.current_path: Optional[Path] = None
-        self.detect_cycles = detect_cycles  # 是否检测循环依赖
+        self._detect_cycles_enabled = detect_cycles  # 是否检测循环依赖
         self.loading_stack: List[str] = []  # 当前正在加载的模块路径栈（用于循环检测）
         
         # 新增功能
@@ -225,7 +225,7 @@ class ModuleSystem:
         abs_path = str(resolved_path.resolve())
         
         # 循环依赖检测和延迟加载
-        if self.detect_cycles:
+        if self._detect_cycles_enabled:
             if abs_path in self.loading_stack:
                 # 检测到循环依赖，使用延迟加载
                 return self._handle_circular_dependency(abs_path, resolved_path)
@@ -242,7 +242,7 @@ class ModuleSystem:
             # 更新LRU顺序
             self._update_lru(abs_path)
             # 从加载栈移除
-            if self.detect_cycles and abs_path in self.loading_stack:
+            if self._detect_cycles_enabled and abs_path in self.loading_stack:
                 self.loading_stack.remove(abs_path)
             return cached_module
         
@@ -296,7 +296,7 @@ class ModuleSystem:
             return module
         finally:
             # 从加载栈移除（确保异常时也能清理）
-            if self.detect_cycles and abs_path in self.loading_stack:
+            if self._detect_cycles_enabled and abs_path in self.loading_stack:
                 self.loading_stack.remove(abs_path)
     
     def _handle_circular_dependency(self, abs_path: str, resolved_path: Path) -> Module:
@@ -307,7 +307,6 @@ class ModuleSystem:
         if abs_path in self.lazy_modules:
             return self.lazy_modules[abs_path]
         
-        # 创建延迟加载的占位模块
         module_name = resolved_path.stem
         lazy_module = Module(
             name=module_name,
@@ -316,10 +315,121 @@ class ModuleSystem:
             is_loaded=False
         )
         
-        # 保存到延迟加载缓存
         self.lazy_modules[abs_path] = lazy_module
         
         return lazy_module
+    
+    def resolve_lazy_modules(self):
+        """
+        解析所有延迟加载的模块
+        在所有模块加载完成后调用，补全循环依赖的模块内容
+        """
+        for abs_path, lazy_module in list(self.lazy_modules.items()):
+            if not lazy_module.is_loaded:
+                self._resolve_lazy_module(abs_path, lazy_module)
+
+    def _resolve_lazy_module(self, abs_path: str, lazy_module: Module):
+        """解析单个延迟加载的模块"""
+        try:
+            with open(lazy_module.path, 'r', encoding='utf-8') as f:
+                source = f.read()
+            
+            lazy_module.source = source
+            lazy_module.source_hash = lazy_module._compute_hash()
+            lazy_module.version = self._extract_version(lazy_module.path)
+            
+            imports = self._parse_imports(source)
+            exports = self._parse_exports(source)
+            
+            for export_name in exports:
+                lazy_module.exports[export_name] = None
+            
+            for imp in imports:
+                try:
+                    dep_module = self.load_module(imp.path, lazy_module.path, imp.version_spec)
+                    lazy_module.dependencies.append(imp.path)
+                except ModuleError:
+                    pass
+            
+            lazy_module.is_loaded = True
+            
+            if abs_path in self.lazy_modules:
+                del self.lazy_modules[abs_path]
+            
+            if abs_path not in self.cache:
+                self.cache[abs_path] = lazy_module
+                self._update_lru(abs_path)
+                
+        except Exception as e:
+            print(f"解析延迟加载模块失败 {lazy_module.name}: {e}")
+    
+    def _detect_all_cycles(self) -> List[List[str]]:
+        """
+        检测所有循环依赖
+        返回: 循环依赖路径列表，如 [[A, B, A], [C, D, E, C]]
+        """
+        cycles = []
+        visited = set()
+        recursion_stack = set()
+        
+        def dfs(module_name: str, path: List[str]):
+            if module_name in recursion_stack:
+                # 找到循环
+                cycle_start = path.index(module_name)
+                cycle = path[cycle_start:] + [module_name]
+                cycles.append(cycle)
+                return
+            
+            if module_name in visited:
+                return
+            
+            visited.add(module_name)
+            recursion_stack.add(module_name)
+            
+            module = self.get_module(module_name)
+            if module:
+                for dep_path in module.dependencies:
+                    dep_name = Path(dep_path).stem
+                    dfs(dep_name, path + [module_name])
+            
+            recursion_stack.remove(module_name)
+        
+        for module in self.cache.values():
+            dfs(module.name, [])
+        
+        return cycles
+
+    def print_cycles(self):
+        """打印循环依赖信息"""
+        cycles = self._detect_all_cycles()
+        if cycles:
+            print("\n检测到循环依赖:")
+            for i, cycle in enumerate(cycles, 1):
+                cycle_str = " -> ".join(cycle)
+                print(f"  {i}. {cycle_str}")
+        else:
+            print("\n未检测到循环依赖")
+
+    def generate_dot_graph(self) -> str:
+        """生成 DOT 格式的依赖图"""
+        lines = ["digraph modules {"]
+        lines.append("  rankdir=LR;")
+        lines.append("  node [shape=box];")
+        
+        for module in self.cache.values():
+            for dep_path in module.dependencies:
+                dep_name = Path(dep_path).stem
+                lines.append(f'  "{module.name}" -> "{dep_name}";')
+        
+        lines.append("}")
+        return "\n".join(lines)
+
+    def save_dependency_graph(self, filename: str):
+        """保存依赖图到文件"""
+        dot_content = self.generate_dot_graph()
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write(dot_content)
+        print(f"依赖图已保存到: {filename}")
     
     def _extract_version(self, module_path: Path) -> str:
         """
@@ -344,44 +454,83 @@ class ModuleSystem:
         
         :param current_version: 当前版本
         :param version_spec: 版本约束（如 ">= 1.0.0", "< 2.0.0", "== 1.2.3"）
+                          支持复合约束（如 ">=1.0.0,<2.0.0"）
         :return: 是否满足约束
         """
         try:
-            # 解析版本约束
-            import re
-            match = re.match(r'([<>!=]+)\s*([\d.]+)', version_spec.strip())
-            if not match:
-                return True  # 无法解析约束，视为满足
+            # 支持复合版本约束，用逗号分隔
+            constraints = version_spec.split(',')
             
-            operator = match.group(1)
-            spec_version = match.group(2)
-            
-            # 比较版本
-            current_parts = list(map(int, current_version.split('.')[:3]))
-            spec_parts = list(map(int, spec_version.split('.')[:3]))
-            
-            # 补齐版本号位数
-            while len(current_parts) < 3:
-                current_parts.append(0)
-            while len(spec_parts) < 3:
-                spec_parts.append(0)
-            
-            if operator == '==' or operator == '=':
-                return current_parts == spec_parts
-            elif operator == '!=':
-                return current_parts != spec_parts
-            elif operator == '>':
-                return current_parts > spec_parts
-            elif operator == '<':
-                return current_parts < spec_parts
-            elif operator == '>=':
-                return current_parts >= spec_parts
-            elif operator == '<=':
-                return current_parts <= spec_parts
+            for constraint in constraints:
+                constraint = constraint.strip()
+                
+                # 解析版本约束
+                import re
+                match = re.match(r'([<>!=~]+)\s*([\d.]+)', constraint)
+                if not match:
+                    continue  # 无法解析约束，视为满足
+                
+                operator = match.group(1)
+                spec_version = match.group(2)
+                
+                # 比较版本
+                current_parts = list(map(int, current_version.split('.')[:3]))
+                spec_parts = list(map(int, spec_version.split('.')[:3]))
+                
+                # 补齐版本号位数
+                while len(current_parts) < 3:
+                    current_parts.append(0)
+                while len(spec_parts) < 3:
+                    spec_parts.append(0)
+                
+                if operator == '==' or operator == '=':
+                    if current_parts != spec_parts:
+                        return False
+                elif operator == '!=':
+                    if current_parts == spec_parts:
+                        return False
+                elif operator == '>':
+                    if current_parts <= spec_parts:
+                        return False
+                elif operator == '<':
+                    if current_parts >= spec_parts:
+                        return False
+                elif operator == '>=':
+                    if current_parts < spec_parts:
+                        return False
+                elif operator == '<=':
+                    if current_parts > spec_parts:
+                        return False
+                elif operator == '~=':
+                    if not self._check_compatible_version(current_version, spec_version):
+                        return False
             
             return True
         except:
             return True  # 解析失败，视为满足
+    
+    def _check_compatible_version(self, current_version: str, spec_version: str) -> bool:
+        """
+        检查兼容版本（~= 操作符）
+        ~= 表示兼容版本：例如 ~=1.2.3 表示 >=1.2.3 且 <1.3.0
+        （对于 1.2.3 格式，兼容版本是 >=1.2.3 且 <(1.3.0)）
+        """
+        try:
+            current_parts = list(map(int, current_version.split('.')[:2]))
+            spec_parts = list(map(int, spec_version.split('.')[:2]))
+            
+            if len(current_parts) < 2:
+                return True
+            
+            if current_parts[0] != spec_parts[0]:
+                return False
+            
+            if current_parts[1] < spec_parts[1]:
+                return False
+            
+            return True
+        except:
+            return True
     
     def _parse_imports(self, source: str) -> List[ImportStatement]:
         """
@@ -395,9 +544,9 @@ class ModuleSystem:
         imports: List[ImportStatement] = []
         
         # 匹配导入语句的正则
-        # 简单匹配：导入 后接字符串，可选后面的 为 或 取
+        # 支持：导入 "module" [为 alias] [取 name1, name2] [>= 1.0.0]
         import_pattern = re.compile(
-            r'导入\s*[\"\']([^\"\']+)[\"\']\s*(?:为\s*(\w+))?\s*(?:取\s*([^\.\n]+))?',
+            r'导入\s*[\"\']([^\"\']+)[\"\']\s*(?:为\s*(\w+))?\s*(?:取\s*([^\.\n]+))?\s*(?:(>=|<=|>|<|==|!=|~=)\s*([\d.]+))?',
             re.UNICODE
         )
         
@@ -418,10 +567,16 @@ class ModuleSystem:
                         parts = [p.strip() for p in selective_str.split(',')]
                         selective = [p for p in parts if p]
                 
+                # 解析版本约束
+                version_spec = None
+                if match.group(4) and match.group(5):
+                    version_spec = f"{match.group(4)}{match.group(5)}"
+                
                 imports.append(ImportStatement(
                     path=path,
                     alias=alias,
-                    selective=selective
+                    selective=selective,
+                    version_spec=version_spec
                 ))
         
         return imports
@@ -673,7 +828,71 @@ class ModuleSystem:
             module.is_hot_reload_enabled = False
         else:
             raise ModuleError(f"找不到模块: {module_name}", module_name)
-    
+
+    def watch_module(self, module_name: str, callback: Callable):
+        """
+        监视指定模块的变化
+        
+        :param module_name: 模块名称
+        :param callback: 变化时的回调函数
+        """
+        module = self.get_module(module_name)
+        if module:
+            module.add_hot_reload_callback(callback)
+            module.is_hot_reload_enabled = True
+        else:
+            raise ModuleError(f"找不到模块: {module_name}", module_name)
+
+    def unwatch_module(self, module_name: str):
+        """
+        停止监视指定模块
+        
+        :param module_name: 模块名称
+        """
+        module = self.get_module(module_name)
+        if module:
+            module.is_hot_reload_enabled = False
+            module.hot_reload_callbacks.clear()
+        else:
+            raise ModuleError(f"找不到模块: {module_name}", module_name)
+
+    def get_hot_reload_status(self) -> Dict[str, bool]:
+        """
+        获取所有模块的热更新状态
+        
+        :return: {模块名: 是否启用热更新}
+        """
+        status = {}
+        for module in self.cache.values():
+            status[module.name] = module.is_hot_reload_enabled
+        return status
+
+    def update_module_exports(self, module_path: str):
+        """
+        只更新模块的导出，不重新加载整个模块
+        
+        :param module_path: 模块路径
+        """
+        if module_path in self.cache:
+            module = self.cache[module_path]
+            
+            try:
+                with open(module.path, 'r', encoding='utf-8') as f:
+                    new_source = f.read()
+                
+                exports = self._parse_exports(new_source)
+                
+                # 只更新新增的导出
+                for export_name in exports:
+                    if export_name not in module.exports:
+                        module.exports[export_name] = None
+                
+                print(f"模块导出已更新: {module.name}")
+            except Exception as e:
+                print(f"更新模块导出失败: {e}")
+        else:
+            raise ModuleError(f"找不到模块: {module_path}", module_path)
+
     def shutdown_hot_reload(self):
         """停止热更新监控"""
         self.enable_hot_reload = False
@@ -730,6 +949,54 @@ class ModuleSystem:
                             )
         
         return issues
+    
+    def detect_version_conflicts(self) -> List[Dict[str, Any]]:
+        """
+        检测版本冲突（跨模块）
+
+        :return: 冲突列表
+        """
+        conflicts = []
+
+        # 收集所有依赖版本要求
+        # {dep_name: [(module_name, version_spec), ...]}
+        all_requirements: Dict[str, List[Dict[str, str]]] = {}
+
+        for module in self.cache.values():
+            imports = self._parse_imports(module.source)
+
+            for imp in imports:
+                dep_name = Path(imp.path).stem
+                if dep_name not in all_requirements:
+                    all_requirements[dep_name] = []
+                all_requirements[dep_name].append({
+                    "module": module.name,
+                    "spec": imp.version_spec or ">=0.0.0"  # 无约束默认为 >=0.0.0
+                })
+
+        # 检测冲突
+        for dep_name, requirements in all_requirements.items():
+            if len(requirements) > 1:
+                dep_module = self.get_module(dep_name)
+                if dep_module:
+                    # 检查是否有冲突：版本是否同时满足所有约束
+                    all_satisfied = True
+                    for req in requirements:
+                        if not self._check_version(dep_module.version, req["spec"]):
+                            all_satisfied = False
+                            break
+
+                    if not all_satisfied:
+                        conflicts.append({
+                            "dependency": dep_name,
+                            "available_version": dep_module.version,
+                            "requirements": [
+                                {"module": req["module"], "spec": req["spec"]}
+                                for req in requirements
+                            ]
+                        })
+
+        return conflicts
 
 
 # =====================================

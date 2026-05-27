@@ -1,0 +1,77 @@
+-- Web服务器演示示例
+-- 展示如何使用言语言标准库构建一个简单的Web服务器
+
+注 "Web服务器演示"。
+
+-- 导入需要的模块
+引 json。
+引 database。
+引 config。
+引 crypto。
+引 regex。
+引 process。
+引 time。
+
+-- 加载配置
+定 cfg = 读JSON配置 "config.json"。
+定 端口 = 获取配置 cfg "server.port" 8080。
+定 数据库路径 = 获取配置 cfg "database.path" "example.db"。
+
+-- 初始化数据库
+定 db = 打开数据库 数据库路径。
+创建表 db "users" 典 "id INTEGER PRIMARY KEY" "name TEXT" "email TEXT" "created_at TEXT"。
+创建表 db "posts" 典 "id INTEGER PRIMARY KEY" "title TEXT" "content TEXT" "author_id INTEGER" "created_at TEXT"。
+
+-- 示例数据
+定 示例用户 = 列 典 "name" "Alice" "email" "alice@example.com" 典 "name" "Bob" "email" "bob@example.com"。
+定 i = 0。
+当 i 小于 长 示例用户：
+  定 用户 = 取 示例用户 i。
+  设 用户 "created_at" 当前日期时间。
+  插入 db "users" 用户。
+  定 i = 加 i 1。
+。
+
+-- API路由处理
+定 处理请求 = 函 路径 方法：
+  当 等于 路径 "/users"：
+    当 等于 方法 "GET"：
+      定 用户 = 查询 db "SELECT * FROM users" 空。
+      返回 典 "status" 200 "content" JSON生成 用户。
+    。
+    返回 典 "status" 405。
+  。
+  当 匹配 "^/users/\\d+$" 路径：
+    定 用户ID = 转数字 取 分割 路径 "/" 2。
+    定 用户 = 查询单行 db "SELECT * FROM users WHERE id=?" 列 用户ID。
+    当 用户 不等于 空：
+      返回 典 "status" 200 "content" JSON生成 用户。
+    。
+    返回 典 "status" 404 "content" "用户未找到"。
+  。
+  当 等于 路径 "/hash"：
+    定 哈希 = SHA256 "test-data"。
+    返回 典 "status" 200 "content" 典 "hash" 哈希。
+  。
+  返回 典 "status" 404 "content" "未找到"。
+。
+
+-- 服务器主循环
+定 启动服务器 = 函：
+  印 连 "服务器启动在端口 " 转字符串 端口。
+  印 "按 Ctrl+C 停止服务器"。
+  
+  定 运行 = 真。
+  当 运行：
+    定 请求 = 典 "path" "/users" "method" "GET"。
+    定 响应 = 处理请求 值 请求 "path" 值 请求 "method"。
+    印 连 "请求: " 值 请求 "method" " " 值 请求 "path" " -> " 转字符串 值 响应 "status"。
+    睡眠 1。
+  。
+。
+
+-- 运行服务器
+启动服务器。
+
+-- 关闭数据库
+关闭数据库 db。

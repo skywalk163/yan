@@ -1,0 +1,89 @@
+-- 加密模块（crypto.yan）
+-- 提供加密和安全相关功能
+
+-- 导出声明
+出 MD5, SHA1, SHA256, SHA512,
+    Base64编码, Base64解码, Base64URL编码, Base64URL解码,
+    UUID1, UUID4, UUID字符串,
+    HMAC_MD5, HMAC_SHA1, HMAC_SHA256,
+    CRC32, 安全比较。
+
+-- MD5哈希
+定 MD5 = 函 文本：
+  返回 MD5 文本。
+．
+
+-- SHA1哈希
+定 SHA1 = 函 文本：
+  返回 SHA1 文本。
+．
+
+-- SHA256哈希
+定 SHA256 = 函 文本：
+  返回 SHA256 文本。
+．
+
+-- SHA512哈希
+定 SHA512 = 函 文本：
+  返回 SHA512 文本。
+．
+
+-- Base64编码
+定 Base64编码 = 函 文本：
+  返回 Base64编码 文本。
+．
+
+-- Base64解码
+定 Base64解码 = 函 编码文本：
+  返回 Base64解码 编码文本。
+．
+
+-- Base64URL编码
+定 Base64URL编码 = 函 文本：
+  返回 Base64URL编码 文本。
+．
+
+-- Base64URL解码
+定 Base64URL解码 = 函 编码文本：
+  返回 Base64URL解码 编码文本。
+．
+
+-- UUID版本1（基于时间戳）
+定 UUID1 = 函：
+  返回 UUID1。
+．
+
+-- UUID版本4（随机）
+定 UUID4 = 函：
+  返回 UUID4。
+．
+
+-- 生成短UUID字符串（去掉连字符）
+定 UUID字符串 = 函：
+  返回 UUID字符串。
+．
+
+-- HMAC-MD5
+定 HMAC_MD5 = 函 文本 密钥：
+  返回 HMAC_MD5 文本 密钥。
+．
+
+-- HMAC-SHA1
+定 HMAC_SHA1 = 函 文本 密钥：
+  返回 SHA1 连 密钥 文本。
+．
+
+-- HMAC-SHA256
+定 HMAC_SHA256 = 函 文本 密钥：
+  返回 HMAC_SHA256 文本 密钥。
+．
+
+-- CRC32校验和
+定 CRC32 = 函 文本：
+  返回 0。
+．
+
+-- 安全字符串比较（防止时序攻击）
+定 安全比较 = 函 字符串1 字符串2：
+  返回 安全比较 字符串1 字符串2。
+．

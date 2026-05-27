@@ -406,7 +406,12 @@ def main():
     # 检查是否是从stdin读取代码（Playground使用）
     if sys.argv[1] == "-c" or sys.argv[1] == "--code":
         try:
+            # 使用 utf-8 编码读取 stdin，确保正确处理中文
             source = sys.stdin.read()
+            if not source:
+                # 尝试以二进制方式读取并解码
+                import io
+                source = sys.stdin.buffer.read().decode('utf-8')
             if source.strip():
                 result = run(source, debug=False, use_global_verbs=False, clear_cache=True)
                 if result is not None:

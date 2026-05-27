@@ -25,25 +25,59 @@ from pathlib import Path
 BASE_DIR = Path(__file__).parent.parent
 MAIN_PY = BASE_DIR / "main.py"
 
+# 添加 yan 目录到 Python 路径，确保可以导入模块
+import sys
+sys.path.insert(0, str(BASE_DIR))
+
 
 def execute_code_in_process(code: str) -> dict:
     """在独立进程中执行代码，避免内存泄漏"""
+    import tempfile
+    import os
+    
     try:
-        result = subprocess.run(
-            [sys.executable, str(MAIN_PY), "-c"],
-            input=code,
-            capture_output=True,
-            text=True,
-            timeout=30,  # 30秒超时
-            encoding='utf-8',
-        )
+        # 创建临时文件来传递代码，避免 stdin 编码问题
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yan', delete=False, encoding='utf-8') as f:
+            f.write(code)
+            temp_file = f.name
         
-        # 修复：安全处理 stdout 可能为 None 的情况
-        stdout_str = result.stdout if result.stdout else ""
+        try:
+            result = subprocess.run(
+                [sys.executable, str(MAIN_PY), temp_file],
+                capture_output=True,
+                text=False,
+                timeout=30,
+            )
+        finally:
+            # 确保删除临时文件
+            os.unlink(temp_file)
+        
+        # 尝试多种编码解码 stdout
+        stdout_str = ""
+        if result.stdout:
+            try:
+                stdout_str = result.stdout.decode('utf-8')
+            except UnicodeDecodeError:
+                try:
+                    stdout_str = result.stdout.decode('gbk')
+                except UnicodeDecodeError:
+                    stdout_str = result.stdout.decode('utf-8', errors='replace')
+        
         output = stdout_str.strip().split('\n') if stdout_str.strip() else []
+        # 移除 Windows 换行符 \r
+        output = [line.rstrip('\r') for line in output]
         
-        # 修复：安全处理 stderr 可能为 None 的情况
-        stderr_str = result.stderr if result.stderr else ""
+        # 尝试多种编码解码 stderr
+        stderr_str = ""
+        if result.stderr:
+            try:
+                stderr_str = result.stderr.decode('utf-8')
+            except UnicodeDecodeError:
+                try:
+                    stderr_str = result.stderr.decode('gbk')
+                except UnicodeDecodeError:
+                    stderr_str = result.stderr.decode('utf-8', errors='replace')
+        
         error = stderr_str.strip() if stderr_str.strip() else None
         
         if result.returncode != 0:
@@ -113,6 +147,10 @@ class PlaygroundHandler(SimpleHTTPRequestHandler):
         
         if parsed.path == '/api/execute':
             self.handle_execute()
+        elif parsed.path == '/api/execute-wasm':
+            self.handle_execute_wasm()
+        elif parsed.path == '/api/compile-wasm':
+            self.handle_compile_wasm()
         elif parsed.path == '/api/format':
             self.handle_format()
         elif parsed.path == '/api/lint':
@@ -215,6 +253,100 @@ class PlaygroundHandler(SimpleHTTPRequestHandler):
             })
         except Exception as e:
             self.send_json({'success': False, 'error': str(e), 'issues': []})
+    
+    def handle_compile_wasm(self):
+        """处理 WebAssembly 编译请求"""
+        content_length = int(self.headers.get('Content-Length', 0))
+        body = self.rfile.read(content_length).decode('utf-8')
+        
+        try:
+            data = json.loads(body)
+            code = data.get('code', '')
+        except json.JSONDecodeError:
+            self.send_json({'success': False, 'error': 'Invalid JSON', 'wasm': None})
+            return
+        
+        if not code.strip():
+            self.send_json({'success': False, 'error': 'Empty code', 'wasm': None})
+            return
+        
+        try:
+            from lexer import Lexer
+            from parser import Parser
+            from codegen_wasm import WASMCodeGen
+            
+            # 编译流程
+            lexer = Lexer()
+            tokens = lexer.tokenize(code)
+            parser = Parser()
+            ast = parser.parse(tokens)
+            codegen = WASMCodeGen()
+            wasm_bytes = codegen.generate(ast)
+            
+            # 转换为 base64 便于前端传输
+            import base64
+            wasm_base64 = base64.b64encode(wasm_bytes).decode('utf-8')
+            
+            self.send_json({
+                'success': True,
+                'wasm': wasm_base64,
+                'error': None
+            })
+            
+        except Exception as e:
+            self.send_json({
+                'success': False,
+                'wasm': None,
+                'error': str(e)
+            })
+    
+    def handle_execute_wasm(self):
+        """处理 WebAssembly 执行请求（直接编译并返回结果）"""
+        content_length = int(self.headers.get('Content-Length', 0))
+        body = self.rfile.read(content_length).decode('utf-8')
+        
+        try:
+            data = json.loads(body)
+            code = data.get('code', '')
+        except json.JSONDecodeError:
+            self.send_json({'success': False, 'output': [], 'error': 'Invalid JSON'})
+            return
+        
+        if not code.strip():
+            self.send_json({'success': False, 'output': [], 'error': 'Empty code'})
+            return
+        
+        try:
+            from lexer import Lexer
+            from parser import Parser
+            from codegen_wasm import WASMCodeGen
+            
+            # 编译
+            lexer = Lexer()
+            tokens = lexer.tokenize(code)
+            parser = Parser()
+            ast = parser.parse(tokens)
+            codegen = WASMCodeGen()
+            wasm_bytes = codegen.generate(ast)
+            
+            # 转换为 base64
+            import base64
+            wasm_base64 = base64.b64encode(wasm_bytes).decode('utf-8')
+            
+            self.send_json({
+                'success': True,
+                'wasm': wasm_base64,
+                'output': [],
+                'error': None
+            })
+            
+        except Exception as e:
+            self.send_json({
+                'success': False,
+                'wasm': None,
+                'output': [],
+                'error': str(e)
+            })
     
     def send_examples(self):
         """发送示例列表"""

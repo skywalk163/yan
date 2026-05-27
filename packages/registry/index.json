@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0",
+  "packages": [
+    "yan-stdlib"
+  ],
+  "categories": {
+    "core": ["yan-stdlib"],
+    "database": ["yan-stdlib"],
+    "network": ["yan-stdlib"],
+    "utilities": ["yan-stdlib"]
+  },
+  "trending": ["yan-stdlib"],
+  "newest": ["yan-stdlib"]
+}

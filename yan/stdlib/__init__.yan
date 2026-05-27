@@ -2,7 +2,7 @@
 -- 本文件作为标准库的统一入口点
 
 -- 导出所有标准库模块
-出 math, collections, string, io, json, net, time, functional, algorithms。
+出 math, collections, string, io, json, net, time, functional, algorithms, crypto, database, csv, config, regex, process, test, logging, cache, template。
 
 -- 导入子模块
 引 "math"。
@@ -14,10 +14,24 @@
 引 "time"。
 引 "functional"。
 引 "algorithms"。
+引 "crypto"。
+引 "database"。
+引 "csv"。
+引 "config"。
+引 "regex"。
+引 "process"。
+引 "test"。
+引 "logging"。
+引 "cache"。
+引 "template"。
 
 -- 模块版本信息
-定 __version__ = "0.2.0"。
-定 __modules__ = 列 "math" "collections" "string" "io" "json" "net" "time" "functional" "algorithms"。
+定 __version__ = "0.4.0"。
+定 __modules__ = 列 "math" "collections" "string" "io" "json" "net" "time" "functional" "algorithms" "crypto" "database" "csv" "config" "regex" "process" "test" "logging" "cache" "template"。
 
 -- 模块说明
-定 __doc__ = "言语言标准库 - 提供常用功能模块包括集合操作、文件IO、数学运算、字符串处理、网络请求、JSON处理、函数式编程和算法实现"。
+定 __doc__ = "言语言标准库 - 提供常用功能模块包括集合操作、文件IO、数学运算、字符串处理、网络请求、JSON处理、函数式编程、算法实现、加密安全、数据库操作、CSV处理、配置管理、正则表达式、进程管理、单元测试、日志记录和缓存管理"。
+
+引 logging 之 DEBUG INFO WARNING ERROR CRITICAL debug info warning error critical。
+引 cache 之 初始化缓存 缓存获取 缓存设置 缓存删除 缓存清空。
+引 template 之 渲染 加载模板 渲染文件。

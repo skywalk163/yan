@@ -1,0 +1,63 @@
+-- 完整Web服务器示例
+-- 展示如何构建一个功能完整的Web应用
+
+注 "完整Web服务器示例"。
+
+引 net。
+引 json。
+引 database。
+引 template。
+引 logging。
+
+设置日志级别 DEBUG。
+设置日志文件 "server.log"。
+
+定 服务器 = 创建服务器 8080。
+
+定 路由 = 典。
+
+设 路由 "/" (函 请求 响应.
+  定 数据 = 典 "title" "欢迎" "message" "这是言语言Web服务器"。
+  定 内容 = 渲染 "<html><body><h1>{{title}}</h1><p>{{message}}</p></body></html>" 数据。
+  返回 响应 200 内容 "text/html"。
+)。
+
+设 路由 "/api/users" (函 请求 响应.
+  定 db = 打开数据库 "app.db"。
+  定 用户 = 查询 db "SELECT * FROM users" 空。
+  关闭数据库 db。
+  返回 响应 200 JSON生成 用户 "application/json"。
+)。
+
+设 路由 "/api/users/:id" (函 请求 响应.
+  定 用户ID = 获取参数 请求 "id"。
+  定 db = 打开数据库 "app.db"。
+  定 用户 = 查询单行 db "SELECT * FROM users WHERE id=?" 列 用户ID。
+  关闭数据库 db。
+  当 用户 不等于 空:
+    返回 响应 200 JSON生成 用户 "application/json"。
+  否则:
+    返回 响应 404 JSON生成 典 "error" "用户未找到" "application/json"。
+  。
+)。
+
+定 处理请求 = 函 请求.
+  定 路径 = 获取路径 请求。
+  定 方法 = 获取方法 请求。
+
+  debug 连 "收到请求: " 方法 " " 路径。
+
+  当 存在键 路由 路径:
+    定 处理器 = 值 路由 路径。
+    返回 处理器 请求 响应。
+  。
+
+  返回 响应 404 "Not Found" "text/plain"。
+。
+
+定 启动 = 函.
+  印 "服务器启动在 http://localhost:8080"。
+  监听 服务器 处理请求。
+.
+
+启动。

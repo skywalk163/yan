@@ -102,7 +102,7 @@ class Parser:
         '并且', '或者', '非也',
         '首个', '其余', '入', '取', '设', '长', '添', '连', '含', '空',
         '映射', '过滤', '归约', '潜',
-        '输出', '读', '写', '行', '读行', '印',
+        '输出', '读', '写', '行', '读行', '印', '印数', '印浮',
         '如果', '那么', '否则', '定义', '函数', '返回',
         '遍历', '于', '当满足', '当时',
         '列表', '典', '序', '范围',
@@ -403,9 +403,9 @@ class Parser:
         if self._match(TokenType.DOT, TokenType.SEMI):
                 return None
 
-        # 检查是否以 '定义' 开头（处理 "定xxx" 形式的变量名）
+        # 检查是否以 '定义' 或 '定' 开头（处理 "定xxx" 或 "定义xxx" 形式的变量名）
         if (self._current().type == TokenType.WORD and 
-            self._current().value.startswith('定义')):
+            (self._current().value.startswith('定义') or self._current().value == '定')):
             result = self._parse_define()
             if consume_dot:
                 self._match(TokenType.DOT, TokenType.SEMI)
@@ -456,7 +456,7 @@ class Parser:
         name = ''.join(name_parts)
         self._expect(TokenType.EQUALS, "期望 '='")
 
-        if self._check_word('函数'):
+        if self._check_word('函数') or self._check_word('函'):
             value = self._parse_lambda()
             # 添加到全局用户动词集合
             if self.use_global_verbs:

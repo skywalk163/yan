@@ -1,0 +1,56 @@
+// Minimal with Memory - try different encodings
+
+// Encoding 1: flags=0, initial=1 (our current)
+const wasm1 = new Uint8Array([
+    0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
+    0x01, 0x04, 0x01, 0x60, 0x00, 0x00, // Type
+    0x03, 0x02, 0x01, 0x00, // Function
+    0x05, 0x02, 0x00, 0x01, // Memory: flags=0, initial=1
+    0x07, 0x08, 0x01, 0x04, 0x6d, 0x61, 0x69, 0x6e, 0x00, 0x00, // Export
+    0x0a, 0x04, 0x01, 0x02, 0x00, 0x0b, // Code
+]);
+
+// Encoding 2: using LEB128 for initial (should be same)
+const wasm2 = new Uint8Array([
+    0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
+    0x01, 0x04, 0x01, 0x60, 0x00, 0x00, // Type
+    0x03, 0x02, 0x01, 0x00, // Function
+    0x05, 0x02, 0x00, 0x01, // Memory: flags=0, initial=1
+    0x07, 0x08, 0x01, 0x04, 0x6d, 0x61, 0x69, 0x6e, 0x00, 0x00, // Export
+    0x0a, 0x04, 0x01, 0x02, 0x00, 0x0b, // Code
+]);
+
+console.log('wasm1 (flags=0, initial=1):');
+console.log('  Valid:', WebAssembly.validate(wasm1) ? 'Valid' : 'Invalid');
+if (!WebAssembly.validate(wasm1)) {
+    WebAssembly.compile(wasm1).catch(e => console.log('  Error:', e.message.split('\n')[0]));
+}
+
+// Try with no memory
+const wasm3 = new Uint8Array([
+    0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
+    0x01, 0x04, 0x01, 0x60, 0x00, 0x00,
+    0x03, 0x02, 0x01, 0x00,
+    0x07, 0x08, 0x01, 0x04, 0x6d, 0x61, 0x69, 0x6e, 0x00, 0x00,
+    0x0a, 0x04, 0x01, 0x02, 0x00, 0x0b,
+]);
+
+console.log('wasm3 (no Memory):');
+console.log('  Valid:', WebAssembly.validate(wasm3) ? 'Valid' : 'Invalid');
+if (WebAssembly.validate(wasm3)) {
+    WebAssembly.compile(wasm3).then(m => {
+        console.log('  Compile OK');
+    });
+}
+
+// Let's try a known good wasm with memory from a file
+const fs = require('fs');
+// Read tower_of_hanoi.wasm
+const hanoi = fs.readFileSync('g:\\dumategithub\\newlisp\\yan\\wasm_output\\tower_of_hanoi.wasm');
+console.log('\\nhanoi.wasm:');
+console.log('  Length:', hanoi.length);
+console.log('  Hex at 88-91:', hanoi.slice(88, 92).toString('hex'));
+console.log('  Valid:', WebAssembly.validate(hanoi) ? 'Valid' : 'Invalid');
+if (!WebAssembly.validate(hanoi)) {
+    WebAssembly.compile(hanoi).catch(e => console.log('  Error:', e.message.split('\n')[0]));
+}

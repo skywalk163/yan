@@ -36,10 +36,15 @@ class WASMCodeGen:
     
     def _init_basic_types(self):
         """初始化基础类型"""
-        self.func_types.append(b'\x02\x60\x01\x7f\x00')
-        self.func_types.append(b'\x02\x60\x01\x7d\x00')
-        self.func_types.append(b'\x02\x60\x01\x7c\x00')
-        self.func_types.append(b'\x02\x60\x00\x00')
+        # WASM 函数类型格式: 0x60 (func) + param_count + params + result_count + results
+        # print(i32) - 1个i32参数，无返回值
+        self.func_types.append(b'\x60\x01\x7f\x00')
+        # print_num(i32) - 1个i32参数，无返回值（改为i32，因为我们主要打印整数）
+        self.func_types.append(b'\x60\x01\x7f\x00')
+        # print_float(f64) - 1个f64参数，无返回值
+        self.func_types.append(b'\x60\x01\x7c\x00')
+        # main() - 无参数，无返回值
+        self.func_types.append(b'\x60\x00\x00')
     
     def generate(self, node: Node) -> bytes:
         """生成 WASM 字节码"""
@@ -53,12 +58,15 @@ class WASMCodeGen:
         self._collect_functions(node)
         self._build_func_types()
         
+        # 先生成代码段以收集全局变量
+        code_bytes = self._gen_code_section(node)
+        
+        # 现在可以生成全局变量段
         imports_bytes = self._gen_imports()
         type_bytes = self._gen_type_section()
         func_bytes = self._gen_func_section()
         global_bytes = self._gen_global_section()
         elem_bytes = self._gen_elem_section()
-        code_bytes = self._gen_code_section(node)
         data_bytes = self._gen_data_section()
         export_bytes = self._gen_export_section()
         
@@ -71,6 +79,8 @@ class WASMCodeGen:
         if global_bytes:
             module += self._encode_section(0x06, global_bytes)
         
+        module += self._encode_section(0x07, export_bytes)  # Export 必须在 Element/Code/Data 之前
+        
         if elem_bytes:
             module += self._encode_section(0x09, elem_bytes)
         
@@ -78,8 +88,6 @@ class WASMCodeGen:
         
         if data_bytes:
             module += self._encode_section(0x0b, data_bytes)
-        
-        module += self._encode_section(0x07, export_bytes)
         
         return module
     
@@ -93,16 +101,24 @@ class WASMCodeGen:
         """构建函数类型"""
         for _, func in self.functions:
             param_count = len(func.params) if func.params else 0
-            type_str = b'\x02\x60' + bytes([param_count]) + b'\x7f' * param_count + b'\x01\x7f'
+            # WASM 函数类型格式: 0x60 (func) + param_count + params + result_count + results
+            # 不返回值（\x00 表示无返回值）
+            type_str = b'\x60' + bytes([param_count]) + b'\x7f' * param_count + b'\x00'
             self.func_types.append(type_str)
     
     def _gen_imports(self) -> bytes:
         """生成导入段"""
         imports = []
-        imports.append(b'\x07\x65\x6e\x76\x08print\x00\x00')
-        imports.append(b'\x07\x65\x6e\x76\x0a\x70\x72\x69\x6e\x74\x5f\x6e\x75\x6d\x00\x01')
-        imports.append(b'\x07\x65\x6e\x76\x0c\x70\x72\x69\x6e\x74\x5f\x66\x6c\x6f\x61\x74\x00\x02')
-        return b''.join(imports)
+        # print(i32) - module="env", field="print", kind=function(0), type=0
+        imports.append(b'\x03env\x05print\x00\x00')
+        # print_num(f32) - module="env", field="print_num", kind=function(0), type=1
+        imports.append(b'\x03env\x09print_num\x00\x01')
+        # print_float(f64) - module="env", field="print_float", kind=function(0), type=2
+        imports.append(b'\x03env\x0bprint_float\x00\x02')
+        # 导入 memory - module="env", field="memory", kind=memory(2), limits(flags=0, initial=1)
+        imports.append(b'\x03env\x06memory\x02\x00\x01')
+        # 添加 count (4 个导入)
+        return b'\x04' + b''.join(imports)
     
     def _gen_type_section(self) -> bytes:
         """生成类型段"""
@@ -131,9 +147,12 @@ class WASMCodeGen:
         result = self._encode_varuint(len(self.global_vars))
         
         for name, idx in self.global_vars.items():
-            result += b'\x00\x7f'
-            result += b'\x41\x00'
-            result += b'\x0b'
+            # WASM Global 格式: type (valuetype) + mutability + init_expr
+            # type: 0x7f = i32
+            # mutability: 0x00 = immutable, 0x01 = mutable
+            result += b'\x7f\x01'  # type=i32, mutable=1 (可变)
+            result += b'\x41\x00'   # i32.const 0
+            result += b'\x0b'       # end
         
         return result
     
@@ -184,15 +203,11 @@ class WASMCodeGen:
         """生成导出段"""
         exports = []
         
-        exports.append(b'\x04main\x00\x00' + self._encode_varuint(len(self.functions)))
-        exports.append(b'\x04memory\x00\x02\x00')
+        # main 函数导出: name_length(4) + "main" + kind(0=function) + index
+        # 导入了3个函数，所以自定义函数从索引3开始
+        exports.append(b'\x04main\x00' + self._encode_varuint(3 + len(self.functions)))
         
-        for i, (name, _) in enumerate(self.functions):
-            name_bytes = name.encode('utf-8')
-            export = self._encode_varuint(len(name_bytes)) + name_bytes
-            export += b'\x00\x00' + self._encode_varuint(i)
-            exports.append(export)
-        
+        # 计算导出数量并生成结果
         result = self._encode_varuint(len(exports))
         for e in exports:
             result += e
@@ -203,11 +218,15 @@ class WASMCodeGen:
         """生成主函数"""
         instructions = []
         
+        # 局部变量数量（0）
+        instructions.append(self._encode_varuint(0))
+        
         for stmt in node.statements:
             if isinstance(stmt, Define) and isinstance(stmt.value, Lambda):
                 continue
             instructions.extend(self._gen_statement(stmt))
         
+        # end 指令
         instructions.append(b'\x0b')
         return b''.join(instructions)
     
@@ -216,12 +235,13 @@ class WASMCodeGen:
         instructions = []
         
         param_count = len(func.params) if func.params else 0
+        # 局部变量数量（0）
         instructions.append(self._encode_varuint(0))
         
         for stmt in func.body.statements:
             instructions.extend(self._gen_statement(stmt))
         
-        instructions.append(b'\x0f')
+        # end 指令
         instructions.append(b'\x0b')
         
         return b''.join(instructions)
@@ -424,6 +444,10 @@ class WASMCodeGen:
                     instructions.append(b'\x10\x01')
             else:
                 instructions.append(b'\x10\x00')
+        elif verb_name == '印数':
+            instructions.append(b'\x10\x01')
+        elif verb_name == '印浮':
+            instructions.append(b'\x10\x02')
         else:
             func_idx = None
             for i, (name, _) in enumerate(self.functions):

@@ -1,0 +1,21 @@
+{
+  "packages": [
+    {
+      "name": "yan-stdlib",
+      "version": "0.4.0",
+      "description": "言语言标准库",
+      "author": "Yan Language Team",
+      "license": "MIT",
+      "dependencies": [],
+      "modules": [
+        "math", "collections", "string", "io", "json", "net", "time",
+        "functional", "algorithms", "crypto", "database", "csv",
+        "config", "regex", "process", "test", "logging", "cache",
+        "template"
+      ],
+      "location": "stdlib/"
+    }
+  ],
+  "registry_version": "1.0.0",
+  "last_updated": "2026-05-27"
+}

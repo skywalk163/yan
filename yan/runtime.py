@@ -6,7 +6,18 @@ import math
 import random
 import os
 import time as _time_module
+import hashlib
+import base64
+import uuid
+import csv
+import json
+import sqlite3
+import zlib
+import requests
+import re
+import subprocess
 from functools import reduce
+from io import StringIO
 from typing import Any, Callable, List, Optional
 
 
@@ -465,6 +476,10 @@ def _random(): return random.random()
 def _randint(a, b): return random.randint(a, b)
 def _pi(): return math.pi
 def _e(): return math.e
+def _random_seed(seed): random.seed(seed)
+def _random_range(start, end, step=1): return random.randrange(start, end, step)
+def _random_gauss(mu, sigma): return random.gauss(mu, sigma)
+def _random_uniform(a, b): return random.uniform(a, b)
 
 # 数学库扩展
 MATH_BUILTINS = {
@@ -483,6 +498,10 @@ MATH_BUILTINS = {
     '四舍五入': (_round, 1),
     '随机': (_random, 0),
     '随机整数': (_randint, 2),
+    '随机种子': (_random_seed, 1),
+    '随机范围': (_random_range, 3),
+    '正态随机': (_random_gauss, 2),
+    '均匀随机': (_random_uniform, 2),
     '圆周率': (_pi, 0),
     '自然常数': (_e, 0),
 }
@@ -576,6 +595,17 @@ def _strftime(fmt, ts=None):
         return _time_module.strftime(fmt)
     return _time_module.strftime(fmt, _time_module.localtime(ts))
 def _sleep(seconds): _time_module.sleep(seconds); return True
+def _sleep_ms(milliseconds): _time_module.sleep(milliseconds / 1000); return True
+def _year(date_str): return int(_time_module.strptime(date_str, '%Y-%m-%d').tm_year)
+def _month(date_str): return int(_time_module.strptime(date_str, '%Y-%m-%d').tm_mon)
+def _day(date_str): return int(_time_module.strptime(date_str, '%Y-%m-%d').tm_mday)
+def _hour(time_str): return int(_time_module.strptime(time_str, '%H:%M:%S').tm_hour)
+def _minute(time_str): return int(_time_module.strptime(time_str, '%H:%M:%S').tm_min)
+def _second(time_str): return int(_time_module.strptime(time_str, '%H:%M:%S').tm_sec)
+def _weekday(date_str): return ['周一', '周二', '周三', '周四', '周五', '周六', '周日'][_time_module.strptime(date_str, '%Y-%m-%d').tm_wday]
+def _is_leap(year): return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+def _date_to_timestamp(date_str): return _time_module.mktime(_time_module.strptime(date_str, '%Y-%m-%d %H:%M:%S'))
+def _timestamp_to_date(ts): return _time_module.strftime('%Y-%m-%d', _time_module.localtime(ts))
 
 TIME_BUILTINS = {
     '当前时间': (_now, 0),
@@ -584,6 +614,17 @@ TIME_BUILTINS = {
     '日期时间': (_datetime, 0),
     '格式化时间': (_strftime, 2),
     '睡眠': (_sleep, 1),
+    '睡眠毫秒': (_sleep_ms, 1),
+    '取年': (_year, 1),
+    '取月': (_month, 1),
+    '取日': (_day, 1),
+    '取时': (_hour, 1),
+    '取分': (_minute, 1),
+    '取秒': (_second, 1),
+    '星期几': (_weekday, 1),
+    '是闰年': (_is_leap, 1),
+    '日期时间戳': (_date_to_timestamp, 1),
+    '时间戳日期': (_timestamp_to_date, 1),
 }
 
 
@@ -623,6 +664,335 @@ class YanAssertionError(Exception):
     pass
 
 
+# ============ 网络库 ============
+
+def _http_get(url, headers=None, timeout=10):
+    try:
+        resp = requests.get(url, headers=headers, timeout=timeout)
+        return {'status': resp.status_code, 'content': resp.text, 'json': resp.json, 'headers': dict(resp.headers), 'ok': resp.ok}
+    except:
+        return {'status': 0, 'content': '', 'json': None, 'headers': {}, 'ok': False}
+
+def _http_post(url, data=None, json_data=None, headers=None, timeout=10):
+    try:
+        resp = requests.post(url, data=data, json=json_data, headers=headers, timeout=timeout)
+        return {'status': resp.status_code, 'content': resp.text, 'json': resp.json, 'headers': dict(resp.headers), 'ok': resp.ok}
+    except:
+        return {'status': 0, 'content': '', 'json': None, 'headers': {}, 'ok': False}
+
+def _http_put(url, data=None, json_data=None, headers=None, timeout=10):
+    try:
+        resp = requests.put(url, data=data, json=json_data, headers=headers, timeout=timeout)
+        return {'status': resp.status_code, 'content': resp.text, 'json': resp.json, 'headers': dict(resp.headers), 'ok': resp.ok}
+    except:
+        return {'status': 0, 'content': '', 'json': None, 'headers': {}, 'ok': False}
+
+def _http_delete(url, headers=None, timeout=10):
+    try:
+        resp = requests.delete(url, headers=headers, timeout=timeout)
+        return {'status': resp.status_code, 'content': resp.text, 'json': resp.json, 'headers': dict(resp.headers), 'ok': resp.ok}
+    except:
+        return {'status': 0, 'content': '', 'json': None, 'headers': {}, 'ok': False}
+
+def _http_patch(url, data=None, json_data=None, headers=None, timeout=10):
+    try:
+        resp = requests.patch(url, data=data, json=json_data, headers=headers, timeout=timeout)
+        return {'status': resp.status_code, 'content': resp.text, 'json': resp.json, 'headers': dict(resp.headers), 'ok': resp.ok}
+    except:
+        return {'status': 0, 'content': '', 'json': None, 'headers': {}, 'ok': False}
+
+def _url_encode(params):
+    from urllib.parse import quote
+    return quote(str(params))
+
+def _url_decode(url):
+    from urllib.parse import unquote
+    return unquote(url)
+
+def _url_build(base_url, path, params=None):
+    from urllib.parse import urljoin, urlencode
+    url = urljoin(base_url, path)
+    if params:
+        url += '?' + urlencode(params)
+    return url
+
+NETWORK_BUILTINS = {
+    'HTTP_GET': (_http_get, 1),
+    'HTTP_POST': (_http_post, 1),
+    'HTTP_PUT': (_http_put, 1),
+    'HTTP_DELETE': (_http_delete, 1),
+    'HTTP_PATCH': (_http_patch, 1),
+    'URL编码': (_url_encode, 1),
+    'URL解码': (_url_decode, 1),
+    'URL构建': (_url_build, 2),
+}
+
+
+# ============ 加密库 ============
+
+def _md5(s): return hashlib.md5(str(s).encode('utf-8')).hexdigest()
+def _sha1(s): return hashlib.sha1(str(s).encode('utf-8')).hexdigest()
+def _sha256(s): return hashlib.sha256(str(s).encode('utf-8')).hexdigest()
+def _sha512(s): return hashlib.sha512(str(s).encode('utf-8')).hexdigest()
+def _b64encode(s): return base64.b64encode(str(s).encode('utf-8')).decode('utf-8')
+def _b64decode(s): return base64.b64decode(s).decode('utf-8')
+def _b64urlencode(s): return base64.urlsafe_b64encode(str(s).encode('utf-8')).decode('utf-8').rstrip('=')
+def _b64urldecode(s):
+    padding = 4 - (len(s) % 4)
+    if padding != 4:
+        s += '=' * padding
+    return base64.urlsafe_b64decode(s).decode('utf-8')
+def _uuid1(): return str(uuid.uuid1())
+def _uuid4(): return str(uuid.uuid4())
+def _uuid_short(): return str(uuid.uuid4()).replace('-', '')
+def _hmac_md5(s, key): return hashlib.md5((str(key) + str(s)).encode('utf-8')).hexdigest()
+def _hmac_sha256(s, key): return hashlib.sha256((str(key) + str(s)).encode('utf-8')).hexdigest()
+def _crc32(s): return zlib.crc32(str(s).encode('utf-8')) & 0xffffffff
+def _secure_compare(a, b): return str(a) == str(b)
+
+CRYPTO_BUILTINS = {
+    'MD5': (_md5, 1),
+    'SHA1': (_sha1, 1),
+    'SHA256': (_sha256, 1),
+    'SHA512': (_sha512, 1),
+    'Base64编码': (_b64encode, 1),
+    'Base64解码': (_b64decode, 1),
+    'Base64URL编码': (_b64urlencode, 1),
+    'Base64URL解码': (_b64urldecode, 1),
+    'UUID1': (_uuid1, 0),
+    'UUID4': (_uuid4, 0),
+    'UUID字符串': (_uuid_short, 0),
+    'HMAC_MD5': (_hmac_md5, 2),
+    'HMAC_SHA256': (_hmac_sha256, 2),
+    '安全比较': (_secure_compare, 2),
+}
+
+
+# ============ 正则表达式库 ============
+
+def _re_match(pattern, text):
+    match = re.match(pattern, text)
+    return match.group() if match else None
+
+def _re_search(pattern, text):
+    match = re.search(pattern, text)
+    return match.group() if match else None
+
+def _re_findall(pattern, text):
+    return re.findall(pattern, text)
+
+def _re_finditer(pattern, text):
+    return [match.group() for match in re.finditer(pattern, text)]
+
+def _re_sub(pattern, repl, text):
+    return re.sub(pattern, repl, text)
+
+def _re_split(pattern, text):
+    return re.split(pattern, text)
+
+def _re_fullmatch(pattern, text):
+    match = re.fullmatch(pattern, text)
+    return match.group() if match else None
+
+def _re_compile(pattern):
+    return re.compile(pattern)
+
+REGEX_BUILTINS = {
+    '正则匹配': (_re_match, 2),
+    '正则搜索': (_re_search, 2),
+    '正则查找所有': (_re_findall, 2),
+    '正则替换': (_re_sub, 3),
+    '正则分割': (_re_split, 2),
+    '正则完全匹配': (_re_fullmatch, 2),
+    '正则编译': (_re_compile, 1),
+}
+
+
+# ============ 进程管理库 ============
+
+def _exec_cmd(cmd, shell=True):
+    try:
+        result = subprocess.run(cmd, shell=shell, capture_output=True, text=True, encoding='utf-8')
+        return {'stdout': result.stdout, 'stderr': result.stderr, 'returncode': result.returncode}
+    except Exception as e:
+        return {'stdout': '', 'stderr': str(e), 'returncode': -1}
+
+def _get_env(name):
+    return os.environ.get(name, '')
+
+def _set_env(name, value):
+    os.environ[name] = value
+    return True
+
+def _get_env_dict():
+    return dict(os.environ)
+
+def _exec_popen(cmd, shell=True):
+    try:
+        process = subprocess.Popen(cmd, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8')
+        stdout, stderr = process.communicate()
+        return {'stdout': stdout, 'stderr': stderr, 'returncode': process.returncode}
+    except Exception as e:
+        return {'stdout': '', 'stderr': str(e), 'returncode': -1}
+
+PROCESS_BUILTINS = {
+    '执行命令': (_exec_cmd, 1),
+    '获取环境变量': (_get_env, 1),
+    '设置环境变量': (_set_env, 2),
+    '获取所有环境变量': (_get_env_dict, 0),
+    '启动进程': (_exec_popen, 1),
+}
+
+
+# ============ JSON库 ============
+
+def _json_parse(s):
+    try:
+        return json.loads(str(s))
+    except:
+        return None
+
+def _json_generate(obj, indent=2):
+    return json.dumps(obj, ensure_ascii=False, indent=indent)
+
+def _json_readfile(path):
+    with open(path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+def _json_writefile(path, obj):
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(obj, f, ensure_ascii=False, indent=2)
+    return True
+
+JSON_BUILTINS = {
+    'JSON解析': (_json_parse, 1),
+    'JSON生成': (_json_generate, 1),
+    'JSON读文件': (_json_readfile, 1),
+    'JSON写文件': (_json_writefile, 2),
+}
+
+
+# ============ 数据库库 ============
+
+def _db_open(path):
+    conn = sqlite3.connect(path)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def _db_close(conn):
+    if conn:
+        conn.close()
+    return True
+
+def _db_execute(conn, sql, params=None):
+    cursor = conn.cursor()
+    if params:
+        cursor.execute(sql, params)
+    else:
+        cursor.execute(sql)
+    conn.commit()
+    return cursor.rowcount
+
+def _db_query(conn, sql, params=None):
+    cursor = conn.cursor()
+    if params:
+        cursor.execute(sql, params)
+    else:
+        cursor.execute(sql)
+    rows = cursor.fetchall()
+    return [dict(row) for row in rows]
+
+def _db_query_one(conn, sql, params=None):
+    cursor = conn.cursor()
+    if params:
+        cursor.execute(sql, params)
+    else:
+        cursor.execute(sql)
+    row = cursor.fetchone()
+    return dict(row) if row else None
+
+def _db_query_value(conn, sql, params=None):
+    cursor = conn.cursor()
+    if params:
+        cursor.execute(sql, params)
+    else:
+        cursor.execute(sql)
+    row = cursor.fetchone()
+    return row[0] if row else None
+
+def _db_insert(conn, table, data):
+    keys = list(data.keys())
+    placeholders = ','.join(['?' for _ in keys])
+    values = [data[k] for k in keys]
+    sql = f'INSERT INTO {table} ({",".join(keys)}) VALUES ({placeholders})'
+    cursor = conn.execute(sql, values)
+    conn.commit()
+    return cursor.lastrowid
+
+DATABASE_BUILTINS = {
+    '打开数据库': (_db_open, 1),
+    '关闭数据库': (_db_close, 1),
+    '执行SQL': (_db_execute, 2),
+    '查询': (_db_query, 2),
+    '查询单行': (_db_query_one, 2),
+    '查询值': (_db_query_value, 2),
+    '插入记录': (_db_insert, 3),
+}
+
+
+# ============ CSV库 ============
+
+def _csv_read(path, delimiter=','):
+    with open(path, 'r', encoding='utf-8', newline='') as f:
+        reader = csv.DictReader(f, delimiter=delimiter)
+        return list(reader)
+
+def _csv_write(path, data, delimiter=','):
+    if not data:
+        return True
+    headers = list(data[0].keys()) if isinstance(data[0], dict) else []
+    with open(path, 'w', encoding='utf-8', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=headers, delimiter=delimiter)
+        writer.writeheader()
+        writer.writerows(data)
+    return True
+
+def _csv_read_raw(path, delimiter=','):
+    with open(path, 'r', encoding='utf-8', newline='') as f:
+        reader = csv.reader(f, delimiter=delimiter)
+        return list(reader)
+
+def _csv_write_raw(path, data, delimiter=','):
+    with open(path, 'w', encoding='utf-8', newline='') as f:
+        writer = csv.writer(f, delimiter=delimiter)
+        writer.writerows(data)
+    return True
+
+def _csv_parse(s, delimiter=','):
+    f = StringIO(s)
+    reader = csv.DictReader(f, delimiter=delimiter)
+    return list(reader)
+
+def _csv_serialize(data, delimiter=','):
+    if not data:
+        return ''
+    headers = list(data[0].keys()) if isinstance(data[0], dict) else []
+    f = StringIO()
+    writer = csv.DictWriter(f, fieldnames=headers, delimiter=delimiter)
+    writer.writeheader()
+    writer.writerows(data)
+    return f.getvalue()
+
+CSV_BUILTINS = {
+    'CSV读取': (_csv_read, 1),
+    'CSV写入': (_csv_write, 2),
+    'CSV读取纯文本': (_csv_read_raw, 1),
+    'CSV写入纯文本': (_csv_write_raw, 2),
+    'CSV解析': (_csv_parse, 1),
+    'CSV序列化': (_csv_serialize, 1),
+}
+
+
 # ============ 合并所有内置函数 ============
 
 ALL_BUILTINS = {
@@ -633,4 +1003,11 @@ ALL_BUILTINS = {
     **FILE_BUILTINS,
     **TIME_BUILTINS,
     **TYPE_BUILTINS,
+    **NETWORK_BUILTINS,
+    **CRYPTO_BUILTINS,
+    **REGEX_BUILTINS,
+    **PROCESS_BUILTINS,
+    **JSON_BUILTINS,
+    **DATABASE_BUILTINS,
+    **CSV_BUILTINS,
 }
