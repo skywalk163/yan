@@ -3,8 +3,12 @@
 """
 
 from typing import Dict, List, Optional, Set
-from lexer import Token, TokenType
-from nodes import *
+try:
+    from .tokens import Token, TokenType
+    from .nodes import *
+except ImportError:
+    from tokens import Token, TokenType
+    from nodes import *
 
 
 class ParserError(Exception):
@@ -165,22 +169,40 @@ class Parser:
         '连': 2,
     }
 
-    def __init__(self, use_global_verbs: bool = False):
+    def __init__(self, use_global_verbs: bool = False, syntax_version: int = 2):
         self.tokens: List[Token] = []
         self.pos: int = 0
         self.user_verbs: Set[str] = set()
         self.user_verb_arity: Dict[str, int] = {}
         self.use_global_verbs = use_global_verbs
         self.block_stack = BlockStack()
+        self.syntax_version = syntax_version
+        # 优化：缓存动词集合以提高查找性能
+        self._verbs_cache = None
 
     @property
     def VERBS(self) -> Set[str]:
         """合并内置动词和用户定义动词"""
-        if self.use_global_verbs:
-            return self.BUILTIN_VERBS | _global_user_verbs | self.user_verbs
-        return self.BUILTIN_VERBS | self.user_verbs
+        if self._verbs_cache is None:
+            if self.use_global_verbs:
+                self._verbs_cache = self.BUILTIN_VERBS | _global_user_verbs | self.user_verbs
+            else:
+                self._verbs_cache = self.BUILTIN_VERBS | self.user_verbs
+        return self._verbs_cache
+
+    def _reset_verbs_cache(self):
+        """重置动词缓存（在收集新用户动词后调用）"""
+        self._verbs_cache = None
 
     def parse(self, tokens: List[Token]) -> Program:
+        """解析源码，根据语法版本选择解析方法"""
+        if self.syntax_version >= 2:
+            return self.parse_v2(tokens)
+        else:
+            return self.parse_v1(tokens)
+
+    def parse_v1(self, tokens: List[Token]) -> Program:
+        """v1 语法解析：传统语法，支持句号结束语句"""
         self.tokens = tokens
         self.pos = 0
         self.user_verbs = set()
@@ -205,6 +227,341 @@ class Parser:
                 statements.append(stmt)
 
         return Program(statements)
+
+    def parse_v2(self, tokens: List[Token]) -> Program:
+        """v2 语法解析：支持无句号代码块，代码块通过缩进结束"""
+        self.tokens = tokens
+        self.pos = 0
+        self.user_verbs = set()
+        self._reset_verbs_cache()
+
+        # 第一遍：收集用户定义的函数名
+        self._collect_user_verbs()
+        self._reset_verbs_cache()
+
+        # 第二遍：正常解析
+        self.pos = 0
+        self.current_indent = 0
+        self.indent_stack = [0]
+        statements = []
+
+        while not self._is_at_end():
+            # 跳过空行和 DEDENT
+            while self._current().type in {TokenType.DEDENT, TokenType.DOT}:
+                self._advance()
+            if self._is_at_end():
+                break
+
+            # 检测缩进变化
+            current_indent = self._get_indent_level()
+
+            if current_indent < self.indent_stack[-1]:
+                # 缩进减少：代码块结束
+                while self.indent_stack[-1] > current_indent:
+                    self.indent_stack.pop()
+                # 返回上级代码块
+                break
+
+            # 解析语句
+            stmt = self._parse_statement_v2()
+            if stmt:
+                statements.append(stmt)
+
+        return Program(statements)
+
+    def _get_indent_level(self) -> int:
+        """获取当前行的缩进级别"""
+        if self._current().type == TokenType.INDENT:
+            return int(self._current().value)
+        return 0
+
+    def _is_empty_line(self) -> bool:
+        """检查当前是否为空行"""
+        tok = self._current()
+        return tok.type in {TokenType.DOT, TokenType.SEMI}
+
+    def _parse_statement_v2(self) -> Optional[Node]:
+        """解析 v2 语法的语句"""
+        # 跳过 INDENT tokens
+        while self._current().type == TokenType.INDENT:
+            self._advance()
+
+        if self._is_at_end():
+            return None
+
+        token = self._current()
+
+        if self._check_word('如果') or self._check_word('当'):
+            return self._parse_if_v2()
+
+        if self._check_word('遍历'):
+            return self._parse_foreach_v2()
+
+        if self._check_word('当满足') or self._check_word('当时'):
+            return self._parse_while_v2()
+
+        if token.type == TokenType.WORD and (token.value.startswith('定义') or token.value == '定'):
+            return self._parse_define_v2()
+
+        if self._check_word('测'):
+            return self._parse_test_v2()
+
+        if self._check_word('套'):
+            return self._parse_test_suite_v2()
+
+        if self._check_word('导入'):
+            return self._parse_import()
+
+        if self._check_word('导出'):
+            return self._parse_export()
+
+        if self._check_word('结构'):
+            return self._parse_struct_def()
+
+        expr = self._parse_expression()
+        # v2 语法：语句后不需要句号
+        return expr
+
+    def _parse_if_v2(self) -> If:
+        """解析 v2 语法的 if 语句"""
+        # 检查是否以 '如果' 开头（如 "如果真那么1"）
+        if self._check_word('如果'):
+            self._advance()  # 消耗 '如果'
+        elif self._check_word('当'):
+            self._advance()  # 消耗 '当'
+
+        # 解析条件
+        cond = self._parse_expression()
+
+        # 消耗冒号（如果有）
+        if self._current().type == TokenType.COLON:
+            self._advance()
+
+        # 解析 then 分支
+        then_block = self._parse_block_v2()
+
+        # 检查 else
+        elif_clauses = []
+        else_block = None
+
+        while not self._is_at_end():
+            # 跳过空行
+            if self._is_empty_line():
+                self._advance()
+                continue
+            if self._current().type == TokenType.INDENT:
+                self._advance()
+                continue
+
+            if self._check_word('否则当') or (self._current().type == TokenType.WORD and
+                                               self._current().value == '否则' and
+                                               self._peek(1).type == TokenType.WORD and
+                                               self._peek(1).value == '当'):
+                # 否则当
+                self._advance()  # 消耗 '否则'
+                self._advance()  # 消耗 '当'
+                elif_cond = self._parse_expression()
+                elif_body = self._parse_block_v2()
+                elif_clauses.append({'condition': elif_cond, 'body': elif_body})
+            elif self._check_word('否则'):
+                # 否则
+                self._advance()  # 消耗 '否则'
+                else_block = self._parse_block_v2()
+                break
+            else:
+                break
+
+        return If(cond, then_block, else_block)
+
+    def _parse_block_v2(self) -> Node:
+        """解析 v2 语法的代码块（通过缩进判断结束）"""
+        statements = []
+
+        # 获取块开始时的缩进
+        block_indent = self._get_indent_level()
+        self.indent_stack.append(block_indent)
+
+        # 消耗 INDENT token
+        if self._current().type == TokenType.INDENT:
+            self._advance()
+
+        while not self._is_at_end():
+            # 检查是否到达代码块结束
+            if self._is_at_block_end_v2(block_indent):
+                self.indent_stack.pop()
+                break
+
+            # 解析语句
+            stmt = self._parse_statement_v2()
+            if stmt:
+                statements.append(stmt)
+
+        if len(statements) == 0:
+            return Nil()
+        elif len(statements) == 1:
+            return statements[0]
+        else:
+            return Block(statements)
+
+    def _is_at_block_end_v2(self, block_indent: int) -> bool:
+        """检查是否到达 v2 代码块结束"""
+        if self._is_at_end():
+            return True
+
+        # 跳过空行
+        if self._is_empty_line():
+            self._advance()
+            return False
+
+        # 如果 block_indent 为 0（顶层代码块），只有文件结束才结束
+        if block_indent == 0:
+            return False
+
+        current_indent = self._get_indent_level()
+        return current_indent <= block_indent
+
+    def _parse_foreach_v2(self) -> ForEach:
+        """解析 v2 语法的遍历循环"""
+        self._advance()  # 消耗 '遍历'
+
+        # 解析变量名
+        if self._current().type != TokenType.WORD:
+            raise ParserError("期望变量名", self._current().line, self._current().col)
+        var = self._advance().value
+
+        # 期望 '于'
+        if not self._check_word('于'):
+            raise ParserError("期望 '于'", self._current().line, self._current().col)
+        self._advance()  # 消耗 '于'
+
+        # 解析可迭代对象
+        iterable = self._parse_iterable()
+
+        # 解析循环体
+        body = self._parse_block_v2()
+
+        return ForEach(var, iterable, body)
+
+    def _parse_while_v2(self) -> While:
+        """解析 v2 语法的当循环"""
+        self._advance()  # 消耗 '当满足' 或 '当时'
+
+        # 解析条件表达式
+        cond = self._parse_expression()
+
+        # 解析循环体
+        body = self._parse_block_v2()
+
+        return While(cond, body)
+
+    def _parse_define_v2(self) -> Define:
+        """解析 v2 语法的定义语句"""
+        # 消耗 '定义' 关键字（可能与变量名合并，如 "定义阶乘"）
+        first_tok = self._advance()
+
+        # 提取变量名
+        if first_tok.value.startswith('定义') and len(first_tok.value) > 2:
+            var_name = first_tok.value[2:]
+        else:
+            var_name = None
+
+        # 收集连续的 WORD 作为名称
+        name_parts = [] if var_name is None else [var_name]
+
+        while self._current().type == TokenType.WORD:
+            if self._current().value == '定义':
+                break
+            next_tok = self._peek(1)
+            if next_tok.type == TokenType.EQUALS:
+                name_parts.append(self._advance().value)
+                break
+            name_parts.append(self._advance().value)
+
+        if not name_parts:
+            raise ParserError("期望标识符", self._current().line, self._current().col)
+
+        name = ''.join(name_parts)
+        self._expect(TokenType.EQUALS, "期望 '='")
+
+        if self._check_word('函数') or self._check_word('函'):
+            value = self._parse_lambda_v2()
+            if self.use_global_verbs:
+                _global_user_verbs.add(name)
+        else:
+            value = self._parse_expression()
+
+        return Define(name, value)
+
+    def _parse_lambda_v2(self) -> Lambda:
+        """解析 v2 语法的 lambda 表达式"""
+        self._advance()  # 消耗 '函数' 或 '函'
+
+        params = []
+        while (self._current().type == TokenType.WORD and
+                self._current().value not in self.VERBS and
+                self._current().value not in {'如果', '那么', '否则', '真', '假', '空', '定义', '函数'}):
+            params.append(self._advance().value)
+
+        # 检查并消耗冒号
+        if self._current().type == TokenType.COLON:
+            self._advance()
+
+        # 解析函数体
+        body = self._parse_block_v2()
+        return Lambda(params, body)
+
+    def _parse_test_v2(self) -> Test:
+        """解析 v2 语法的测试"""
+        self._advance()  # 消耗 '测'
+
+        if self._current().type != TokenType.STR:
+            raise self._error("期望测试名称（字符串）")
+        name = self._advance().value
+
+        # 解析测试体
+        body = self._parse_block_v2()
+
+        return Test(name, body)
+
+    def _parse_test_suite_v2(self) -> TestSuite:
+        """解析 v2 语法的测试套件"""
+        self._advance()  # 消耗 '套'
+
+        if self._current().type != TokenType.STR:
+            raise self._error("期望套件名称（字符串）")
+        name = self._advance().value
+
+        # 解析测试列表
+        tests = []
+        setup = None
+        teardown = None
+
+        while not self._is_at_end():
+            if self._is_empty_line():
+                self._advance()
+                continue
+
+            if self._check_word('前'):
+                self._advance()
+                setup = self._parse_block_v2()
+                continue
+
+            if self._check_word('后'):
+                self._advance()
+                teardown = self._parse_block_v2()
+                continue
+
+            if self._check_word('测'):
+                test = self._parse_test_v2()
+                tests.append(test)
+                continue
+
+            if self._check_word('套'):
+                break
+
+            self._advance()
+
+        return TestSuite(name, tests, setup, teardown)
 
     def _collect_user_verbs(self):
         """第一遍扫描：收集所有用户定义的函数名及其参数数量"""
@@ -278,30 +635,6 @@ class Parser:
     def _check_word(self, value: str) -> bool:
         return (self._current().type == TokenType.WORD and
                 self._current().value == value)
-
-    def __init__(self, use_global_verbs: bool = False):
-        self.tokens: List[Token] = []
-        self.pos: int = 0
-        self.user_verbs: Set[str] = set()
-        self.user_verb_arity: Dict[str, int] = {}
-        self.use_global_verbs = use_global_verbs
-        self.block_stack = BlockStack()
-        # 优化：缓存动词集合以提高查找性能
-        self._verbs_cache = None
-
-    @property
-    def VERBS(self) -> Set[str]:
-        """合并内置动词和用户定义动词"""
-        if self._verbs_cache is None:
-            if self.use_global_verbs:
-                self._verbs_cache = self.BUILTIN_VERBS | _global_user_verbs | self.user_verbs
-            else:
-                self._verbs_cache = self.BUILTIN_VERBS | self.user_verbs
-        return self._verbs_cache
-
-    def _reset_verbs_cache(self):
-        """重置动词缓存（在收集新用户动词后调用）"""
-        self._verbs_cache = None
 
     def _is_verb(self, name: str) -> bool:
         """优化：直接使用集合查找"""
