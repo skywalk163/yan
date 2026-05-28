@@ -256,11 +256,10 @@ class Parser:
             current_indent = self._get_indent_level()
 
             if current_indent < self.indent_stack[-1]:
-                # 缩进减少：代码块结束
-                while self.indent_stack[-1] > current_indent:
+                # 缩进减少：代码块结束，调整缩进栈但不退出循环
+                while self.indent_stack and self.indent_stack[-1] > current_indent:
                     self.indent_stack.pop()
-                # 返回上级代码块
-                break
+                continue  # 继续处理下一个 token，不要 break
 
             # 解析语句
             stmt = self._parse_statement_v2()
@@ -379,17 +378,34 @@ class Parser:
 
         # 获取块开始时的缩进
         block_indent = self._get_indent_level()
-        self.indent_stack.append(block_indent)
-
+        
         # 消耗 INDENT token
         if self._current().type == TokenType.INDENT:
             self._advance()
 
+        # 维护当前缩进级别
+        current_indent = block_indent
+
         while not self._is_at_end():
-            # 检查是否到达代码块结束
-            if self._is_at_block_end_v2(block_indent):
-                self.indent_stack.pop()
-                break
+            # 处理缩进变化
+            if self._current().type == TokenType.INDENT:
+                current_indent += int(self._current().value)
+                self._advance()
+                continue
+            
+            if self._current().type == TokenType.DEDENT:
+                current_indent -= int(self._current().value)
+                self._advance()
+                
+                # 检查是否退出当前块
+                if current_indent < block_indent:
+                    break
+                continue
+
+            # 跳过空行（只有句号的行）
+            if self._is_empty_line():
+                self._advance()
+                continue
 
             # 解析语句
             stmt = self._parse_statement_v2()
@@ -407,6 +423,12 @@ class Parser:
         """检查是否到达 v2 代码块结束"""
         if self._is_at_end():
             return True
+
+        # 处理 DEDENT token
+        if self._current().type == TokenType.DEDENT:
+            self._advance()  # 消耗 DEDENT
+            # DEDENT 后需要重新检查
+            return self._is_at_block_end_v2(block_indent)
 
         # 跳过空行
         if self._is_empty_line():
@@ -437,6 +459,10 @@ class Parser:
         # 解析可迭代对象
         iterable = self._parse_iterable()
 
+        # 消耗冒号（如果有）
+        if self._current().type == TokenType.COLON:
+            self._advance()
+
         # 解析循环体
         body = self._parse_block_v2()
 
@@ -448,6 +474,10 @@ class Parser:
 
         # 解析条件表达式
         cond = self._parse_expression()
+
+        # 消耗冒号（如果有）
+        if self._current().type == TokenType.COLON:
+            self._advance()
 
         # 解析循环体
         body = self._parse_block_v2()
