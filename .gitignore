@@ -77,3 +77,12 @@ Thumbs.db
 # ANTLR
 *.jar
 .worktrees/
+
+# Node modules
+node_modules/
+
+# VSCode extension build
+yan/vscode-extension/out/
+yan/vscode-extension/.vscode-test/
+
+
