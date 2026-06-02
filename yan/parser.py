@@ -83,8 +83,10 @@ class Parser:
 
     # 优化：使用 frozenset 提高查找性能
     ADVERBS = frozenset({'潜'})  # 潜 is the only true adverb that modifies verbs
-    VARARGS = frozenset({'列表', '典', '序'})
+    VARARGS = frozenset({'列', '列表', '典', '序'})
     INFIX_VERBS = frozenset({
+        '加', '减', '乘', '除',
+        '大', '小',
         '相加', '相减', '相乘', '相除', '取余', '幂',
         '大于', '小于', '等于', '不等',
         '并且', '或者', '连', '含',
@@ -92,7 +94,7 @@ class Parser:
     })
 
     # 二元中缀动词：只接受2个参数
-    BINARY_INFIX = frozenset({'大于', '大等于', '小于', '小等于', '等于', '不等于', '不等', '并且', '或者'})
+    BINARY_INFIX = frozenset({'加', '减', '乘', '除', '大', '小', '大于', '大等于', '小于', '小等于', '等于', '不等于', '不等', '并且', '或者'})
     
     # 条件关键字集合
     CONDITION_KEYWORDS = frozenset({'如果', '那么', '否则', '真', '假', '空', '定义', '函数'})
@@ -105,11 +107,11 @@ class Parser:
         '大于', '大于', '大等于', '小于', '小于', '小等于', '等于', '不等于', '不等',
         '并且', '或者', '非也',
         '首个', '其余', '入', '取', '设', '长', '添', '连', '含', '空',
-        '映射', '过滤', '归约', '潜',
+        '映射', '过滤', '归约', '皆', '只', '归', '潜',
         '输出', '读', '写', '行', '读行', '印', '印数', '印浮',
-        '如果', '那么', '否则', '定义', '函数', '返回',
+        '如果', '那么', '否则', '若', '定义', '函数', '返回',
         '遍历', '于', '当满足', '当时',
-        '列表', '典', '序', '范围',
+        '列表', '列', '典', '序', '范围',
         # 字符串库
         '长度', '连接', '分割', '替换', '截取', '小写', '大写',
         '查找', '包含', '去空', '开头是', '结尾是',
@@ -129,6 +131,8 @@ class Parser:
         '反转', '排序', '最大', '最小', '求和', '计数',
         # 新增字典操作
         '典', '键', '值', '项', '删键',
+        # 正则表达式
+        '匹配',
         # 表达式求值
         '求值',
         # 模块系统
@@ -206,6 +210,7 @@ class Parser:
         self.tokens = tokens
         self.pos = 0
         self.user_verbs = set()
+        self.use_global_verbs = True  # v1 语法支持全局用户定义函数
         self._reset_verbs_cache()  # 重置缓存
 
         # 第一遍：收集用户定义的函数名
@@ -222,9 +227,12 @@ class Parser:
                 self._advance()
             if self._is_at_end():
                 break
-            stmt = self._parse_statement()
+            stmt = self._parse_statement_v2()  # 使用 v2 的语句解析
             if stmt:
                 statements.append(stmt)
+            # v1 语法：跳过语句后的句号
+            if not self._is_at_end() and self._current().type == TokenType.DOT:
+                self._advance()
 
         return Program(statements)
 
@@ -290,7 +298,7 @@ class Parser:
 
         token = self._current()
 
-        if self._check_word('如果') or self._check_word('当'):
+        if self._check_word('如果') or self._check_word('当') or self._check_word('若'):
             return self._parse_if_v2()
 
         if self._check_word('遍历'):
@@ -317,6 +325,11 @@ class Parser:
         if self._check_word('结构'):
             return self._parse_struct_def()
 
+        # 跳过 INDENT token（在代码块内部，缩进已由块解析器处理）
+        if self._current().type == TokenType.INDENT:
+            self._advance()
+            return self._parse_statement_v2()
+
         expr = self._parse_expression()
         # v2 语法：语句后不需要句号
         return expr
@@ -328,9 +341,12 @@ class Parser:
             self._advance()  # 消耗 '如果'
         elif self._check_word('当'):
             self._advance()  # 消耗 '当'
+        elif self._check_word('若'):
+            # v1 语法的条件表达式
+            return self._parse_if()  # 使用 v1 的条件解析逻辑
 
-        # 解析条件
-        cond = self._parse_expression()
+        # 解析条件，遇到冒号或换行时停止
+        cond = self._parse_expression({TokenType.COLON})
 
         # 消耗冒号（如果有）
         if self._current().type == TokenType.COLON:
@@ -372,12 +388,20 @@ class Parser:
 
         return If(cond, then_block, else_block)
 
-    def _parse_block_v2(self) -> Node:
-        """解析 v2 语法的代码块（通过缩进判断结束）"""
+    def _parse_block_v2(self, stop_tokens: Optional[Set[TokenType]] = None) -> Node:
+        """解析 v2 语法的代码块（通过缩进判断结束）
+        
+        Args:
+            stop_tokens: 可选的停止 token 类型集合，遇到这些 token 时停止解析
+        """
         statements = []
 
         # 获取块开始时的缩进
         block_indent = self._get_indent_level()
+        
+        # 消耗 COLON（如果存在）
+        if self._current().type == TokenType.COLON:
+            self._advance()
         
         # 消耗 INDENT token
         if self._current().type == TokenType.INDENT:
@@ -387,6 +411,10 @@ class Parser:
         current_indent = block_indent
 
         while not self._is_at_end():
+            # 检查是否遇到停止 token（如括号内的 lambda 表达式）
+            if stop_tokens and self._current().type in stop_tokens:
+                break
+                
             # 处理缩进变化
             if self._current().type == TokenType.INDENT:
                 current_indent += int(self._current().value)
@@ -514,7 +542,7 @@ class Parser:
         self._expect(TokenType.EQUALS, "期望 '='")
 
         if self._check_word('函数') or self._check_word('函'):
-            value = self._parse_lambda_v2()
+            value = self._parse_lambda_v2(stop_tokens={TokenType.DOT})
             if self.use_global_verbs:
                 _global_user_verbs.add(name)
         else:
@@ -522,13 +550,19 @@ class Parser:
 
         return Define(name, value)
 
-    def _parse_lambda_v2(self) -> Lambda:
-        """解析 v2 语法的 lambda 表达式"""
+    def _parse_lambda_v2(self, stop_tokens: Optional[Set[TokenType]] = None) -> Lambda:
+        """解析 v2 语法的 lambda 表达式
+        
+        Args:
+            stop_tokens: 可选的停止 token 类型集合，遇到这些 token 时停止解析（用于括号内的 lambda）
+        """
         self._advance()  # 消耗 '函数' 或 '函'
 
         params = []
         while (self._current().type == TokenType.WORD and
-                self._current().value not in self.VERBS and
+                # 如果下一个 token 是 COLON，即使当前是动词也作为参数
+                (self._current().value not in self.VERBS or 
+                 self._peek(1).type == TokenType.COLON) and
                 self._current().value not in {'如果', '那么', '否则', '真', '假', '空', '定义', '函数'}):
             params.append(self._advance().value)
 
@@ -536,8 +570,52 @@ class Parser:
         if self._current().type == TokenType.COLON:
             self._advance()
 
-        # 解析函数体
-        body = self._parse_block_v2()
+        # 检查是否是单行 lambda
+        # 单行 lambda 的情况：
+        # 1. 当前 token 是 INDENT（块开始），不是单行
+        # 2. 当前 token 是 RPAREN（括号结束），是单行（空 body）
+        # 3. 当前 token 是 COMMA 或 DOT，是单行
+        # 4. 否则检查后续是否有 RPAREN、COMMA、DOT（可能跳过一些 token）
+        has_stop = False
+        if self._current().type == TokenType.INDENT:
+            # 块结构的 lambda
+            body = self._parse_block_v2(stop_tokens)
+        elif self._current().type in {TokenType.RPAREN, TokenType.COMMA, TokenType.DOT}:
+            # 单行 lambda，空 body 或简单表达式
+            if stop_tokens and self._current().type in stop_tokens:
+                body = Block([])
+            else:
+                body = self._parse_expression(stop_tokens)
+                if body is None:
+                    body = Block([])
+        else:
+            # 检查后续是否会遇到停止 token
+            # 向前查找几个 token，看看是否有 RPAREN、COMMA、DOT
+            for i in range(1, 10):  # 最多向前看 10 个 token
+                peek_tok = self._peek(i)
+                if peek_tok:
+                    if peek_tok.type in {TokenType.RPAREN, TokenType.COMMA, TokenType.DOT}:
+                        has_stop = True
+                        break
+                    # 如果遇到 INDENT，说明是块结构
+                    if peek_tok.type == TokenType.INDENT:
+                        break
+            
+            if has_stop:
+                # 单行 lambda
+                # 检查当前 token 是否已经是停止 token
+                if stop_tokens and self._current().type in stop_tokens:
+                    # 空 body
+                    body = Block([])
+                else:
+                    body = self._parse_expression(stop_tokens)
+                    # 如果返回 None，使用空 body
+                    if body is None:
+                        body = Block([])
+            else:
+                # 块结构的 lambda
+                body = self._parse_block_v2(stop_tokens)
+        
         return Lambda(params, body)
 
     def _parse_test_v2(self) -> Test:
@@ -599,7 +677,7 @@ class Parser:
         while pos < len(self.tokens):
             tok = self.tokens[pos]
             # 查找 "定 名称 = 函" 或 "定 名称 = {{...}}" 模式
-            if tok.type == TokenType.WORD and tok.value == '定义':
+            if tok.type == TokenType.WORD and tok.value in {'定义', '定'}:
                 if pos + 2 < len(self.tokens):
                     name_tok = self.tokens[pos + 1]
                     eq_tok = self.tokens[pos + 2]
@@ -607,8 +685,8 @@ class Parser:
                         # 检查是否是函数定义
                         if pos + 3 < len(self.tokens):
                             next_tok = self.tokens[pos + 3]
-                            # 定 名称 = 函 ...
-                            if next_tok.type == TokenType.WORD and next_tok.value == '函数':
+                            # 定 名称 = 函 或 定 名称 = 函数
+                            if next_tok.type == TokenType.WORD and next_tok.value in {'函数', '函'}:
                                 self.user_verbs.add(name_tok.value)
                                 if self.use_global_verbs:
                                     _global_user_verbs.add(name_tok.value)
@@ -1026,26 +1104,40 @@ class Parser:
         # 这里返回 False，让解析继续
         return False
 
-    def _parse_expression(self) -> Node:
-        return self._parse_pipeline()
+    def _parse_expression(self, stop_tokens: Optional[Set[TokenType]] = None) -> Node:
+        return self._parse_pipeline(stop_tokens)
 
-    def _parse_pipeline(self) -> Node:
-        steps = [self._parse_expr()]
+    def _parse_pipeline(self, stop_tokens: Optional[Set[TokenType]] = None) -> Node:
+        step = self._parse_expr(stop_tokens)
+        
+        # 如果 _parse_expr 返回 None（遇到停止 token），返回 None
+        if step is None:
+            return None
+            
+        steps = [step]
 
         while self._match(TokenType.COMMA):
-            steps.append(self._parse_expr())
+            steps.append(self._parse_expr(stop_tokens))
 
         if len(steps) == 1:
             return steps[0]
         return Pipeline(steps)
 
-    def _parse_expr(self) -> Node:
+    def _parse_expr(self, stop_tokens: Optional[Set[TokenType]] = None) -> Node:
         """解析表达式：动词 数据* (副词 动词 数据*)*"""
-        first = self._parse_term()
+        first = self._parse_term(stop_tokens)
+        
+        # 如果 _parse_term 返回 None（遇到停止 token），返回 None
+        if first is None:
+            return None
 
         # 处理副词链和高阶函数管道
         # 遇到右括号时停止（用于括号表达式）
         while self._current().type == TokenType.WORD and self._current().type != TokenType.RPAREN:
+            # 检查是否遇到停止 token
+            if stop_tokens and self._current().type in stop_tokens:
+                break
+            
             word = self._current().value
             
             # 如果遇到语句开始关键字，说明表达式结束了
@@ -1089,8 +1181,12 @@ class Parser:
 
         return first
 
-    def _parse_term(self) -> Node:
+    def _parse_term(self, stop_tokens: Optional[Set[TokenType]] = None) -> Node:
         """解析项"""
+        # 检查是否遇到停止 token
+        if stop_tokens and self._current().type in stop_tokens:
+            return None
+        
         # 导入语句
         if self._check_word('导入'):
             return self._parse_import()
@@ -1103,9 +1199,19 @@ class Parser:
         if self._check_word('结构'):
             return self._parse_struct_def()
         
-        # 条件语句
-        if self._check_word('如果'):
-            return self._parse_if()
+        # 条件语句（仅在不在条件解析的上下文中时处理）
+        if self._check_word('如果') or self._check_word('若'):
+            # 检查是否在条件解析的上下文中
+            # 通过检查 stop_tokens 来判断
+            if stop_tokens and TokenType.INDENT in stop_tokens:
+                # 在条件解析的上下文中，不处理嵌套的 '若'
+                pass
+            else:
+                return self._parse_if()
+
+        # Lambda 表达式（支持在表达式中使用）
+        if self._check_word('函') or self._check_word('函数'):
+            return self._parse_lambda_v2(stop_tokens)
 
         # 遍历循环
         if self._check_word('遍历'):
@@ -1124,7 +1230,7 @@ class Parser:
         if self._current().type == TokenType.WORD and self._current().value in self.ADVERBS:
             adverb_name = self._advance().value
             adverb = Word(adverb_name)
-            next_call = self._parse_term()
+            next_call = self._parse_term(stop_tokens)
             return Call(adverb, [next_call])
 
         # 动词开头（必须是已知动词）
@@ -1136,6 +1242,10 @@ class Parser:
             while not self._is_at_end():
                 tok = self._current()
 
+                # 检查是否遇到停止 token
+                if stop_tokens and tok.type in stop_tokens:
+                    break
+
                 # 遇到缩进变化，停止收集参数
                 if tok.type in {TokenType.INDENT, TokenType.DEDENT}:
                     break
@@ -1144,12 +1254,12 @@ class Parser:
                                 TokenType.EQUALS, TokenType.COLON, TokenType.RPAREN}:
                     break
 
-                # 遇到条件关键字，停止
-                if tok.type == TokenType.WORD and tok.value in {'如果', '那么', '否则', '定义'}:
+                # 遇到条件关键字，停止（但允许若/如果作为参数的一部分）
+                if tok.type == TokenType.WORD and tok.value in {'如果', '那么', '则', '否则', '定义'}:
                     break
 
-                # 高阶函数（归、皆、只）：作为管道操作处理
-                if tok.type == TokenType.WORD and tok.value in {'归约', '映射', '过滤'}:
+                # 高阶函数（归/归约、皆/映射、只/过滤）：作为管道操作处理
+                if tok.type == TokenType.WORD and tok.value in {'归', '皆', '只', '归约', '映射', '过滤'}:
                     # 将前面的结果作为高阶函数的输入，构建管道操作
                     # 例如：列1 2 3皆乘2 -> 皆(乘, 2, 列(1,2,3))
                     
@@ -1158,22 +1268,30 @@ class Parser:
                     func = Word(func_name)
                     pipe_args = []
                     
-                    # 对于 '归约'，需要收集两个参数（函数和初始值）
-                    # 对于 '映射' 和 '过滤'，只需要收集一个参数（函数）
-                    expected_args = 2 if func_name == '归约' else 1
+                    # 对于 '归约' 和 '归'，需要收集两个参数（函数和初始值）
+                    # 对于 '映射'/'皆' 和 '过滤'/'只'，只需要收集一个参数（函数）
+                    full_func_name = func_name
+                    if func_name == '归':
+                        full_func_name = '归约'
+                    elif func_name == '皆':
+                        full_func_name = '映射'
+                    elif func_name == '只':
+                        full_func_name = '过滤'
+                    
+                    expected_args = 2 if full_func_name == '归约' else 1
                     
                     while not self._is_at_end() and len(pipe_args) < expected_args:
                         t2 = self._current()
                         if t2.type in {TokenType.DOT, TokenType.SEMI, TokenType.COMMA,
                                        TokenType.EQUALS, TokenType.COLON}:
                             break
-                        if t2.type == TokenType.WORD and t2.value in {'如果', '那么', '否则', '定义', '函数'}:
+                        if t2.type == TokenType.WORD and t2.value in {'如果', '那么', '否则', '定义', '函数', '函'}:
                             break
-                        if t2.type == TokenType.WORD and t2.value in {'归约', '映射', '过滤'}:
+                        if t2.type == TokenType.WORD and t2.value in {'归', '皆', '只', '归约', '映射', '过滤'}:
                             break
                         
-                        # 对于 '归约' 的第一个参数（函数），只取动词名，不解析参数
-                        if func_name == '归约' and len(pipe_args) == 0:
+                        # 对于 '归约'/'归' 的第一个参数（函数），只取动词名，不解析参数
+                        if full_func_name == '归约' and len(pipe_args) == 0:
                             # 第一个参数是函数名
                             pipe_arg = Word(t2.value)
                             self._advance()
@@ -1217,11 +1335,56 @@ class Parser:
                         inner_verb = self._advance().value
                         inner_args = []
                         if not self._is_at_end():
-                            inner_args.append(self._parse_atom())
+                            inner_args.append(self._parse_atom(stop_tokens))
                         arg = Call(Word(inner_verb), inner_args)
                         args.append(arg)
                         continue
-                    # 可变参数动词（列/典/序）：前缀动词可作为参数，中缀/结构动词停止
+                    # 条件关键字（若/如果）作为参数的一部分，需要解析整个条件表达式
+                    if tok.value in {'若', '如果'}:
+                        arg = self._parse_term(stop_tokens)
+                        args.append(arg)
+                        continue
+                    # 普通动词遇到中缀动词：停止收集参数，让前面的参数与中缀动词形成中缀表达式
+                    if tok.value in self.INFIX_VERBS:
+                        # 如果已经有参数，让最后一个参数与中缀动词形成中缀表达式
+                        if args:
+                            last_arg = args.pop()
+                            # 构建中缀表达式：last_arg 中缀动词 ...
+                            infix_verb = self._advance().value
+                            right = self._parse_term()
+                            infix_expr = Call(Word(infix_verb), [last_arg, right])
+                            args.append(infix_expr)
+                            # 中缀表达式构建完成，停止收集参数
+                            break
+                        else:
+                            # 没有参数，中缀动词作为普通动词处理
+                            arg = self._parse_term(stop_tokens)
+                            args.append(arg)
+                            continue
+                    # VARARGS 动词（列/列表/典/序）作为参数：解析为独立调用
+                    if tok.value in self.VARARGS:
+                        inner_verb = self._advance().value
+                        inner_args = []
+                        while not self._is_at_end():
+                            t2 = self._current()
+                            if t2.type in {TokenType.DOT, TokenType.SEMI, TokenType.COMMA,
+                                           TokenType.EQUALS, TokenType.COLON}:
+                                break
+                            if t2.type == TokenType.WORD:
+                                if t2.value in self.VARARGS or t2.value in self.INFIX_VERBS:
+                                    break
+                                if t2.value in {'如果', '那么', '否则', '定义', '函数'}:
+                                    break
+                                if t2.value in self.BINARY_INFIX:
+                                    break
+                                if self._is_verb(t2.value):
+                                    inner_args.append(self._parse_term(stop_tokens))
+                                    break
+                            inner_args.append(self._parse_atom(stop_tokens))
+                        arg = Call(Word(inner_verb), inner_args)
+                        args.append(arg)
+                        continue
+                    # 可变参数动词（列/列表/典/序）：前缀动词可作为参数，中缀/结构动词停止
                     if verb_name in self.VARARGS:
                         if tok.value in self.INFIX_VERBS or tok.value in {'如果', '那么', '否则', '定义', '函数'}:
                             break
@@ -1243,19 +1406,19 @@ class Parser:
                                     if t2.value in self.BINARY_INFIX:
                                         break
                                     if self._is_verb(t2.value):
-                                        inner_args.append(self._parse_term())
+                                        inner_args.append(self._parse_term(stop_tokens))
                                         break
-                                inner_args.append(self._parse_atom())
+                                inner_args.append(self._parse_atom(stop_tokens))
                             arg = Call(Word(inner_verb), inner_args)
                         else:
-                            arg = self._parse_term()
+                            arg = self._parse_term(stop_tokens)
                         args.append(arg)
                         continue
                     # 高阶函数（归、皆、只）：动词作为参数传递（只取动词名，不解析参数）
                     if verb_name in {'归约', '映射', '过滤'}:
-                        if tok.value == '函数':
+                        if tok.value == '函数' or tok.value == '函':
                             # 函开头的是匿名函数，解析 lambda
-                            lambda_node = self._parse_lambda()
+                            lambda_node = self._parse_lambda_v2(stop_tokens)
                             args.append(lambda_node)
                             # 块风格的 lambda 已消费块结束标记，参数收集结束
                             if isinstance(lambda_node.body, Block):
@@ -1265,7 +1428,12 @@ class Parser:
                         # 继续收集后续参数（如初始值）
                         continue
                     # 普通动词：吞噬
-                    arg = self._parse_term()
+                    arg = self._parse_term(stop_tokens)
+                    
+                    # 如果 _parse_term 返回 None（遇到停止 token），停止收集参数
+                    if arg is None:
+                        break
+                    
                     args.append(arg)
                     # 对于已知元数的前缀动词，达到元数后停止
                     if verb_name in self.PREFIX_VERB_ARITY:
@@ -1277,7 +1445,11 @@ class Parser:
                     continue
 
                 # 原子 + 可能的中缀动词
-                arg = self._parse_atom()
+                arg = self._parse_atom(stop_tokens)
+                
+                # 如果 _parse_atom 返回 None（遇到停止 token），返回 None
+                if arg is None:
+                    return None
 
                 # 中缀动词延续：当参数是裸原子时允许中缀延续
                 # 对于二元中缀运算符，中缀延续会在下面统一处理
@@ -1313,7 +1485,7 @@ class Parser:
             return result
 
         # 普通原子
-        node = self._parse_atom()
+        node = self._parse_atom(stop_tokens)
         
         # 如果 _parse_atom 返回 None（遇到 INDENT/DEDENT），返回 None 让上层处理
         if node is None:
@@ -1337,8 +1509,12 @@ class Parser:
             node = Call(Word(infix_verb), [node, right])
 
         return node
-    def _parse_atom(self) -> Node:
+    def _parse_atom(self, stop_tokens: Optional[Set[TokenType]] = None) -> Node:
         """解析原子"""
+        # 检查是否遇到停止 token
+        if stop_tokens and self._current().type in stop_tokens:
+            return None
+        
         # 缩进 tokens 不是原子，返回 None 让上层处理
         if self._current().type in {TokenType.INDENT, TokenType.DEDENT}:
             return None
@@ -1346,19 +1522,19 @@ class Parser:
         # 引用：'expr
         if self._current().type == TokenType.QUOTE:
             self._advance()  # 跳过 '
-            expr = self._parse_expression()
+            expr = self._parse_expression(stop_tokens)
             return Quote(expr)
 
         # 括号表达式：(expr)
         if self._current().type == TokenType.LPAREN:
             self._advance()  # 跳过 '('
-            expr = self._parse_expression()
+            expr = self._parse_expression({TokenType.RPAREN})
             if self._current().type != TokenType.RPAREN:
                 raise ParserError("期望 ')'", self._current().line, self._current().col)
             self._advance()  # 跳过 ')'
             return expr
 
-        if self._check_word('如果'):
+        if self._check_word('如果') or self._check_word('若'):
             return self._parse_if()
 
         if self._current().type == TokenType.NUM:
@@ -1393,8 +1569,17 @@ class Parser:
             raise ParserError(f"意外的关键字: {self._current().value}",
                              self._current().line, self._current().col)
 
-        # 普通标识符（变量名）
+        # 普通标识符（变量名或函数名）
         if self._current().type == TokenType.WORD:
+            # 先检查是否是用户定义的函数
+            if self.use_global_verbs:
+                matched_name = self._try_match_user_verb()
+                if matched_name:
+                    func = Word(matched_name)
+                    args = self._collect_call_args()
+                    return Call(func, args)
+            
+            # 普通变量引用
             node = Word(self._advance().value)
             
             # 检查是否是成员访问：标识符.标识符（仅英文句号）
@@ -1441,15 +1626,20 @@ class Parser:
             self.pos -= 1  # 后退一步
             self.tokens[self.pos] = Token(TokenType.WORD, rest, line, col + 2)
         else:
-            self._advance()  # 消耗 '如果'
+            # 消耗 '如果' 或 '若'
+            self._advance()
 
         # 解析条件：使用 _parse_expr_until 可以处理函数调用和中缀表达式
-        # 停止词包括 '那么'、'：'（块开始标记）和 INDENT（缩进开始）
-        cond = self._parse_expr_until({'那么', '：', 'INDENT'})
+        # 停止词包括 '则'、'：'（块开始标记）和 INDENT（缩进开始）
+        cond = self._parse_expr_until({'则', '：', 'INDENT'})
 
-        # 可选的 '那么' 关键字
-        if self._check_word('那么'):
-            self._advance()  # 消耗 '那么'
+        # 可选的 '则' 关键字
+        if self._check_word('则'):
+            self._advance()  # 消耗 '则'
+
+        # 可选的 '那么' 或 '则' 关键字
+        if self._check_word('那么') or self._check_word('则'):
+            self._advance()  # 消耗 '那么' 或 '则'
 
         # 检查是否有 '：'（块开始标记）或 INDENT（缩进开始）
         has_block = self._current().type == TokenType.COLON or self._current().type == TokenType.INDENT
@@ -1669,14 +1859,19 @@ class Parser:
             # 检查 COLON 类型的停止词（支持 '：' 作为停止标记）
             if self._current().type == TokenType.COLON and '：' in stop_words:
                 break
-            if self._current().type == TokenType.WORD and self._current().value in {'如果', '那么', '否则'}:
+            if self._current().type == TokenType.WORD and self._current().value in {'如果', '若', '那么', '否则'}:
                 # 如果是嵌套的条件语句
-                if self._current().value == '如果':
+                # 但如果 '若' 不在 stop_words 中，说明这是外层条件的一部分，不要处理
+                if self._current().value in {'如果', '若'} and '若' not in stop_words:
                     terms.append(self._parse_if())
                 else:
                     break
             else:
-                terms.append(self._parse_term())
+                # 检查是否遇到 '则'，如果是则停止收集（条件部分结束）
+                if self._current().type == TokenType.WORD and self._current().value == '则':
+                    break
+                # 传递 stop_words，防止 _parse_term 处理嵌套的 '若'
+                terms.append(self._parse_term({TokenType.INDENT}))
 
         if len(terms) == 0:
             return Nil()

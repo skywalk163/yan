@@ -3,8 +3,12 @@
 """
 
 from typing import Dict, Tuple, Any, Optional
-from nodes import *
-from runtime import ALL_BUILTINS as BUILTINS
+try:
+    from .nodes import *
+    from .runtime import ALL_BUILTINS as BUILTINS
+except ImportError:
+    from nodes import *
+    from runtime import ALL_BUILTINS as BUILTINS
 
 # 导入新模块节点类
 try:
@@ -565,9 +569,20 @@ class PythonCodeGen:
                 lines.append(f'    {else_code}')
             return '\n'.join(lines)
         
+        # 如果 else_code 包含函数调用（如递归），也应该生成 if 语句
         if node.else_branch:
             else_code = self.generate(node.else_branch)
-            return f'({then_code} if {cond} else {else_code})'
+            # 检查 else_code 是否包含函数调用（简单启发式判断）
+            if '(' in else_code and ')' in else_code:
+                # 生成 if 语句而不是三元表达式
+                lines = []
+                lines.append(f'if {cond}:')
+                lines.append(f'    return {then_code}')
+                lines.append('else:')
+                lines.append(f'    return {else_code}')
+                return '\n'.join(lines)
+            else:
+                return f'({then_code} if {cond} else {else_code})'
         else:
             return f'({then_code} if {cond} else None)'
 

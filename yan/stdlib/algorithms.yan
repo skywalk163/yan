@@ -36,7 +36,7 @@
       定 j = 加 j 1
     定 i = 加 i 1
   返回 result
-．
+
 
 -- 复制列表
 定 复制 = 函 lst：
@@ -46,7 +46,7 @@
     添 result (取 lst i)
     定 i = 加 i 1
   返回 result
-．
+
 
 -- 选择排序
 定 选择排序 = 函 lst：
@@ -67,7 +67,7 @@
       设 result min_idx temp
     定 i = 加 i 1
   返回 result
-．
+
 
 -- 插入排序
 定 插入排序 = 函 lst：
@@ -83,7 +83,7 @@
     设 result 加 j 1 elem
     定 i = 加 i 1
   返回 result
-．
+
 
 -- 快速排序
 定 快速排序 = 函 lst：
@@ -100,7 +100,7 @@
     当 elem 大于 pivot：添 greater elem。
     定 i = 加 i 1
   返回 (快速排序 less) ++ equal ++ (快速排序 greater)
-．
+
 
 -- ++ 连接两个列表
 定 ++ = 函 lst1 lst2：
@@ -110,7 +110,7 @@
     添 result (取 lst2 i)
     定 i = 加 i 1
   返回 result
-．
+
 
 -- 归并排序
 定 归并排序 = 函 lst：
@@ -121,7 +121,7 @@
   定 left_sorted = 归并排序 left
   定 right_sorted = 归并排序 right
   返回 归并 left_sorted right_sorted
-．
+
 
 -- 归并两个有序列表
 定 归并 = 函 lst1 lst2：
@@ -130,7 +130,7 @@
   当 取 lst1 0 小于等于 取 lst2 0：
     返回 列 (取 lst1 0) ++ (归并 (切片 lst1 1 长 lst1) lst2)
   返回 列 (取 lst2 0) ++ (归并 lst1 (切片 lst2 1 长 lst2))
-．
+
 
 -- 堆排序
 定 堆排序 = 函 lst：
@@ -141,26 +141,26 @@
     添 result (堆顶 heap)
     定 heap = 删堆顶 heap
   返回 result
-．
+
 
 -- 建最大堆
 定 建堆 = 函 lst：
   -- 简化实现：返回排序后的列表
   归并排序 lst
-．
+
 
 -- 获取堆顶
 定 堆顶 = 函 heap：
   当 heap 等于 空：返回 空。
   返回 取 heap 0
-．
+
 
 -- 删除堆顶
 定 删堆顶 = 函 heap：
   当 长 heap 小于等于 1：返回 列。
   -- 简化实现
   切片 heap 1 长 heap
-．
+
 
 -- ==================== 查找算法 ====================
 
@@ -175,7 +175,7 @@
     当 mid_val 小于 target：定 left = 加 mid 1。
     当 mid_val 大于 target：定 right = 减 mid 1。
   返回 负一
-．
+
 
 -- 顺序查找
 定 顺序查找 = 函 lst target：
@@ -184,19 +184,19 @@
     当 取 lst i 等于 target：返回 i。
     定 i = 加 i 1
   返回 负一
-．
+
 
 -- ==================== 图算法 ====================
 
 -- 创建图（邻接表表示）
 定 图创建 = 函：
   典
-．
+
 
 -- 邻接表表示
 定 图邻接表 = 函：
   典
-．
+
 
 -- 邻接矩阵表示
 定 图邻接矩阵 = 函 n：
@@ -211,7 +211,7 @@
     添 matrix row
     定 i = 加 i 1
   返回 matrix
-．
+
 
 -- 添加边
 定 图添加边 = 函 graph from to：
@@ -221,7 +221,7 @@
   连 neighbors 列 to
   设 graph from neighbors
   返回 graph
-．
+
 
 -- 删除边
 定 图删除边 = 函 graph from to：
@@ -235,7 +235,7 @@
       定 i = 加 i 1
     设 graph from new_neighbors
   返回 graph
-．
+
 
 -- 检查是否有边
 定 图有边? = 函 graph from to：
@@ -246,13 +246,13 @@
     当 (取 neighbors i) 等于 to：返回 真。
     定 i = 加 i 1
   返回 假
-．
+
 
 -- 获取节点数
 定 图节点数 = 函 graph：
   定 keys = 典 graph
   长 keys
-．
+
 
 -- 获取边数
 定 图边数 = 函 graph：
@@ -264,7 +264,7 @@
     定 count = 加 count 长 neighbors
     定 i = 加 i 1
   返回 count
-．
+
 
 -- 深度优先搜索
 定 深度优先搜索 = 函 graph start visited：
@@ -280,7 +280,7 @@
         深度优先搜索 graph neighbor visited
       定 i = 加 i 1
   返回 visited
-．
+
 
 -- 广度优先搜索
 定 广度优先搜索 = 函 graph start：
@@ -300,7 +300,7 @@
           连 queue 列 neighbor
         定 i = 加 i 1
   返回 visited
-．
+
 
 -- Dijkstra 最短路径
 定 Dijkstra = 函 graph start end：
@@ -341,7 +341,7 @@
           设 prev v u
         定 i = 加 i 1
   返回 空
-．
+
 
 -- 重建最短路径
 定 路径重建 = 函 prev end：
@@ -351,7 +351,7 @@
     定 u = 取 prev u
     连 path 列 u
   返回 path
-．
+
 
 -- ==================== 动态规划 ====================
 
@@ -383,7 +383,7 @@
       定 j = 加 j 1
     定 i = 加 i 1
   返回 取 dp m n
-．
+
 
 -- 编辑距离（Levenshtein距离）
 定 编辑距离 = 函 s1 s2：
@@ -409,7 +409,7 @@
     添 dp row
     定 i = 加 i 1
   返回 取 dp m n
-．
+
 
 -- ==================== 贪心算法 ====================
 
@@ -429,7 +429,7 @@
       定 remaining = 减 remaining weight
     定 i = 加 i 1
   返回 total_value
-．
+
 
 -- ==================== 经典问题 ====================
 
@@ -439,7 +439,7 @@
     汉诺塔 减 n 1 from aux to
     印 连 "移动盘子 " n " 从 " from " 到 " to
     汉诺塔 减 n 1 aux to from
-．
+
 
 -- 全排列
 定 全排列 = 函 lst：
@@ -461,7 +461,7 @@
       定 k = 加 k 1
     定 i = 加 i 1
   返回 result
-．
+
 
 -- 组合
 定 组合 = 函 n k：
@@ -474,20 +474,20 @@
     定 result = 除 (乘 result 减 n i) 加 i 1
     定 i = 加 i 1
   返回 result
-．
+
 
 -- 八皇后（简化版，返回解的数量）
 定 八皇后 = 函 n：
   -- 简化实现
   返回 92  -- 标准8皇后问题有92个解
-．
+
 
 -- ==================== 数据结构 ====================
 
 -- 栈
 定 栈创建 = 函：
   典 "data" 列 "top" 0
-．
+
 
 定 栈压入 = 函 stack value：
   定 data = 入 stack "data"
@@ -495,7 +495,7 @@
   设 stack "data" data
   设 stack "top" 加 1
   返回 stack
-．
+
 
 定 栈弹出 = 函 stack：
   定 data = 入 stack "data"
@@ -505,28 +505,28 @@
   定 value = 取 data 减 top 1
   设 stack "top" 减 top 1
   返回 value
-．
+
 
 定 栈顶 = 函 stack：
   定 data = 入 stack "data"
   定 top = 入 stack "top"
   当 top 小于等于 0：返回 空。
   返回 取 data 减 top 1
-．
+
 
 定 栈空? = 函 stack：
   定 top = 入 stack "top"
   top 小于等于 0
-．
+
 
 定 栈大小 = 函 stack：
   入 stack "top"
-．
+
 
 -- 队列
 定 队列创建 = 函：
   典 "data" 列 "front" 0 "rear" 0
-．
+
 
 定 队列入队 = 函 queue value：
   定 data = 入 queue "data"
@@ -534,7 +534,7 @@
   设 queue "data" data
   设 queue "rear" 加 1
   返回 queue
-．
+
 
 定 队列出队 = 函 queue：
   定 data = 入 queue "data"
@@ -544,7 +544,7 @@
   定 value = 取 data front
   设 queue "front" 加 1
   返回 value
-．
+
 
 定 队列头 = 函 queue：
   定 data = 入 queue "data"
@@ -552,31 +552,31 @@
   定 rear = 入 queue "rear"
   当 front 大于等于 rear：返回 空。
   返回 取 data front
-．
+
 
 定 队列尾 = 函 queue：
   定 data = 入 queue "data"
   定 rear = 入 queue "rear"
   当 rear 小于等于 0：返回 空。
   返回 取 data 减 rear 1
-．
+
 
 定 队列空? = 函 queue：
   定 front = 入 queue "front"
   定 rear = 入 queue "rear"
   front 大于等于 rear
-．
+
 
 定 队列大小 = 函 queue：
   定 front = 入 queue "front"
   定 rear = 入 queue "rear"
   减 rear front
-．
+
 
 -- 优先队列（简化）
 定 优先队列创建 = 函：
   典 "data" 列
-．
+
 
 定 优先队列入队 = 函 pq value：
   定 data = 入 pq "data"
@@ -584,7 +584,7 @@
   设 pq "data" data
   -- 简化：没有排序
   返回 pq
-．
+
 
 定 优先队列出队 = 函 pq：
   定 data = 入 pq "data"
@@ -593,27 +593,27 @@
   定 value = 取 data 长 data 1
   设 pq "data" (切片 data 0 长 data 1)
   返回 value
-．
+
 
 定 优先队列查看 = 函 pq：
   定 data = 入 pq "data"
   当 长 data 小于等于 0：返回 空。
   返回 取 data 长 data 1
-．
+
 
 定 优先队列空? = 函 pq：
   定 data = 入 pq "data"
   长 data 小于等于 0
-．
+
 
 -- 二叉树
 定 树创建 = 函 value：
   典 "value" value "left" 空 "right" 空
-．
+
 
 定 二叉树创建 = 函 value left right：
   典 "value" value "left" left "right" right
-．
+
 
 定 树插入 = 函 tree value：
   当 tree 等于 空：返回 树创建 value。
@@ -624,14 +624,14 @@
     定 right = 树插入 (入 tree "right") value
     设 tree "right" right
   返回 tree
-．
+
 
 定 树搜索 = 函 tree value：
   当 tree 等于 空：返回 假。
   当 value 等于 入 tree "value"：返回 真。
   当 value 小于 入 tree "value"：返回 树搜索 (入 tree "left") value。
   返回 树搜索 (入 tree "right") value
-．
+
 
 定 树中序遍历 = 函 tree：
   当 tree 等于 空：返回 列。
@@ -642,7 +642,7 @@
   定 right = 树中序遍历 (入 tree "right")
   连 result right
   返回 result
-．
+
 
 定 树前序遍历 = 函 tree：
   当 tree 等于 空：返回 列。
@@ -652,7 +652,7 @@
   定 right = 树前序遍历 (入 tree "right")
   连 result right
   返回 result
-．
+
 
 定 树后序遍历 = 函 tree：
   当 tree 等于 空：返回 列。
@@ -663,4 +663,4 @@
   连 result right
   连 result 列 (入 tree "value")
   返回 result
-．
+

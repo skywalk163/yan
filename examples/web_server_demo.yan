@@ -44,7 +44,7 @@
   当 匹配 "^/users/\\d+$" 路径：
     定 用户ID = 转数字 取 分割 路径 "/" 2。
     定 用户 = 查询单行 db "SELECT * FROM users WHERE id=?" 列 用户ID。
-    当 用户 不等于 空：
+    当 等于 用户 空：
       返回 典 "status" 200 "content" JSON生成 用户。
     。
     返回 典 "status" 404 "content" "用户未找到"。

@@ -28,38 +28,11 @@ except ImportError:
     chinese_to_number = None
     is_chinese_number = None
 
-
-class TokenType(Enum):
-    NUM = auto()       # 数字：1, 2.5, -3
-    STR = auto()       # 字符串："hello"
-    WORD = auto()      # 动词/标识符：加, 乘, 列, x, y
-    QUOTE = auto()     # ' (引用)
-    COMMA = auto()     # ，
-    DOT = auto()       # 。（中文句号，语句结束）
-    DOT_EN = auto()    # .（英文句号，成员访问）
-    SEMI = auto()      # ；
-    ELLIPSIS = auto()  # ... (可变参数)
-    COLON = auto()     # ：（块开始）
-    EQUALS = auto()    # =
-    MATH = auto()      # $(...) 数学表达式
-    PYTHON = auto()    # {{...}} Python 代码块
-    LPAREN = auto()    # ( 左括号
-    RPAREN = auto()    # ) 右括号
-    INDENT = auto()    # 缩进增加（用于块开始）
-    DEDENT = auto()    # 缩进减少（用于块结束）
-    NEWLINE = auto()   # 换行符
-    EOF = auto()       # 结束
-
-
-@dataclass
-class Token:
-    type: TokenType
-    value: Any
-    line: int
-    col: int
-
-    def __repr__(self):
-        return f"Token({self.type.name}, {self.value!r})"
+# 导入统一的 Token 定义
+try:
+    from .tokens import TokenType, Token
+except ImportError:
+    from tokens import TokenType, Token
 
 
 # 向后兼容：保留旧的 LexerError 类
@@ -106,6 +79,29 @@ class Lexer:
     # 预定义的单字关键字集合（类级缓存）
     _SINGLE_CHAR_KEYWORDS = frozenset({
         '真', '假', '读行', '返回', '印',
+        # 单字动词
+        '加', '减', '乘', '除', '幂', '负', '取', '设', '长', '添', '连', '含', '空',
+        '映射', '过滤', '归约', '潜', '输出', '读', '写', '行',
+        '列', '列表', '典', '序', '范围', '求值',
+        '是数', '是串', '是表', '是函', '是真', '是空', '类型',
+        '键', '值', '项', '删键',
+        '反转', '排序', '最大', '最小', '求和', '计数',
+        '皆', '只', '归', '随机', '随机整数', '圆周率', '自然常数',
+        '读文件', '写文件', '追加文件', '存在', '是文件', '是目录',
+        '列目录', '建目录', '删文件', '删目录', '当前目录',
+        '文件名', '目录名', '扩展名',
+        '当前时间', '日期', '时间', '日期时间', '格式化时间', '睡眠',
+        '大于', '小于', '等于', '不等于', '大等于', '小等于',
+        '并且', '或者', '非也',
+        '首个', '其余', '入',
+        '若', '则', '定', '定义', '函数', '如果', '那么', '否则', '遍历', '于', '当时', '当满足',
+        '导入', '模块', '导出', '从', '引', '出',
+        '结构', '类型', '字段',
+        '正弦', '余弦', '正切', '反正弦', '反余弦', '反正切',
+        '指数', '对数', '对数10', '开方', '取整', '进位', '四舍五入',
+        '替换', '分割', '截取', '小写', '大写', '查找', '去空', '开头是', '结尾是',
+        '匹配',
+        '测', '套', '打印', '印数', '印浮',
     })
 
     def __init__(self, keywords: Optional[Set[str]] = None, user_words: Optional[Set[str]] = None):
@@ -295,7 +291,9 @@ class Lexer:
             
             # 检查是否需要续行
             current_indent = self._count_indent(line)
-            has_dot = line.rstrip().endswith('。') or line.rstrip().endswith('．')
+            # 只检查语句部分（去除注释后），而不是整个行
+            statement_part = stripped.split('--')[0].split('注')[0].rstrip()
+            has_dot = statement_part.endswith('。') or statement_part.endswith('．')
             
             # 检查是否以块开始关键字结尾
             ends_with_block_start = False
@@ -654,6 +652,15 @@ class Lexer:
                             tokens.append(Token(TokenType.WORD, full_identifier, line_num, col))
                             i = end
                             col += len(full_identifier)
+                            continue
+                        
+                        # 如果汉字后面跟着数字（如 "距离3"），且不是用户定义的名称，拆分它们
+                        if han_part != full_identifier:
+                            # 说明后面跟着数字
+                            tokens.append(Token(TokenType.WORD, han_part, line_num, col))
+                            i = han_end
+                            col += len(han_part)
+                            # 继续循环，让后面的数字重新处理
                             continue
                         
                         # 检查第一个汉字是否是关键字

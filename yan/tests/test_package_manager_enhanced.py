@@ -7,7 +7,7 @@ import pytest
 import tempfile
 import os
 from pathlib import Path
-from yan_package_manager import PackageManager
+from yan_pkg import PackageManager
 
 
 class TestPackageManagerCaching:

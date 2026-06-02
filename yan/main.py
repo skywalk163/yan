@@ -237,7 +237,7 @@ def _process_imports(statements: List, current_file: Optional[Path] = None, visi
     return processed_statements
 
 
-def run(source: str, debug: bool = False, env: Optional[Dict[str, Any]] = None, use_global_verbs: bool = False, current_file: Optional[Path] = None, clear_cache: bool = True) -> Any:
+def run(source: str, debug: bool = False, env: Optional[Dict[str, Any]] = None, use_global_verbs: bool = False, current_file: Optional[Path] = None, clear_cache: bool = True, syntax_version: int = 2) -> Any:
     """运行言语言代码
     
     Args:
@@ -247,6 +247,7 @@ def run(source: str, debug: bool = False, env: Optional[Dict[str, Any]] = None, 
         use_global_verbs: 是否使用全局用户动词集合（交互模式）
         current_file: 当前文件路径（用于模块路径解析）
         clear_cache: 是否在执行完成后清理缓存（避免内存泄漏）
+        syntax_version: 语法版本（1 或 2，默认为 2）
     
     Returns:
         执行结果
@@ -267,7 +268,7 @@ def run(source: str, debug: bool = False, env: Optional[Dict[str, Any]] = None, 
             print()
 
         # 2. 语法分析
-        parser = Parser(use_global_verbs=use_global_verbs)
+        parser = Parser(use_global_verbs=use_global_verbs, syntax_version=syntax_version)
         ast = parser.parse(tokens)
         ast = process_adverbs(ast)
         if debug:
@@ -467,6 +468,19 @@ def main():
 
     filename = sys.argv[1]
     debug = '--debug' in sys.argv
+    
+    # 检查语法版本参数
+    syntax_version = 2
+    if '--v1' in sys.argv:
+        syntax_version = 1
+    elif '--v2' in sys.argv:
+        syntax_version = 2
+    
+    # 从 --syntax 参数读取版本
+    for i, arg in enumerate(sys.argv):
+        if arg == '--syntax' and i + 1 < len(sys.argv):
+            syntax_version = int(sys.argv[i + 1])
+            break
 
     # 检查是否是 .ymd 文件
     if filename.endswith('.ymd'):
@@ -485,7 +499,7 @@ def main():
 
     # 传递当前文件路径用于模块路径解析
     current_file = Path(filename)
-    result = run(source, debug=debug, use_global_verbs=True, current_file=current_file)
+    result = run(source, debug=debug, use_global_verbs=True, current_file=current_file, syntax_version=syntax_version)
     if result is not None:
         print(result)
 
