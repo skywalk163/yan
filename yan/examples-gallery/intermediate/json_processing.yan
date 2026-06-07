@@ -17,7 +17,6 @@
   "age" 25
   "email" "zhangsan@example.com"
   "active" 真
-。
 
 印 "字典数据："连用户信息。
 
@@ -53,7 +52,6 @@
   "metadata" 典
     "created" "2026-05-18"
     "updated" "2026-05-18"
-。
 
 印 "复杂数据："。
 印 JSON.格式化 复杂数据 2。
@@ -101,7 +99,6 @@
     "debug" 假
     "log_level" "INFO"
     "max_connections" 100
-。
 
 定 配置文件 = "config.json"。
 JSON.写文件 配置文件 配置数据。
@@ -125,7 +122,6 @@ JSON.写文件 配置文件 配置数据。
       典 "title" "书名1" "price" 10
       典 "title" "书名2" "price" 20
     "bicycle" 典 "color" "red" "price" 100
-。
 
 印 "原始数据："。
 印 JSON.格式化 嵌套数据 2。
@@ -169,14 +165,12 @@ JSON.写文件 配置文件 配置数据。
 
 定 结果列表 = 列。
 遍历 行 于 余 行列表：
-  定 字段 = 分割 行 ","。
+  定 字段 = 分割 行 ","
   定 记录 = 典
     "name" 取 字段 0
     "age" 取 字段 1
     "city" 取 字段 2
-  。
-  定 结果列表 = 入 记录 结果列表。
-。
+  定 结果列表 = 入 记录 结果列表
 
 印 "JSON格式："。
 印 JSON.格式化 结果列表 2。
@@ -188,12 +182,10 @@ JSON.写文件 配置文件 配置数据。
   "debug" 假
   "log_level" "INFO"
   "timeout" 30
-。
 
 定 用户配置 = 典
   "debug" 真
   "log_level" "DEBUG"
-。
 
 印 "默认配置："连JSON.编码 默认配置。
 印 "用户配置："连JSON.编码 用户配置。

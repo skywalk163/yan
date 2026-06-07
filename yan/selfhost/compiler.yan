@@ -13,42 +13,38 @@
 -- 编译函数
 定编译=函源码：
   -- 步骤1：词法分析
-  定tokens=tokenize源码。
+  定tokens=tokenize源码
 
   -- 步骤2：语法分析
-  定parse_result=parsetokens。
-  定ast=get_astparse_result。
-  定errors=get_errorsparse_result。
+  定parse_result=parsetokens
+  定ast=get_astparse_result
+  定errors=get_errorsparse_result
 
   -- 步骤3：代码生成
-  定code=generateast。
+  定code=generateast
 
   -- 返回结果
-  定result=列code errors。
-  返回result。
-。
+  定result=列code errors
+  返回result
 
 -- 编译并执行
 定编译执行=函源码：
-  定result=编译源码。
-  定code=入result0。
-  定errors=入result1。
+  定result=编译源码
+  定code=入result0
+  定errors=入result1
   当长errors大于0：
-    print_errors errors。
-  。
+    print_errors errors
   当code不等于空：
-    印code。
-  。
-  返回result。
-。
+    印code
+  返回result
 
 -- 主程序
 定主=函：
   定测试源码="定x=加1 2。定y=乘x 3。印y。".
-  印"开始编译测试..."。
-  定result=编译执行测试源码。
-  印"编译完成"。
-  返回result。
+  印"开始编译测试..."
+  定result=编译执行测试源码
+  印"编译完成"
+  返回result
 .
 
 -- 运行主程序

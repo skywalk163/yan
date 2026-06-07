@@ -210,9 +210,7 @@ def evaluate(ast, env=None):
 -- 求值器主函数
 定evaluate=函ast：
 {{ return evaluate(ast) }}
-。
 
 -- 求值器带环境的主函数
 定evaluate_with_env=函ast环境：
 {{ return evaluate(ast, 环境) }}
-。

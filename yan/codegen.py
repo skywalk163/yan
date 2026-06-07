@@ -343,19 +343,9 @@ class PythonCodeGen:
             else:
                 return f'{name} = {code}'
 
-        # Lambda with Block body: generate def function instead of lambda
+        # 所有 Lambda 都用 def 函数生成，以确保缩进正确
         if isinstance(node.value, Lambda):
-            # 检查是否是尾递归函数，需要特殊处理
-            if hasattr(node.value, 'is_tail_recursive') and node.value.is_tail_recursive:
-                return self._gen_tail_recursive_function(name, node.value)
-            # 检查是否需要生成 def 函数
-            if isinstance(node.value.body, Block):
-                return self._gen_def_function(name, node.value)
-            # 检查 body 是否会生成多行代码（如 if-else 语句）
-            # 先生成代码，然后检查是否是多行
-            body_code = self.generate(node.value.body)
-            if '\n' in body_code:
-                return self._gen_def_function_from_code(name, node.value.params, body_code)
+            return self._gen_def_function(name, node.value)
 
         value = self.generate(node.value)
         return f'{name} = {value}'
@@ -406,30 +396,36 @@ class PythonCodeGen:
             return f'        return {self.generate(node)}'
 
     def _gen_def_function(self, name: str, node: Lambda) -> str:
-        """Generate a def function for Lambda with Block body"""
+        """Generate a def function for Lambda"""
         params = ', '.join(node.params) if node.params else '_'
         lines = []
         
-        for i, stmt in enumerate(node.body.statements):
-            code = self.generate(stmt)
-            # 如果语句是多行的（如 if-else），需要特殊处理缩进
-            if '\n' in code:
-                # 多行语句，需要调整缩进
-                code_lines = code.split('\n')
-                for line in code_lines:
-                    if line.strip():
-                        lines.append(f'    {line}')
-            else:
-                if i == len(node.body.statements) - 1:
-                    # 最后一个语句，检查是否已经是 return 语句
-                    if code.startswith('return '):
-                        # 如果已经是 return，不再添加 return
-                        lines.append(f'    {code}')
-                    else:
-                        # 否则添加 return
-                        lines.append(f'    return {code}')
+        # 检查 body 是否是 Block 或者是 If（需要多行）
+        if isinstance(node.body, Block):
+            for stmt in node.body.statements:
+                code = self.generate(stmt)
+                # 处理多行代码的缩进
+                if '\n' in code:
+                    code_lines = code.split('\n')
+                    for line in code_lines:
+                        if line.strip():
+                            lines.append(f'    {line}')
                 else:
                     lines.append(f'    {code}')
+        elif isinstance(node.body, If):
+            # If 节点，直接生成，然后适当缩进
+            code = self._gen_if(node.body, force_multi_line=True)
+            code_lines = code.split('\n')
+            for line in code_lines:
+                if line.strip():
+                    lines.append(f'    {line}')
+        else:
+            # 单行 body，直接返回
+            code = self.generate(node.body)
+            if code.startswith('return '):
+                lines.append(f'    {code}')
+            else:
+                lines.append(f'    return {code}')
         
         body_code = '\n'.join(lines)
         return f'def {name}({params}):\n{body_code}'
@@ -479,6 +475,11 @@ class PythonCodeGen:
             return f'__temp_func_{id(node)}\n# 不支持的 Lambda 块，使用 def\n# 实际代码将生成到 _gen_define'
         
         body = self.generate(node.body)
+        # 如果 body 是 return 语句，去掉 return 关键字（lambda 不需要）
+        if body.startswith('return '):
+            body = body[7:]
+        elif body == 'return None':
+            body = 'None'
         return f'(lambda {params}: {body})'
 
     def _gen_block(self, node: Block) -> str:
@@ -491,33 +492,50 @@ class PythonCodeGen:
             lines.extend(code_lines)
         return '\n'.join(lines)
 
-    def _gen_if(self, node: If) -> str:
+    def _gen_if(self, node: If, force_multi_line: bool = False) -> str:
         """生成条件表达式"""
         cond = self.generate(node.cond)
         
-        # 检查 then_branch 是否是 Block
-        if isinstance(node.then_branch, Block):
+        # 首先检查 then 或 else 是否有 Block 类型
+        has_block_body = (
+            isinstance(node.then_branch, Block) or 
+            (node.else_branch and isinstance(node.else_branch, Block))
+        )
+        
+        # 检查 then 是否是 return 语句
+        then_code = self.generate(node.then_branch)
+        is_return_then = then_code.startswith('return ')
+        
+        # 检查 then 或 else 是否是 define 语句（不能放在三元表达式中）
+        is_define_then = isinstance(node.then_branch, Define)
+        is_define_else = node.else_branch and isinstance(node.else_branch, Define)
+        
+        if force_multi_line or has_block_body or is_return_then or is_define_then or is_define_else:
+            # 生成多行 if 语句
             lines = []
-            then_lines = []
-            for i, stmt in enumerate(node.then_branch.statements):
-                code = self.generate(stmt)
-                is_last = (i == len(node.then_branch.statements) - 1)
-                if '\n' in code:
-                    code_lines = code.split('\n')
-                    for line in code_lines:
-                        if line.strip():
-                            then_lines.append(f'    {line}')
-                else:
-                    then_lines.append(f'    {code}')
             lines.append(f'if {cond}:')
-            lines.extend(then_lines)
+            
+            if isinstance(node.then_branch, Block):
+                for stmt in node.then_branch.statements:
+                    code = self.generate(stmt)
+                    if '\n' in code:
+                        code_lines = code.split('\n')
+                        for line in code_lines:
+                            if line.strip():
+                                lines.append(f'    {line}')
+                    else:
+                        lines.append(f'    {code}')
+            else:
+                if is_return_then or is_define_then:
+                    lines.append(f'    {then_code}')
+                else:
+                    lines.append(f'    return {then_code}')
             
             if node.else_branch:
+                lines.append('else:')
                 if isinstance(node.else_branch, Block):
-                    lines.append('else:')
-                    for i, stmt in enumerate(node.else_branch.statements):
+                    for stmt in node.else_branch.statements:
                         code = self.generate(stmt)
-                        is_last = (i == len(node.else_branch.statements) - 1)
                         if '\n' in code:
                             code_lines = code.split('\n')
                             for line in code_lines:
@@ -527,62 +545,18 @@ class PythonCodeGen:
                             lines.append(f'    {code}')
                 else:
                     else_code = self.generate(node.else_branch)
-                    lines.append('else:')
-                    lines.append(f'    {else_code}')
+                    if else_code.startswith('return ') or is_define_else:
+                        lines.append(f'    {else_code}')
+                    else:
+                        lines.append(f'    return {else_code}')
             
             return '\n'.join(lines)
         
-        # 单行 then 分支，else 是 Block
+        # 如果没有 block 且不是 return，使用三元表达式
         then_code = self.generate(node.then_branch)
-        
-        if node.else_branch and isinstance(node.else_branch, Block):
-            lines = []
-            lines.append(f'if {cond}:')
-            lines.append(f'    return {then_code}')
-            lines.append('else:')
-            for i, stmt in enumerate(node.else_branch.statements):
-                code = self.generate(stmt)
-                is_last = (i == len(node.else_branch.statements) - 1)
-                if '\n' in code:
-                    code_lines = code.split('\n')
-                    for line in code_lines:
-                        if line.strip():
-                            lines.append(f'    {line}')
-                elif is_last:
-                    lines.append(f'    return {code}')
-                else:
-                    lines.append(f'    {code}')
-            return '\n'.join(lines)
-        
-        # 简单的三元表达式
-        then_code = self.generate(node.then_branch)
-        
-        # 如果 then_code 是 return 语句，不能作为三元表达式
-        # 需要转换为 if 语句
-        if then_code.startswith('return '):
-            lines = []
-            lines.append(f'if {cond}:')
-            lines.append(f'    {then_code}')
-            if node.else_branch:
-                else_code = self.generate(node.else_branch)
-                lines.append('else:')
-                lines.append(f'    {else_code}')
-            return '\n'.join(lines)
-        
-        # 如果 else_code 包含函数调用（如递归），也应该生成 if 语句
         if node.else_branch:
             else_code = self.generate(node.else_branch)
-            # 检查 else_code 是否包含函数调用（简单启发式判断）
-            if '(' in else_code and ')' in else_code:
-                # 生成 if 语句而不是三元表达式
-                lines = []
-                lines.append(f'if {cond}:')
-                lines.append(f'    return {then_code}')
-                lines.append('else:')
-                lines.append(f'    return {else_code}')
-                return '\n'.join(lines)
-            else:
-                return f'({then_code} if {cond} else {else_code})'
+            return f'({then_code} if {cond} else {else_code})'
         else:
             return f'({then_code} if {cond} else None)'
 

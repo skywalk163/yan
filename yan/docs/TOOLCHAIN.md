@@ -263,17 +263,15 @@ cd my-project
 -- my-project 主文件
 
 定 hello 函 name:
-    印 "你好, " 连 name 连 "!"。
-。
+    印 "你好, " 连 name 连 "!"
 
 定 加 函 a b:
-    a 加 b。
+    a 加 b
 
 定 main 函:
-    hello "世界"。
-    定 result 加 2 3。
-    印 result。
-。
+    hello "世界"
+    定 result 加 2 3
+    印 result
 
 main()。
 

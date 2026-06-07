@@ -15,7 +15,7 @@
 
 -- 解析JSON字符串
 定 解析 = 函 json_str：
-  返回 JSON解析 json_str。
+  返回 JSON解析 json_str
 
 
 -- 生成JSON字符串
@@ -23,103 +23,103 @@
   当 indent 等于 空：
     定 indent = 2
 
-  返回 JSON生成 obj。
+  返回 JSON生成 obj
 
 
 -- 生成紧凑JSON字符串
 定 紧凑 = 函 obj：
-  返回 JSON生成 obj。
+  返回 JSON生成 obj
 
 
 -- 美化JSON字符串
 定 美化 = 函 obj indent_char：
-  返回 JSON生成 obj。
+  返回 JSON生成 obj
 
 
 -- 读取JSON文件
 定 读文件 = 函 filename：
-  定 内容 = 读文件 filename。
+  定 内容 = 读文件 filename
   返回 JSON解析 内容
 
 
 -- 写入JSON文件
 定 写文件 = 函 filename obj indent：
-  定 JSON串 = JSON生成 obj。
+  定 JSON串 = JSON生成 obj
   写文件 filename JSON串
 
 
 -- 转换为字符串
 定 转字符串 = 函 obj：
-  返回 JSON生成 obj。
+  返回 JSON生成 obj
 
 
 -- 转换为对象
 定 转对象 = 函 json_str：
-  返回 JSON解析 json_str。
+  返回 JSON解析 json_str
 
 
 -- 验证JSON有效性
 定 有效? = 函 json_str：
-  定 结果 = JSON解析 json_str。
+  定 结果 = JSON解析 json_str
   当 结果 不等于 空：
     返回 真
 
-  返回 假。
+  返回 假
 
 
 -- 获取错误信息
 定 错误信息 = 函 json_str：
-  定 结果 = JSON解析 json_str。
+  定 结果 = JSON解析 json_str
   当 结果 等于 空：
     返回 "无效的JSON格式"
 
-  返回 空。
+  返回 空
 
 
 -- 编码为JSON字符串
 定 编码 = 函 obj：
-  返回 JSON生成 obj。
+  返回 JSON生成 obj
 
 
 -- 解码JSON字符串
 定 解码 = 函 json_str：
-  返回 JSON解析 json_str。
+  返回 JSON解析 json_str
 
 
 -- 漂亮打印JSON
 定 漂亮打印 = 函 obj：
-  返回 JSON生成 obj。
+  返回 JSON生成 obj
 
 
 -- 带选项的序列化
 定 序列化选项 = 函 obj **kwargs：
-  返回 JSON生成 obj。
+  返回 JSON生成 obj
 
 
 -- 带选项的反序列化
 定 反序列化选项 = 函 json_str **kwargs：
-  返回 JSON解析 json_str。
+  返回 JSON解析 json_str
 
 
 -- 转换为字节
 定 转字节 = 函 obj：
-  定 字符串 = JSON生成 obj。
+  定 字符串 = JSON生成 obj
   返回 字符串
 
 
 -- 从字节转换
 定 从字节 = 函 json_bytes：
-  返回 JSON解析 json_bytes。
+  返回 JSON解析 json_bytes
 
 
 -- Schema验证（简化版）
 定 验证Schema = 函 data schema：
-  返回 真。
+  返回 真
 
 
 -- JSON路径查询（简化版）
 定 JSON路径 = 函 obj path：
-  定 部分 = 分割 path "."。
+  定 部分 = 分割 path "."
   定 当前 = obj
   定 i = 0
   当 i 小于 长 部分：
@@ -128,21 +128,21 @@
       定 当前 = 值 当前 键
 
     否则：
-      返回 空。
+      返回 空
 
-    定 i = 加 i 1。
+    定 i = 加 i 1
 
-  返回 当前。
+  返回 当前
 
 
 -- 深度复制
 定 深度复制 = 函 obj：
-  定 JSON串 = JSON生成 obj。
+  定 JSON串 = JSON生成 obj
   返回 JSON解析 JSON串
 
 
 -- 比较两个对象
 定 比较 = 函 obj1 obj2：
-  定 str1 = JSON生成 obj1。
+  定 str1 = JSON生成 obj1
   定 str2 = JSON生成 obj2
   返回 等于 str1 str2

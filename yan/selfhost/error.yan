@@ -3,81 +3,81 @@
 
 -- 类 SourceLocation 转换为 tagged list
 定创建SourceLocation=函line col filename：
-  定filename=空。
-  返回列"SourceLocation" line col filename。
+  定filename=空
+  返回列"SourceLocation" line col filename
 定是SourceLocation=函节点：
-  等首节点"SourceLocation"。
+  等首节点"SourceLocation"
 -- 类 YanError 转换为函数式
 定创建YanError=函message location source suggestion error_type：
-  列messagemessage。
-  列locationlocation。
-  列sourcesource。
-  列suggestionsuggestion。
-  列error_typeerror_type。
-  super，__init__self，_format_message。
+  列messagemessage
+  列locationlocation
+  列sourcesource
+  列suggestionsuggestion
+  列error_typeerror_type
+  super，__init__self，_format_message
 定YanError__format_message=函self：
-  定lines=列。
-  lines，添"+转字符串self，error_type+": "+转字符串self，messag""。
-  lines，添""  位置: "+转字符串self，locatio""。
+  定lines=列
+  lines，添"+转字符串self，error_type+": "+转字符串self，messag""
+  lines，添""  位置: "+转字符串self，locatio""
   若self，source则：
-      定snippet=self，_get_source_snippet。
+      定snippet=self，_get_source_snippet
       若snippet则：
-            lines，添''。
-            lines，添snippet。
+            lines，添''
+            lines，添snippet
   若self，suggestion则：
-      lines，添''。
-      lines，添""  提示: "+转字符串self，suggestio""。
-  返回lines，连接'\n'。
+      lines，添''
+      lines，添""  提示: "+转字符串self，suggestio""
+  返回lines，连接'\n'
 定YanError__get_source_snippet=函self：
   若非self，source则：
-      返回''。
-  定source_lines=self，source，分割'\n'。
+      返回''
+  定source_lines=self，source，分割'\n'
   若self，location，line小等于0或self，location，line大source_lines，长则：
-      返回''。
-  定error_line=source_lines，入self，location，line减1。。
-  定start_line=最大1 self，location，line减2。
-  定end_line=最小source_lines，长 self，location，line加2。
-  定lines=列。
+      返回''
+  定error_line=source_lines，入self，location，line减1。
+  定start_line=最大1 self，location，line减2
+  定end_line=最小source_lines，长 self，location，line加2
+  定lines=列
   遍历i于范围start_lineend_line加1：
-      定line_content=source_lines，入i减1。。
-      定prefix=若i等self，location，line则'  > '否则'    '。
-      lines，添"+转字符串prefix+""+转字符串i+" | "+转字符串line_conten""。
+      定line_content=source_lines，入i减1。
+      定prefix=若i等self，location，line则'  > '否则'    '
+      lines，添"+转字符串prefix+""+转字符串i+" | "+转字符串line_conten""
       若i等self，location，line则：
-            定indent=prefix，长加7。
-            定pointer=' '乘self，location，col减1加'^'加'~'乘error_line，长减self，location，col。
-            lines，添' '乘indent加pointer。
-  返回lines，连接'\n'。
+            定indent=prefix，长加7
+            定pointer=' '乘self，location，col减1加'^'加'~'乘error_line，长减self，location，col
+            lines，添' '乘indent加pointer
+  返回lines，连接'\n'
 -- 类 LexerError 转换为函数式
 定创建LexerError=函message location source suggestion：
-  super，__init__。
+  super，__init__
 -- 类 ParserError 转换为函数式
 定创建ParserError=函message location source suggestion：
-  super，__init__。
+  super，__init__
 -- 类 CodeGenError 转换为函数式
 定创建CodeGenError=函message location source suggestion：
-  super，__init__。
+  super，__init__
 -- 类 RuntimeError 转换为函数式
 定创建RuntimeError=函message location source suggestion：
-  super，__init__。
+  super，__init__
 定ErrorSuggester_suggest=函cls error_message context：
   遍历列key suggestion于cls，COMMON_ERRORS，项：
       若key含error_message则：
-            返回suggestion。
+            返回suggestion
   若context则：
       遍历列wrong correct于cls，COMMON_ERRORS，项：
             若wrong含context且wrong不等correct则：
-                    返回""您是否想使用 ""+转字符串correct+""？""。
-  返回空。
+                    返回""您是否想使用 ""+转字符串correct+""？""
+  返回空
 定ErrorSuggester_suggest_similar_verb=函cls verb：
   若verb含cls，SIMILAR_VERBS则：
-      定similar=cls，SIMILAR_VERBS，入verb。。
-      返回""相关动词: "+转字符串similar，连接', ""。
-  返回空。
+      定similar=cls，SIMILAR_VERBS，入verb。
+      返回""相关动词: "+转字符串similar，连接', ""
+  返回空
 定create_lexer_error=函message line col source：
-  定location=SourceLocation line col。
-  定suggestion=ErrorSuggester，suggestmessage。
-  返回LexerError message location source suggestion。
+  定location=SourceLocation line col
+  定suggestion=ErrorSuggester，suggestmessage
+  返回LexerError message location source suggestion
 定create_parser_error=函message line col source：
-  定location=SourceLocation line col。
-  定suggestion=ErrorSuggester，suggestmessage。
-  返回ParserError message location source suggestion。
+  定location=SourceLocation line col
+  定suggestion=ErrorSuggester，suggestmessage
+  返回ParserError message location source suggestion

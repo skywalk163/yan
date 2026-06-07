@@ -63,7 +63,7 @@ class Lexer:
         '列目录', '建目录', '删文件', '删目录', '当前目录',
         '文件名', '目录名', '扩展名', '当前时间', '日期', '时间', '日期时间',
         '格式化时间', '睡眠', '是数', '是串', '是表', '是函', '是真', '是空',
-        '大于', '大等于', '小于', '小等于', '最大', '最小', '求和', '计数',
+        '大于', '大等于', '小于', '小等于', '小于等于', '大于等于', '最大', '最小', '求和', '计数',
         '键', '值', '项', '删键', '求值', '套', '测', '范围',
         '列表', '字典', '序列', '对组', '输出', '读取', '写入', '映射', '过滤', '归约',
         '阶乘', '平方',
@@ -91,7 +91,7 @@ class Lexer:
         '列目录', '建目录', '删文件', '删目录', '当前目录',
         '文件名', '目录名', '扩展名',
         '当前时间', '日期', '时间', '日期时间', '格式化时间', '睡眠',
-        '大于', '小于', '等于', '不等于', '大等于', '小等于',
+        '大于', '小于', '等于', '不等于', '大等于', '小等于', '小于等于', '大于等于',
         '并且', '或者', '非也',
         '首个', '其余', '入',
         '若', '则', '定', '定义', '函数', '如果', '那么', '否则', '遍历', '于', '当时', '当满足',
@@ -182,8 +182,27 @@ class Lexer:
                     i += 1
                 continue
             
-            # 查找 '定义'
+            # 查找 '定义' 或 '定'
             if source[i:i+2] == '定义':
+                j = i + 2  # '定义' is 2 characters
+                # 跳过空白
+                while j < len(source) and source[j] in ' \t':
+                    j += 1
+                # 收集标识符
+                k = j
+                while k < len(source) and (source[k].isalnum() or ord(source[k]) >= 0x4E00 and ord(source[k]) <= 0x9FFF):
+                    k += 1
+                if k > j:
+                    name = source[j:k]
+                    # 跳过空白检查 '='
+                    m = k
+                    while m < len(source) and source[m] in ' \t':
+                        m += 1
+                    if m < len(source) and source[m] == '=':
+                        names.add(name)
+                    i = k
+                    continue
+            elif source[i] == '定':
                 j = i + 1
                 # 跳过空白
                 while j < len(source) and source[j] in ' \t':
@@ -270,68 +289,94 @@ class Lexer:
         
         lines = source.splitlines()
         processed_lines = []
-        
+
         # 语句开始关键字（这些关键字开头的行不应与下一行续行）
-        statement_start_keywords = {'定义', '如果', '那么', '否则', '遍历', '当时', '函数', '返回', '结构', '套', '测', '打印', '读', '写', '引', '导', '出'}
+        statement_start_keywords = {'定义', '定', '如果', '那么', '否则', '遍历', '当时', '函数', '返回', '结构', '套', '测', '打印', '印', '印数', '印浮', '读', '写', '行', '读行', '引', '导', '出', '求值', '若', '当', '返回', '加', '减', '乘', '除', '取', '设', '长', '列', '列表', '连', '添', '含', '首个', '其余', '入', '反转', '排序', '输出', '映射', '过滤', '归约'}
         # 块开始关键字（这些关键字结尾的行不应与下一行续行）
         block_start_keywords = {'函数', '如果', '遍历', '当时', '结构', '套', '测'}
-        
+
         i = 0
+        # 追踪 Python 代码块的嵌套深度
+        python_depth = 0
+
         while i < len(lines):
             line = lines[i]
-            
+
             # 检查行内容
             stripped = line.strip()
-            
+
             # 如果是空行或注释，直接保留（不进行续行处理）
             if not stripped or stripped.startswith('--') or stripped.startswith('注'):
                 processed_lines.append(line)
                 i += 1
                 continue
-            
+
+            # 统计行内 {{ 和 }} 的数量（用于追踪 Python 代码块嵌套深度）
+            # 注意：这只是近似计算，因为字符串内的 {{ }} 也会被计入
+            # 但在续行处理阶段，我们只能做近似处理
+            open_braces = stripped.count('{{')
+            close_braces = stripped.count('}}')
+            python_depth += open_braces
+            python_depth -= close_braces
+
+            # 如果在 Python 代码块内（深度 > 0），不进行续行合并
+            if python_depth > 0:
+                processed_lines.append(line)
+                i += 1
+                continue
+
             # 检查是否需要续行
             current_indent = self._count_indent(line)
             # 只检查语句部分（去除注释后），而不是整个行
             statement_part = stripped.split('--')[0].split('注')[0].rstrip()
             has_dot = statement_part.endswith('。') or statement_part.endswith('．')
-            
+
             # 检查是否以块开始关键字结尾
             ends_with_block_start = False
             for kw in block_start_keywords:
                 if stripped.endswith(kw):
                     ends_with_block_start = True
                     break
-            
+
             # 检查是否以语句开始关键字开头
             starts_with_statement = False
             for kw in statement_start_keywords:
                 if stripped.startswith(kw):
                     starts_with_statement = True
                     break
-            
+
             # 查看下一行
             should_merge = False
             if i + 1 < len(lines):
                 next_line = lines[i + 1]
                 next_stripped = next_line.strip()
-                
+
                 # 如果下一行不是空行或注释
                 if next_stripped and not next_stripped.startswith('--') and not next_stripped.startswith('注'):
                     next_indent = self._count_indent(next_line)
-                    
+
+                    # 检查下一行是否以语句开始关键字开头
+                    next_starts_with_statement = False
+                    for kw in statement_start_keywords:
+                        if next_stripped.startswith(kw):
+                            next_starts_with_statement = True
+                            break
+
                     # 如果满足以下条件，则续行：
                     # 1. 下一行缩进 == 当前行缩进
                     # 2. 当前行不以句号结尾
                     # 3. 当前行不以块开始关键字结尾
                     # 4. 当前行不以语句开始关键字开头
-                    if (next_indent == current_indent and 
-                        not has_dot and 
-                        not ends_with_block_start and 
-                        not starts_with_statement):
+                    # 5. 下一行也不以语句开始关键字开头
+                    if (next_indent == current_indent and
+                        not has_dot and
+                        not ends_with_block_start and
+                        not starts_with_statement and
+                        not next_starts_with_statement):
                         should_merge = True
                         line = line.rstrip() + ' ' + next_stripped
                         i += 1  # 跳过下一行
-            
+
             processed_lines.append(line)
             i += 1
         
@@ -339,8 +384,55 @@ class Lexer:
         tokens = []
         indent_stack = [0]  # 当前缩进栈
         current_indent = 0
-        
+
+        # 跨行 Python 代码块状态
+        in_python_block = False
+        python_block_start_line = 0
+        python_block_content = []
+
         for line_num, line in enumerate(processed_lines, 1):
+            # 如果在 Python 代码块内
+            if in_python_block:
+                # 查找 '}}'（不在字符串内的）
+                idx = -1
+                in_string = False
+                string_char = None
+                i = 0
+                while i < len(line):
+                    ch = line[i]
+                    if not in_string:
+                        if ch in ('"', "'"):
+                            in_string = True
+                            string_char = ch
+                        elif ch == '\\' and i + 1 < len(line):
+                            i += 2  # 跳过转义字符
+                        elif i + 1 < len(line) and line[i:i+2] == '}}':
+                            idx = i
+                            break
+                    else:
+                        if ch == '\\' and i + 1 < len(line):
+                            i += 2  # 跳过转义字符
+                        elif ch == string_char:
+                            in_string = False
+                    i += 1
+
+                if idx >= 0:
+                    # Python 代码块结束
+                    python_block_content.append(line[:idx])
+                    # 生成 Python token
+                    content = '\n'.join(python_block_content)
+                    tokens.append(Token(TokenType.PYTHON, content, python_block_start_line, 1))
+                    # 处理 '}}' 之后的内容
+                    remaining = line[idx + 2:]
+                    if remaining.strip():
+                        self._tokenize_line(remaining, line_num, idx + 3, tokens, user_defined_names)
+                    in_python_block = False
+                    python_block_content = []
+                else:
+                    # 继续收集 Python 代码块内容
+                    python_block_content.append(line)
+                continue
+
             # 计算当前行的缩进
             line_indent = 0
             col = 1
@@ -352,7 +444,7 @@ class Lexer:
                     line_indent += 1
                 i += 1
                 col += 1
-            
+
             # 处理缩进变化
             if line_indent > current_indent:
                 # 缩进增加
@@ -365,9 +457,48 @@ class Lexer:
                     indent_stack.pop()
                     current_indent = indent_stack[-1] if indent_stack else 0
                     tokens.append(Token(TokenType.DEDENT, str(current_indent), line_num, 1))
-            
-            # 处理行内容（跳过前面的空白）
-            self._tokenize_line(line[i:], line_num, col, tokens, user_defined_names)
+
+            # 检查行内是否有 Python 代码块开始
+            rest = line[i:]
+            if '{{' in rest:
+                # 检查是否在同一行内有 '}}'（不在字符串内的）
+                py_start = rest.index('{{')
+                py_content_start = py_start + 2
+
+                # 在 py_content_start 之后查找 '}}'
+                idx = -1
+                in_string = False
+                string_char = None
+                j = py_content_start
+                while j < len(rest):
+                    ch = rest[j]
+                    if not in_string:
+                        if ch in ('"', "'"):
+                            in_string = True
+                            string_char = ch
+                        elif ch == '\\' and j + 1 < len(rest):
+                            j += 2  # 跳过转义字符
+                        elif j + 1 < len(rest) and rest[j:j+2] == '}}':
+                            idx = j
+                            break
+                    else:
+                        if ch == '\\' and j + 1 < len(rest):
+                            j += 2  # 跳过转义字符
+                        elif ch == string_char:
+                            in_string = False
+                    j += 1
+
+                if idx >= 0:
+                    # 同一行内有 '}}'，让 _tokenize_line 处理
+                    self._tokenize_line(line[i:], line_num, col, tokens, user_defined_names)
+                else:
+                    # 跨行 Python 代码块
+                    in_python_block = True
+                    python_block_start_line = line_num
+                    python_block_content.append(rest[py_content_start:])
+            else:
+                # 处理行内容（跳过前面的空白）
+                self._tokenize_line(line[i:], line_num, col, tokens, user_defined_names)
         
         # 文件结束：生成剩余的 DEDENT
         while len(indent_stack) > 1:
@@ -538,6 +669,9 @@ class Lexer:
                         j += 2
                     elif j + 1 < n and line[j:j+2] == '}}':
                         depth -= 1
+                        if depth == 0:
+                            j += 2  # 跳过 '}}'
+                            break
                         j += 2
                     else:
                         j += 1
@@ -547,28 +681,23 @@ class Lexer:
                 col += (j - i)
                 continue
             
-            # 符号
-            if ch == '。' or ch == '．':
+            # 符号（支持中英文句号）
+            if ch == '。' or ch == '．' or ch == '.':
                 tokens.append(Token(TokenType.DOT, '。', line_num, col))
                 i += 1
                 col += 1
                 continue
-            if ch == '，':
+            if ch == '，' or ch == ',':
                 tokens.append(Token(TokenType.COMMA, '，', line_num, col))
                 i += 1
                 col += 1
                 continue
-            if ch == ',':
-                tokens.append(Token(TokenType.COMMA, '，', line_num, col))
-                i += 1
-                col += 1
-                continue
-            if ch == '；':
+            if ch == '；' or ch == ';':
                 tokens.append(Token(TokenType.SEMI, '；', line_num, col))
                 i += 1
                 col += 1
                 continue
-            if ch == '：':
+            if ch == '：' or ch == ':':
                 tokens.append(Token(TokenType.COLON, '：', line_num, col))
                 i += 1
                 col += 1
@@ -629,6 +758,13 @@ class Lexer:
                         keyword = line[i:i+matched_length]
                         # 检查剩余部分是否应该合并
                         remaining = line[i+matched_length:end]
+                        # 优先级1：如果完整标识符是用户定义的名称，优先输出完整标识符
+                        # （避免将用户定义的变量/函数名错误拆分为关键字 + 剩余部分）
+                        if full_identifier in user_defined_names:
+                            tokens.append(Token(TokenType.WORD, full_identifier, line_num, col))
+                            i = end
+                            col += len(full_identifier)
+                            continue
                         # 只有当剩余部分是单个非关键字汉字时才考虑合并
                         # 但如果剩余部分是数字，不合并（如 "列表1" -> "列表" + "1"）
                         # 如果剩余部分是多个字符，不合并（如 "函数数" -> "函数" + "数"）
@@ -875,24 +1011,18 @@ class Lexer:
                 i += 1; col += 1
                 continue
             
-            # 结构符
-            if ch == '。' or ch == '．':
+            # 结构符（支持中英文句号）
+            if ch == '。' or ch == '．' or ch == '.':
                 tokens.append(Token(TokenType.DOT, '。', line, col))
                 i += 1; col += 1
                 continue
             
-            if ch == '，':
+            if ch == '，' or ch == ',':
                 tokens.append(Token(TokenType.COMMA, '，', line, col))
                 i += 1; col += 1
                 continue
             
-            # 支持英文逗号
-            if ch == ',':
-                tokens.append(Token(TokenType.COMMA, '，', line, col))
-                i += 1; col += 1
-                continue
-            
-            if ch == '；':
+            if ch == '；' or ch == ';':
                 tokens.append(Token(TokenType.SEMI, '；', line, col))
                 i += 1; col += 1
                 continue
@@ -926,8 +1056,8 @@ class Lexer:
                 i += 1; col += 1
                 continue
 
-            # 冒号：块开始标记
-            if ch == '：':
+            # 冒号：块开始标记（支持中英文冒号）
+            if ch == '：' or ch == ':':
                 tokens.append(Token(TokenType.COLON, '：', line, col))
                 i += 1; col += 1
                 continue

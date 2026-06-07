@@ -43,7 +43,7 @@ def execute_code_in_process(code: str) -> dict:
         
         try:
             result = subprocess.run(
-                [sys.executable, str(MAIN_PY), temp_file],
+                [sys.executable, str(MAIN_PY), temp_file, "--v2"],
                 capture_output=True,
                 text=False,
                 timeout=30,

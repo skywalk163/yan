@@ -17,9 +17,9 @@
     定 headers = 典
 
   当 timeout 等于 空：
-    定 timeout = 10。
+    定 timeout = 10
 
-  返回 HTTP_GET url headers timeout。
+  返回 HTTP_GET url headers timeout
 
 
 -- POST请求
@@ -28,9 +28,9 @@
     定 headers = 典
 
   当 timeout 等于 空：
-    定 timeout = 10。
+    定 timeout = 10
 
-  返回 HTTP_POST url data json headers timeout。
+  返回 HTTP_POST url data json headers timeout
 
 
 -- PUT请求
@@ -39,9 +39,9 @@
     定 headers = 典
 
   当 timeout 等于 空：
-    定 timeout = 10。
+    定 timeout = 10
 
-  返回 HTTP_PUT url data json headers timeout。
+  返回 HTTP_PUT url data json headers timeout
 
 
 -- DELETE请求
@@ -50,9 +50,9 @@
     定 headers = 典
 
   当 timeout 等于 空：
-    定 timeout = 10。
+    定 timeout = 10
 
-  返回 HTTP_DELETE url headers timeout。
+  返回 HTTP_DELETE url headers timeout
 
 
 -- PATCH请求
@@ -61,9 +61,9 @@
     定 headers = 典
 
   当 timeout 等于 空：
-    定 timeout = 10。
+    定 timeout = 10
 
-  返回 HTTP_PATCH url data json headers timeout。
+  返回 HTTP_PATCH url data json headers timeout
 
 
 -- HEAD请求
@@ -72,9 +72,9 @@
     定 headers = 典
 
   当 timeout 等于 空：
-    定 timeout = 10。
+    定 timeout = 10
 
-  返回 HTTP_GET url headers timeout。
+  返回 HTTP_GET url headers timeout
 
 
 -- OPTIONS请求
@@ -83,83 +83,83 @@
     定 headers = 典
 
   当 timeout 等于 空：
-    定 timeout = 10。
+    定 timeout = 10
 
-  返回 HTTP_GET url headers timeout。
+  返回 HTTP_GET url headers timeout
 
 
 -- 获取响应状态码
 定 状态码 = 函 response：
-  返回 值 response "status"。
+  返回 值 response "status"
 
 
 -- 获取响应内容
 定 内容 = 函 response：
-  返回 值 response "content"。
+  返回 值 response "content"
 
 
 -- 获取响应JSON
 定 JSON内容 = 函 response：
-  定 json_func = 值 response "json"。
+  定 json_func = 值 response "json"
   当 json_func 不等于 空：
     返回 JSON解析 内容 response
 
-  返回 空。
+  返回 空
 
 
 -- 获取响应头
 定 响应头 = 函 response name：
-  定 headers = 值 response "headers"。
+  定 headers = 值 response "headers"
   返回 值 headers name
 
 
 -- 获取所有响应头
 定 所有响应头 = 函 response：
-  返回 值 response "headers"。
+  返回 值 response "headers"
 
 
 -- 检查是否成功
 定 成功? = 函 response：
-  返回 值 response "ok"。
+  返回 值 response "ok"
 
 
 -- 获取响应URL
 定 响应URL = 函 response：
-  返回 值 response "url"。
+  返回 值 response "url"
 
 
 -- 获取编码
 定 编码 = 函 response：
-  返回 值 response "encoding"。
+  返回 值 response "encoding"
 
 
 -- 设置编码
 定 设置编码 = 函 response encoding：
-  设 response "encoding" encoding。
+  设 response "encoding" encoding
 
 
 -- 获取Cookie
 定 Cookie = 函 response name：
-  定 cookies = 值 response "cookies"。
+  定 cookies = 值 response "cookies"
   当 cookies 不等于 空：
     返回 值 cookies name
 
-  返回 空。
+  返回 空
 
 
 -- 获取所有Cookie
 定 所有Cookie = 函 response：
-  返回 值 response "cookies"。
+  返回 值 response "cookies"
 
 
 -- 获取请求历史
 定 请求历史 = 函 response：
-  返回 值 response "history"。
+  返回 值 response "history"
 
 
 -- 创建Session
 定 创建Session = 函：
-  返回 HTTP_GET "http://localhost"。
+  返回 HTTP_GET "http://localhost"
 
 
 -- Session GET请求
@@ -168,9 +168,9 @@
     定 headers = 典
 
   当 timeout 等于 空：
-    定 timeout = 10。
+    定 timeout = 10
 
-  返回 HTTP_GET url headers timeout。
+  返回 HTTP_GET url headers timeout
 
 
 -- Session POST请求
@@ -179,35 +179,35 @@
     定 headers = 典
 
   当 timeout 等于 空：
-    定 timeout = 10。
+    定 timeout = 10
 
-  返回 HTTP_POST url data json headers timeout。
+  返回 HTTP_POST url data json headers timeout
 
 
 -- 保存Cookie
 定 保存Cookie = 函 session filename：
-  写文件 filename JSON生成 所有Cookie session。
+  写文件 filename JSON生成 所有Cookie session
 
 
 -- 加载Cookie
 定 加载Cookie = 函 session filename：
-  定 cookies = JSON解析 读文件 filename。
+  定 cookies = JSON解析 读文件 filename
   设 session "cookies" cookies
 
 
 -- URL编码
 定 URL编码 = 函 params：
-  返回 URL编码 params。
+  返回 URL编码 params
 
 
 -- URL解码
 定 URL解码 = 函 url：
-  返回 URL解码 url。
+  返回 URL解码 url
 
 
 -- 构建参数
 定 构建参数 = 函 params：
-  定 结果 = 空串。
+  定 结果 = 空串
   定 键 = 键 params
   定 i = 0
   当 i 小于 长 键：
@@ -216,15 +216,15 @@
     当 i 大于 0：
       定 结果 = 连 结果 "&"
 
-    定 结果 = 连 结果 URL编码 k "=" URL编码 v。
-    定 i = 加 i 1。
+    定 结果 = 连 结果 URL编码 k "=" URL编码 v
+    定 i = 加 i 1
 
-  返回 结果。
+  返回 结果
 
 
 -- 解析URL
 定 解析URL = 函 url：
-  返回 URL解码 url。
+  返回 URL解码 url
 
 
 -- 构建URL
@@ -232,45 +232,45 @@
   当 params 等于 空：
     返回 URL构建 base_url path
 
-  返回 连 URL构建 base_url path "?" 构建参数 params。
+  返回 连 URL构建 base_url path "?" 构建参数 params
 
 
 -- 获取重定向历史
 定 重定向历史 = 函 response：
-  返回 值 response "history"。
+  返回 值 response "history"
 
 
 -- 检查是否有重定向
 定 重定向? = 函 response：
-  定 history = 重定向历史 response。
+  定 history = 重定向历史 response
   当 长 history 大于 0：
     返回 真
 
-  返回 假。
+  返回 假
 
 
 -- 设置超时时间
 定 超时 = 函 seconds：
-  返回 seconds。
+  返回 seconds
 
 
 -- 创建用户代理头
 定 用户代理 = 函 ua：
-  返回 典 "User-Agent" ua。
+  返回 典 "User-Agent" ua
 
 
 -- 创建基础认证
 定 基础认证 = 函 username password：
-  定 auth_str = 连 username ":" password。
+  定 auth_str = 连 username ":" password
   定 encoded = Base64编码 auth_str
   返回 典 "Authorization" 连 "Basic " encoded
 
 
 -- 创建Bearer令牌头
 定 Bearer令牌 = 函 token：
-  返回 典 "Authorization" 连 "Bearer " token。
+  返回 典 "Authorization" 连 "Bearer " token
 
 
 -- 创建JSON请求头
 定 JSON头 = 函：
-  返回 典 "Content-Type" "application/json"。
+  返回 典 "Content-Type" "application/json"

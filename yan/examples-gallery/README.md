@@ -126,9 +126,8 @@ python main.py yan/examples-gallery/advanced/fibonacci.yan
 
 定 主函数 = 函 参数
   注 函数说明
-  定 结果 = 处理 参数。
-  返回 结果。
-。
+  定 结果 = 处理 参数
+  返回 结果
 
 印 主函数 输入。
 ```

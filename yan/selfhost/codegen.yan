@@ -49,211 +49,187 @@
 
 -- 生成列表
 定生成列表=函args：
-  定len_args=长args。
-  当len_args等于0：返回"[]"。
-  定结果="["。
-  定i=0。
+  定len_args=长args
+  当len_args等于0：返回"[]"
+  定结果="["
+  定i=0
   当真：
-    当i大于等于len_args：连结果"]"。返回结果。
-    定arg=入argsi。
-    连结果生成节点arg。
-    当i小于减len_args1：连结果", "。
-    i=加i1。
-  。
-．
+    当i大于等于len_args：连结果"]"。返回结果
+    定arg=入argsi
+    连结果生成节点arg
+    当i小于减len_args1：连结果", "
+    i=加i1
 
 -- 生成索引访问
 定生成索引=函args：
-  当长args小于2：返回""。
-  连生成节点入args0连"["连生成节点入args1连"]"。
-．
+  当长args小于2：返回""
+  连生成节点入args0连"["连生成节点入args1连"]"
 
 -- 生成列表元素访问
 定生成取=函args：生成索引args。
 
 -- 生成列表追加
 定生成添=函args：
-  当长args小于2：返回""。
-  连生成节点入args0连".append("连生成节点入args1连")"。
-．
+  当长args小于2：返回""
+  连生成节点入args0连".append("连生成节点入args1连")"
 
 -- 生成字符串连接
 定生成连=函args：
-  定len_args=长args。
-  当len_args等于0：返回""。
-  定结果=生成节点入args0。
-  定i=1。
+  定len_args=长args
+  当len_args等于0：返回""
+  定结果=生成节点入args0
+  定i=1
   当真：
-    当i大于等于len_args：返回结果。
-    连结果" + "。
-    连结果生成节点入argsi。
-    i=加i1。
-  。
-．
+    当i大于等于len_args：返回结果
+    连结果" + "
+    连结果生成节点入argsi
+    i=加i1
 
 -- 生成打印
 定生成印=函args：
-  定len_args=长args。
-  当len_args等于0：返回"print()"。
-  定结果="print("。
-  定i=0。
+  定len_args=长args
+  当len_args等于0：返回"print()"
+  定结果="print("
+  定i=0
   当真：
-    当i大于等于len_args：连结果")"。返回结果。
-    连结果生成节点入argsi。
-    当i小于减len_args1：连结果", "。
-    i=加i1。
-  。
-．
+    当i大于等于len_args：连结果")"。返回结果
+    连结果生成节点入argsi
+    当i小于减len_args1：连结果", "
+    i=加i1
 
 -- 生成长度
 定生成长=函args：
-  当长args小于1：返回"len()"。
-  连"len("连生成节点入args0连")"。
-．
+  当长args小于1：返回"len()"
+  连"len("连生成节点入args0连")"
 
 -- 生成运算符
 定生成运算符=函verb args：
-  当长args小于2：返回""。
-  连"("连生成节点入args0连" "连取运算符verb连" "连生成节点入args1连")"。
-．
+  当长args小于2：返回""
+  连"("连生成节点入args0连" "连取运算符verb连" "连生成节点入args1连")"
 
 -- 生成函数调用
 定生成函数调用=函verb args：
-  定len_args=长args。
-  当len_args等于0：连verb连"()"。
-  定结果=verb。
-  连结果"("。
-  定i=0。
+  定len_args=长args
+  当len_args等于0：连verb连"()"
+  定结果=verb
+  连结果"("
+  定i=0
   当真：
-    当i大于等于len_args：连结果")"。返回结果。
-    连结果生成节点入argsi。
-    当i小于减len_args1：连结果", "。
-    i=加i1。
-  。
-．
+    当i大于等于len_args：连结果")"。返回结果
+    连结果生成节点入argsi
+    当i小于减len_args1：连结果", "
+    i=加i1
 
 -- 生成调用节点（优化版）
 定生成调用=函node：
-  定verb=入node1。
-  定args=入node2。
-  当verb等于"列"：返回生成列表args。
-  当verb等于"入"：返回生成索引args。
-  当verb等于"取"：返回生成取args。
-  当verb等于"添"：返回生成添args。
-  当verb等于"连"：返回生成连args。
-  当verb等于"印"：返回生成印args。
-  当verb等于"长"：返回生成长args。
-  定val=入运算符映射verb。当val不等于空：返回生成运算符verbargs。
-  返回生成函数调用verbargs。
-．
+  定verb=入node1
+  定args=入node2
+  当verb等于"列"：返回生成列表args
+  当verb等于"入"：返回生成索引args
+  当verb等于"取"：返回生成取args
+  当verb等于"添"：返回生成添args
+  当verb等于"连"：返回生成连args
+  当verb等于"印"：返回生成印args
+  当verb等于"长"：返回生成长args
+  定val=入运算符映射verb。当val不等于空：返回生成运算符verbargs
+  返回生成函数调用verbargs
 
 -- 生成定义节点
 定生成定义=函node：连入node1连" = "连生成节点入node2。
 
 -- 生成Lambda节点
 定生成Lambda=函node：
-  定名称=入node1。
-  定params=入node2。
-  定body=入node3。
-  定len_params=长params。
-  定结果="def "。
-  连结果名称。
-  连结果"("。
-  定i=0。
+  定名称=入node1
+  定params=入node2
+  定body=入node3
+  定len_params=长params
+  定结果="def "
+  连结果名称
+  连结果"("
+  定i=0
   当真：
-    当i大于等于len_params：连结果"):\n    "。连结果生成节点body。返回结果。
-    连结果取params i。
-    当i小于减len_params1：连结果", "。
-    i=加i1。
-  。
-．
+    当i大于等于len_params：连结果"):\n    "。连结果生成节点body。返回结果
+    连结果取params i
+    当i小于减len_params1：连结果", "
+    i=加i1
 
 -- 生成条件节点
 定生成条件=函node：
-  定cond=生成节点入node1。
-  定then_branch=生成节点入node2。
-  定else_branch=入node3。
-  当else_branch等于空：连"("连then_branch连" if "连cond连" else None)"。
-  连"("连then_branch连" if "连cond连" else "连else_branch连")"。
-．
+  定cond=生成节点入node1
+  定then_branch=生成节点入node2
+  定else_branch=入node3
+  当else_branch等于空：连"("连then_branch连" if "连cond连" else None)"
+  连"("连then_branch连" if "连cond连" else "连else_branch连")"
 
 -- 生成循环节点
 定生成循环=函node：连"while "连生成节点入node1连":\n    "连生成节点入node2。
 
 -- 生成Pipeline节点
 定生成Pipeline=函node：
-  定steps=入node1。
-  定len_steps=长steps。
-  当len_steps等于0：返回""。
-  定结果=生成节点入steps0。
-  定i=1。
+  定steps=入node1
+  定len_steps=长steps
+  当len_steps等于0：返回""
+  定结果=生成节点入steps0
+  定i=1
   当真：
-    当i大于等于len_steps：返回结果。
-    连结果"\n"。
-    连结果生成节点入stepsi。
-    i=加i1。
-  。
-．
+    当i大于等于len_steps：返回结果
+    连结果"\n"
+    连结果生成节点入stepsi
+    i=加i1
 
 -- 生成Python代码节点
 定生成Python代码=函node：入node1。
 
 -- 生成程序节点
 定生成程序=函node：
-  定statements=入node1。
-  定len_stmts=长statements。
-  当len_stmts等于0：返回""。
-  定结果=生成节点入statements0。
-  定i=1。
+  定statements=入node1
+  定len_stmts=长statements
+  当len_stmts等于0：返回""
+  定结果=生成节点入statements0
+  定i=1
   当真：
-    当i大于等于len_stmts：返回结果。
-    定code=生成节点入statementsi。
-    当code不等于空：连结果"\n"。连结果code。
-    i=加i1。
-  。
-．
+    当i大于等于len_stmts：返回结果
+    定code=生成节点入statementsi
+    当code不等于空：连结果"\n"。连结果code
+    i=加i1
 
 -- 生成节点（优化版）
 定生成节点=函node：
-  当node等于空：返回""。
-  定类型=取节点类型node。
-  当类型等于1：返回生成程序node。
-  当类型等于2：返回生成数字node。
-  当类型等于3：返回生成字符串node。
-  当类型等于4：返回生成布尔node。
-  当类型等于5：返回生成空。
-  当类型等于6：返回生成词node。
-  当类型等于7：返回生成定义node。
-  当类型等于8：返回生成Lambda node。
-  当类型等于9：返回生成调用node。
-  当类型等于10：返回生成条件node。
-  当类型等于11：返回生成循环node。
-  当类型等于12：返回生成Python代码node。
-  返回""。
-．
+  当node等于空：返回""
+  定类型=取节点类型node
+  当类型等于1：返回生成程序node
+  当类型等于2：返回生成数字node
+  当类型等于3：返回生成字符串node
+  当类型等于4：返回生成布尔node
+  当类型等于5：返回生成空
+  当类型等于6：返回生成词node
+  当类型等于7：返回生成定义node
+  当类型等于8：返回生成Lambda node
+  当类型等于9：返回生成调用node
+  当类型等于10：返回生成条件node
+  当类型等于11：返回生成循环node
+  当类型等于12：返回生成Python代码node
+  返回""
 
 -- 代码生成主函数
 定generate=函ast：生成节点ast。
 
 -- 格式化代码
 定format_code=函code：
-  定lines=截取code 0长code。
-  定result=""。
-  定indent=0。
-  定i=0。
+  定lines=截取code 0长code
+  定result=""
+  定indent=0
+  定i=0
   当真：
-    当i大于等于长lines：返回result。
-    定line=入lines i。
-    定stripped=截取line 0长line。
-    定result_line=""。
-    定j=0。
+    当i大于等于长lines：返回result
+    定line=入lines i
+    定stripped=截取line 0长line
+    定result_line=""
+    定j=0
     当真：
-      当j大于等于indent：连result_line stripped。连result result_line。当且stripped不等于空截取stripped长stripped减1等于":"：indent=加indent1。。i=加i1。
-      连result_line"    "。
-      j=加j1。
-    。
-  。
-．
+      当j大于等于indent：连result_line stripped。连result result_line。当且stripped不等于空截取stripped长stripped减1等于":"：indent=加indent1。。i=加i1
+      连result_line"    "
+      j=加j1
 
 -- 保存代码到文件
 定save_code=函code文件名：{{ save_code(code, filename) }}。

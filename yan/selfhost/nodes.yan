@@ -3,110 +3,110 @@
 
 -- 类 Node 转换为 tagged list
 定创建Node=函_：
-  返回列"Node"。
+  返回列"Node"
 定是Node=函节点：
-  等首节点"Node"。
+  等首节点"Node"
 -- 类 Num 转换为 tagged list
 定创建Num=函value：
-  返回列"Num" value。
+  返回列"Num" value
 定是Num=函节点：
-  等首节点"Num"。
+  等首节点"Num"
 -- 类 Str 转换为 tagged list
 定创建Str=函value：
-  返回列"Str" value。
+  返回列"Str" value
 定是Str=函节点：
-  等首节点"Str"。
+  等首节点"Str"
 -- 类 Bool 转换为 tagged list
 定创建Bool=函value：
-  返回列"Bool" value。
+  返回列"Bool" value
 定是Bool=函节点：
-  等首节点"Bool"。
+  等首节点"Bool"
 -- 类 Nil 转换为 tagged list
 定创建Nil=函_：
-  返回列"Nil"。
+  返回列"Nil"
 定是Nil=函节点：
-  等首节点"Nil"。
+  等首节点"Nil"
 -- 类 MathExpr 转换为 tagged list
 定创建MathExpr=函expr：
-  返回列"MathExpr" expr。
+  返回列"MathExpr" expr
 定是MathExpr=函节点：
-  等首节点"MathExpr"。
+  等首节点"MathExpr"
 -- 类 PythonCode 转换为 tagged list
 定创建PythonCode=函code：
-  返回列"PythonCode" code。
+  返回列"PythonCode" code
 定是PythonCode=函节点：
-  等首节点"PythonCode"。
+  等首节点"PythonCode"
 -- 类 ListLiteral 转换为 tagged list
 定创建ListLiteral=函elements：
-  返回列"ListLiteral" elements。
+  返回列"ListLiteral" elements
 定是ListLiteral=函节点：
-  等首节点"ListLiteral"。
+  等首节点"ListLiteral"
 -- 类 Word 转换为 tagged list
 定创建Word=函name：
-  返回列"Word" name。
+  返回列"Word" name
 定是Word=函节点：
-  等首节点"Word"。
+  等首节点"Word"
 -- 类 Call 转换为 tagged list
 定创建Call=函verb args is_partial：
-  定is_partial=假。
-  返回列"Call" verb args is_partial。
+  定is_partial=假
+  返回列"Call" verb args is_partial
 定是Call=函节点：
-  等首节点"Call"。
+  等首节点"Call"
 -- 类 Pipeline 转换为 tagged list
 定创建Pipeline=函steps：
-  返回列"Pipeline" steps。
+  返回列"Pipeline" steps
 定是Pipeline=函节点：
-  等首节点"Pipeline"。
+  等首节点"Pipeline"
 -- 类 Quote 转换为 tagged list
 定创建Quote=函expr：
-  返回列"Quote" expr。
+  返回列"Quote" expr
 定是Quote=函节点：
-  等首节点"Quote"。
+  等首节点"Quote"
 -- 类 Define 转换为 tagged list
 定创建Define=函name value：
-  返回列"Define" name value。
+  返回列"Define" name value
 定是Define=函节点：
-  等首节点"Define"。
+  等首节点"Define"
 -- 类 Lambda 转换为 tagged list
 定创建Lambda=函params body：
-  返回列"Lambda" params body。
+  返回列"Lambda" params body
 定是Lambda=函节点：
-  等首节点"Lambda"。
+  等首节点"Lambda"
 -- 类 Block 转换为 tagged list
 定创建Block=函statements：
-  返回列"Block" statements。
+  返回列"Block" statements
 定是Block=函节点：
-  等首节点"Block"。
+  等首节点"Block"
 -- 类 If 转换为 tagged list
 定创建If=函cond then_branch else_branch：
-  定else_branch=空。
-  返回列"If" cond then_branch else_branch。
+  定else_branch=空
+  返回列"If" cond then_branch else_branch
 定是If=函节点：
-  等首节点"If"。
+  等首节点"If"
 -- 类 ForEach 转换为 tagged list
 定创建ForEach=函var iterable body：
-  返回列"ForEach" var iterable body。
+  返回列"ForEach" var iterable body
 定是ForEach=函节点：
-  等首节点"ForEach"。
+  等首节点"ForEach"
 -- 类 While 转换为 tagged list
 定创建While=函cond body：
-  返回列"While" cond body。
+  返回列"While" cond body
 定是While=函节点：
-  等首节点"While"。
+  等首节点"While"
 -- 类 Program 转换为 tagged list
 定创建Program=函statements：
-  返回列"Program" statements。
+  返回列"Program" statements
 定是Program=函节点：
-  等首节点"Program"。
+  等首节点"Program"
 -- 类 Test 转换为 tagged list
 定创建Test=函name body：
-  返回列"Test" name body。
+  返回列"Test" name body
 定是Test=函节点：
-  等首节点"Test"。
+  等首节点"Test"
 -- 类 TestSuite 转换为 tagged list
 定创建TestSuite=函name tests setup teardown：
-  定setup=空。
-  定teardown=空。
-  返回列"TestSuite" name tests setup teardown。
+  定setup=空
+  定teardown=空
+  返回列"TestSuite" name tests setup teardown
 定是TestSuite=函节点：
-  等首节点"TestSuite"。
+  等首节点"TestSuite"

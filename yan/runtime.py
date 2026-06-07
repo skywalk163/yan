@@ -40,10 +40,11 @@ def _mul(*args):
         return 1
     return reduce(lambda a, b: a * b, args)
 
-def _div(*args): 
+def _div(*args):
     if not args:
         return 1
-    return reduce(lambda a, b: a / b, args)
+    result = reduce(lambda a, b: a // b if isinstance(a, int) and isinstance(b, int) else a / b, args)
+    return result
 def _mod(a, b): return a % b
 def _pow(a, b): return a ** b
 def _abs(a): return abs(a)
