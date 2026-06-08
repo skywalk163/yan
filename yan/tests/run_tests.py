@@ -60,12 +60,12 @@ class MemoryMonitor:
 
                 # 检查是否超过内存限制
                 if self.current_memory > self.max_memory:
-                    print(f"\n\033[91m⚠ 警告: 内存占用超过限制 ({self.current_memory / (1024**3):.2f}GB > {self.max_memory / (1024**3):.2f}GB)\033[0m")
+                    print(f"\n\033[91m! Warning: Memory usage exceeds limit ({self.current_memory / (1024**3):.2f}GB > {self.max_memory / (1024**3):.2f}GB)\033[0m")
                     self._cleanup_large_objects()
                     time.sleep(1)
 
             except Exception as e:
-                print(f"\n内存监控错误: {e}")
+                print(f"\nMemory monitor error: {e}")
 
             time.sleep(MEMORY_CHECK_INTERVAL)
 
@@ -75,7 +75,7 @@ class MemoryMonitor:
             import gc
             gc.collect()
         except Exception as e:
-            print(f"清理对象时出错: {e}")
+            print(f"Error cleaning up objects: {e}")
 
     def get_memory_usage(self):
         """获取当前内存占用"""
@@ -97,7 +97,7 @@ class TestRunner:
     def print_header(self):
         """打印测试报告头部"""
         print("=" * 80)
-        print("言语言标准库测试报告")
+        print("Yan Language Standard Library Test Report")
         print("=" * 80)
         print()
 
@@ -105,31 +105,31 @@ class TestRunner:
         """打印测试摘要"""
         print()
         print("=" * 80)
-        print("测试摘要")
+        print("Test Summary")
         print("=" * 80)
-        print(f"  总计测试: {self.total_tests}")
-        print(f"  通过: {self.passed_tests}")
-        print(f"  失败: {self.failed_tests}")
-        print(f"  错误: {self.error_tests}")
-        print(f"  跳过: {self.skipped_tests}")
-        print(f"  总时间: {self.total_time:.2f}秒")
+        print(f"  Total tests: {self.total_tests}")
+        print(f"  Passed: {self.passed_tests}")
+        print(f"  Failed: {self.failed_tests}")
+        print(f"  Errors: {self.error_tests}")
+        print(f"  Skipped: {self.skipped_tests}")
+        print(f"  Total time: {self.total_time:.2f}s")
         print()
 
         # 打印内存占用统计
         memory_usage = self.memory_monitor.get_memory_usage()
-        print(f"  最大内存占用: {memory_usage / (1024**3):.2f}GB")
-        print(f"  内存限制: {MAX_MEMORY_BYTES / (1024**3):.2f}GB")
+        print(f"  Max memory usage: {memory_usage / (1024**3):.2f}GB")
+        print(f"  Memory limit: {MAX_MEMORY_BYTES / (1024**3):.2f}GB")
         print("=" * 80)
 
         # 根据测试结果打印不同的消息
         if self.failed_tests == 0 and self.error_tests == 0:
-            print("\033[92m✓ 所有测试通过!\033[0m")
+            print("\033[92m[PASS] All tests passed!\033[0m")
         else:
-            print("\033[91m✗ 有测试失败\033[0m")
+            print("\033[91m[FAIL] Some tests failed\033[0m")
 
     def run_test_file(self, test_file: str):
         """运行单个测试文件"""
-        print(f"\n运行测试: {test_file}")
+        print(f"\nRunning test: {test_file}")
         print("-" * 80)
 
         try:
@@ -157,11 +157,11 @@ class TestRunner:
             self.skipped_tests += report.skipped
             self.total_time += elapsed
 
-            print(f"\n文件测试完成，耗时: {elapsed:.2f}秒")
+            print(f"\nTest file completed, elapsed: {elapsed:.2f}s")
 
         except Exception as e:
-            print(f"\033[91m错误: 无法加载测试文件 {test_file}\033[0m")
-            print(f"错误信息: {e}")
+            print(f"\033[91mError: Cannot load test file {test_file}\033[0m")
+            print(f"Error info: {e}")
             import traceback
             traceback.print_exc()
 
@@ -170,9 +170,9 @@ class TestRunner:
         start_time = time.time()
 
         # 启动内存监控
-        print("启动内存监控...")
+        print("Starting memory monitor...")
         self.memory_monitor.start()
-        print(f"内存限制: {MAX_MEMORY_BYTES / (1024**3):.2f}GB")
+        print(f"Memory limit: {MAX_MEMORY_BYTES / (1024**3):.2f}GB")
         print()
 
         # 查找所有测试文件
@@ -188,7 +188,7 @@ class TestRunner:
         test_files = [f for f in test_files if f.exists()]
 
         if not test_files:
-            print("\033[91m未找到测试文件！\033[0m")
+            print("\033[91mNo test files found!\033[0m")
             return
 
         # 打印头部
